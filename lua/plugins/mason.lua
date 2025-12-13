@@ -1,3 +1,18 @@
+local signs = { " ", " ", " ", " " }
+vim.diagnostic.config({
+	virtual_text = {
+		prefix = "",
+		format = function(diagnostic)
+			return string.format("%s (%s)", signs[diagnostic.severity], diagnostic.source, diagnostic.message)
+		end,
+	},
+
+	signs = { text = signs },
+	virtual_lines = { current_line = true },
+	underline = false,
+	severity_sort = true,
+})
+
 return {
 	{
 		"mason-org/mason-lspconfig.nvim",
@@ -21,6 +36,7 @@ return {
 		},
 		config = function()
 			require("mason-null-ls").setup({
+				automatic_installation = false,
 				ensure_installed = { "stylua" },
 			})
 		end,
