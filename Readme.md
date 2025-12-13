@@ -1,10 +1,4 @@
 # Vizier
 
-A neovim configuration as personal assistant.
-
-```rust
-fn main() {
-    println!("hello world!");
-}
-```
+A neovim configuration as personal assistant. powered by [opencode](https://opencode.ai/).
 

@@ -30,7 +30,7 @@ return {
 		"folke/snacks.nvim",
 		priority = 1000,
 		lazy = false,
-		opts = { image = {} },
+		opts = { image = {}, dashboard = require("config.dashboard") },
 		config = function(_, opts)
 			local notify = vim.notify
 			require("snacks").setup(opts)

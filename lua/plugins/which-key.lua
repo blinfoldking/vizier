@@ -2,7 +2,7 @@ local keys = {
 	{
 		"tt",
 		function()
-			vim.cmd("Neotree toggle=true")
+			vim.cmd("NvimTreeToggle")
 		end,
 		desc = "Toggle File Tree",
 	},
