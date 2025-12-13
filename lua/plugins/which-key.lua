@@ -25,34 +25,17 @@ local keys = {
 		end,
 		desc = "Find Pattern",
 	},
+	{
+		"<leader>a",
+		group = "AI",
+	},
 	-- terminal
 	{
 		"<leader>t",
 		group = "Terminal",
 	},
-	{
-		"<leader>tt",
-		function()
-			vim.cmd("ToggleTerm direction=float")
-		end,
-		desc = "Floating Terminal",
-	},
-	{
-		"<leader>th",
-		function()
-			vim.cmd("ToggleTerm direction=horizontal")
-		end,
-		desc = "Horizontal Terminal",
-	},
-	{
-		"<leader>tv",
-		function()
-			vim.cmd("ToggleTerm direction=vertical")
-		end,
-		desc = "Vertical Terminal",
-	},
 	-- LSP
-	{ "<leader>l", group = "LSP" },
+	{ "<leader>l", group = "Code and LSP" },
 	{
 		"<leader>lh",
 		function()
@@ -60,27 +43,40 @@ local keys = {
 		end,
 		desc = "Hover Definition",
 	},
-	-- misc
+	-- terminal
+	{
+		"<leader>d",
+		group = "Trouble Diagnostic",
+	},
+	-- Quit
 	{
 		"<leader>q",
+		group = "Quit",
+	},
+	{
+		"<leader>qq",
 		function()
 			vim.cmd("qa!")
 		end,
 		desc = "Force Quit",
+	},
+	{
+		"<leader>qw",
+		function()
+			vim.cmd("wqa!")
+		end,
+		desc = "Save and Quit",
 	},
 }
 
 return {
 	"folke/which-key.nvim",
 	event = "VeryLazy",
-	opts = {
-		-- your configuration comes here
-		-- or leave it empty to use the default settings
-		-- refer to the configuration section below
-		preset = "classic",
-	},
 	config = function()
 		local wk = require("which-key")
+		wk.setup({
+			preset = "modern",
+		})
 
 		wk.add(keys)
 	end,

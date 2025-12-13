@@ -30,7 +30,17 @@ return {
 		"folke/snacks.nvim",
 		priority = 1000,
 		lazy = false,
-		opts = { image = {}, dashboard = require("config.dashboard") },
+		opts = {
+			image = {},
+			dashboard = require("config.dashboard"),
+			terminal = {
+				keys = {
+					["<Esc>"] = function()
+						vim.cmd("stopinsert")
+					end,
+				},
+			},
+		},
 		config = function(_, opts)
 			local notify = vim.notify
 			require("snacks").setup(opts)
