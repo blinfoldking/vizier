@@ -3,10 +3,6 @@ require("config.lazy")
 vim.cmd("tnoremap <Esc> <C-\\><C-n>")
 vim.cmd("set clipboard+=unnamedplus")
 
-vim.cmd("source ~/.config/nvim/.vimrc")
-
-vim.cmd("set laststatus=3")
-
 vim.opt.titlestring = [[%f %h%m%r%w %{v:progname} (%{tabpagenr()} of %{tabpagenr('$')})]]
 
 -- Dynamic terminal title updates for kitty
@@ -39,3 +35,15 @@ vim.api.nvim_create_autocmd("DirChanged", {
 		set_kitty_title(dirname)
 	end,
 })
+
+vim.api.nvim_create_autocmd("BufWritePost", {
+	callback = function()
+		if vim.fn.expand("%:p") == vim.fn.stdpath("config") .. "/.vimrc" then
+			vim.cmd("source " .. vim.env.MYVIMRC)
+		end
+	end,
+})
+
+vim.cmd("source ~/.config/nvim/.vimrc")
+
+vim.cmd("set laststatus=3")

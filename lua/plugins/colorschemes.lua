@@ -5,4 +5,12 @@ return {
 	{ "cpea2506/one_monokai.nvim" },
 	{ "everviolet/nvim", name = "evergarden" },
 	{ "jacoborus/tender.vim" },
+	{ "catppuccin/nvim" },
+	{ "scottmckendry/cyberdream.nvim" },
+	{ "folke/tokyonight.nvim" },
+	{ "rebelot/kanagawa.nvim" },
+	{ "rose-pine/neovim" },
+	{ "navarasu/onedark.nvim" },
+	{ "Mofiqul/dracula.nvim" },
+	{ "tiagovla/tokyodark.nvim" },
 }
