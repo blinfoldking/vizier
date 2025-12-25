@@ -32,6 +32,7 @@ return {
 		lazy = false,
 		opts = {
 			image = {},
+			indent = {},
 			dashboard = require("config.dashboard"),
 			terminal = {
 				keys = {

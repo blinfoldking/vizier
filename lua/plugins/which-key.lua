@@ -49,6 +49,11 @@ local keys = {
 		"<leader>d",
 		group = "Trouble Diagnostic",
 	},
+	-- Minimap
+	{
+		"<leader>m",
+		group = "Minimap",
+	},
 	-- Config
 	{
 		"<leader>c",
