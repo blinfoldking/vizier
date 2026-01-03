@@ -31,7 +31,6 @@ return {
 		priority = 1000,
 		lazy = false,
 		opts = {
-			image = {},
 			indent = {},
 			dashboard = require("config.dashboard"),
 			terminal = {
