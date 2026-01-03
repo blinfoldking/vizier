@@ -42,7 +42,28 @@ local keys = {
 		function()
 			vim.cmd("Lspsaga hover_doc")
 		end,
-		desc = "Hover Definition",
+		desc = "hover",
+	},
+	{
+		"<leader>lr",
+		function()
+			vim.cmd("Lspsaga rename")
+		end,
+		desc = "rename",
+	},
+	{
+		"<leader>lf",
+		function()
+			vim.cmd("Lspsaga lsp_finder")
+		end,
+		desc = "find",
+	},
+	{
+		"<leader>lca",
+		function()
+			vim.cmd("Lspsaga code_action")
+		end,
+		desc = "code action",
 	},
 	-- terminal
 	{
