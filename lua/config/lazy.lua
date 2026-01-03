@@ -33,4 +33,11 @@ require("lazy").setup({
 	checker = { enabled = true },
 })
 
-vim.cmd("autocmd BufWritePre * lua vim.lsp.buf.format()")
+vim.api.nvim_create_autocmd("BufWritePre", {
+	pattern = "*",
+	callback = function()
+		if #vim.lsp.get_clients({ bufnr = 0 }) > 0 then
+			vim.lsp.buf.format()
+		end
+	end,
+})
