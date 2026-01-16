@@ -42,28 +42,35 @@ local keys = {
 		function()
 			vim.cmd("Lspsaga hover_doc")
 		end,
-		desc = "hover",
+		desc = "Hover",
 	},
 	{
 		"<leader>lr",
 		function()
 			vim.cmd("Lspsaga rename")
 		end,
-		desc = "rename",
+		desc = "Rename",
 	},
 	{
 		"<leader>lf",
 		function()
-			vim.cmd("Lspsaga lsp_finder")
+			vim.cmd("Lspsaga finder")
 		end,
-		desc = "find",
+		desc = "Find",
 	},
 	{
 		"<leader>lca",
 		function()
 			vim.cmd("Lspsaga code_action")
 		end,
-		desc = "code action",
+		desc = "Code Action",
+	},
+	{
+		"<leader>ld",
+		function()
+			vim.cmd("Lspsaga goto_definition")
+		end,
+		desc = "Goto Definition",
 	},
 	-- terminal
 	{
@@ -107,6 +114,50 @@ local keys = {
 			end
 		end,
 		desc = "Open and Edit .vimrc",
+	},
+	-- Neorg
+	{
+		"<leader>n",
+		group = "Neorg",
+	},
+	{
+		"<leader>nc",
+		function()
+			vim.cmd("Neorg toggle-concealer")
+		end,
+		desc = "Toogle Concealer",
+	},
+	{
+		"<leader>njj",
+		function()
+			vim.cmd("Neorg journal")
+		end,
+		desc = "Journal",
+	},
+	{
+		"<leader>njt",
+		function()
+			vim.cmd("Neorg journal today")
+		end,
+		desc = "Daily Journal",
+	},
+	{
+		"<leader>nt",
+		group = "Telescope",
+	},
+	{
+		"<leader>ntb",
+		function()
+			vim.cmd("Telescope neorg find_backlinks")
+		end,
+		desc = "Backlinks",
+	},
+	{
+		"<leader>ntl",
+		function()
+			vim.cmd("Telescope neorg find_linkable")
+		end,
+		desc = "Linkables",
 	},
 	-- Quit
 	{
