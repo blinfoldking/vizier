@@ -1,0 +1,8 @@
+[channels.discord]
+token = ""
+
+[agents.primary]
+name = "primary"
+model = { provider = "ollama", name = "qwen3:4b", base_url = "http://localhost:11434" }
+# to use open router:
+# model = { provider = "openrouter", name = "", api_key = "" }

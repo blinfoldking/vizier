@@ -1,0 +1,24 @@
+services:
+  ollama:
+    build:
+      context: ./dockerfile/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - .data/ollama:/root/.ollama
+
+  mongodb:
+    image: mongo:7.0
+    container_name: agent_memory_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    # This starts mongo and initiates the replica set in one go
+    command: >
+      bash -c "mongod --bind_ip_all --replSet rs0 & 
+      until mongosh --eval 'rs.initiate()' > /dev/null 2>&1; do sleep 1; done; 
+      wait"
+
+volumes:
+  mongo_data:
