@@ -13,18 +13,6 @@ pub enum VizierResponse {
     Message(String),
 }
 
-// pub type VizierTransport = Arc<Mutex<VizierTransportImpl>>;
-
-pub trait VizierTransportConstructor {
-    fn init_transport() -> Self;
-}
-
-// impl VizierTransportConstructor for VizierTransport {
-//     fn init_transport() -> Self {
-//         Arc::new(Mutex::new(VizierTransportImpl::new()))
-//     }
-// }
-
 #[derive(Debug, Clone)]
 pub struct VizierTransport {
     pub request_writer: Arc<flume::Sender<(VizierSession, VizierRequest)>>,

@@ -44,6 +44,11 @@ pub struct VizierConfig {
     pub channels: ChannelsConfig,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+struct AllConfig {
+    vizier: VizierConfig,
+}
+
 impl VizierConfig {
     pub fn load(path: Option<std::path::PathBuf>) -> Result<Self> {
         let mut default_path = dirs::home_dir().unwrap();
@@ -72,7 +77,9 @@ impl VizierConfig {
             .build()?;
 
         log::info!("config loaded: {:?}", path.to_str().unwrap());
-        Ok(settings.try_deserialize::<Self>()?)
+        let config = settings.try_deserialize::<AllConfig>()?;
+
+        Ok(config.vizier)
     }
 
     pub fn create_file(path: std::path::PathBuf) -> Result<()> {
