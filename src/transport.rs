@@ -4,8 +4,16 @@ use crate::agent::session::VizierSession;
 
 #[derive(Debug, Clone)]
 pub struct VizierRequest {
+    pub user: String,
     pub content: String,
 }
+
+impl VizierRequest {
+    pub fn to_prompt(&self) -> String {
+        format!("{}: {}", self.user, self.content)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum VizierResponse {
     StartThinking,

@@ -49,7 +49,11 @@ pub async fn run() -> Result<()> {
             let config = VizierConfig::load(args.config.clone())?;
             let transport = VizierTransport::new();
 
-            let mut agents = VizierAgents::new(config.agents.clone(), transport.clone())?;
+            let mut agents = VizierAgents::new(
+                config.agents.clone(),
+                config.memory.clone(),
+                transport.clone(),
+            )?;
             tokio::spawn(async move {
                 if let Err(err) = agents.run().await {
                     log::error!("{}", err);

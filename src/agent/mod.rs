@@ -1,17 +1,17 @@
 use anyhow::Result;
-use rig::OneOrMany;
 use rig::agent::Agent;
 use rig::client::{CompletionClient, Nothing};
-use rig::completion::{Chat, CompletionModel, Prompt};
-use rig::message::{Message, UserContent};
+use rig::completion::{Chat, CompletionModel};
 use rig::providers::{ollama, openrouter};
-use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
+use crate::agent::memory::SessionMemory;
 use crate::agent::session::VizierSession;
-use crate::config::{AgentConfig, AgentConfigs};
+use crate::config::{AgentConfig, AgentConfigs, MemoryConfig};
 use crate::transport::{VizierRequest, VizierResponse, VizierTransport};
+use crate::utils::remove_think_tags;
 
 pub mod memory;
 pub mod session;
@@ -19,14 +19,20 @@ pub mod session;
 #[derive(Clone)]
 pub struct VizierAgents {
     config: AgentConfigs,
+    memory_config: MemoryConfig,
     transport: VizierTransport,
-    sessions: HashMap<VizierSession, Arc<VizierAgent>>,
+    sessions: HashMap<VizierSession, Arc<Mutex<VizierAgent>>>,
 }
 
 impl VizierAgents {
-    pub fn new(config: AgentConfigs, transport: VizierTransport) -> Result<Self> {
+    pub fn new(
+        config: AgentConfigs,
+        memory_config: MemoryConfig,
+        transport: VizierTransport,
+    ) -> Result<Self> {
         Ok(Self {
             config: config,
+            memory_config: memory_config,
             transport,
             sessions: HashMap::new(),
         })
@@ -71,11 +77,11 @@ impl VizierAgents {
     ) -> Result<String> {
         // find session, if none found, make it then retry
         if let Some(agent) = self.sessions.get(session) {
-            agent.handle_prompt(req.content.clone()).await
+            agent.lock().await.handle_chat(req.clone()).await
         } else {
-            let agent = Arc::new(self.init_session()?);
+            let agent = Arc::new(Mutex::new(self.init_session()?));
             self.sessions.insert(session.clone(), agent.clone());
-            agent.handle_prompt(req.content.clone()).await
+            agent.lock().await.handle_chat(req.clone()).await
         }
     }
 
@@ -87,11 +93,13 @@ impl VizierAgents {
                 VizierAgent::OpenRouter(VizierAgentImpl::<openrouter::CompletionModel>::new(
                     "primary".into(),
                     primary_config,
+                    &self.memory_config,
                 )?)
             }
             _ => VizierAgent::Ollama(VizierAgentImpl::<ollama::CompletionModel>::new(
                 "primary".into(),
                 primary_config,
+                &self.memory_config,
             )?),
         };
 
@@ -106,19 +114,10 @@ pub enum VizierAgent {
 }
 
 impl VizierAgent {
-    pub async fn handle_prompt(&self, prompt: String) -> Result<String> {
+    pub async fn handle_chat(&mut self, req: VizierRequest) -> Result<String> {
         let response = match self {
-            Self::Ollama(agent) => agent.agent.prompt(prompt).await,
-            Self::OpenRouter(agent) => agent.agent.prompt(prompt).await,
-        }?;
-
-        Ok(response.to_string())
-    }
-
-    pub async fn handle_chat(&self, prompt: String) -> Result<String> {
-        let response = match self {
-            Self::Ollama(agent) => agent.agent.chat(prompt, vec![]).await,
-            Self::OpenRouter(agent) => agent.agent.chat(prompt, vec![]).await,
+            Self::Ollama(agent) => agent.chat(req).await,
+            Self::OpenRouter(agent) => agent.chat(req).await,
         }?;
 
         Ok(response.to_string())
@@ -129,10 +128,30 @@ impl VizierAgent {
 pub struct VizierAgentImpl<T: CompletionModel> {
     id: String,
     agent: Agent<T>,
+    session_memory: SessionMemory,
+}
+
+impl<T: CompletionModel> VizierAgentImpl<T> {
+    async fn chat(&mut self, req: VizierRequest) -> Result<String> {
+        self.session_memory.push_user_message(req.clone());
+        let response = self
+            .agent
+            .chat(
+                format!("{}\n{}", req.content, self.session_memory.summary_prompt()),
+                self.session_memory.recall_as_messages(),
+            )
+            .await?;
+
+        let response_msg = remove_think_tags(&*response.to_string());
+        self.session_memory
+            .push_agent(self.agent.name.clone().unwrap(), response_msg);
+
+        Ok(response.to_string())
+    }
 }
 
 impl VizierAgentImpl<ollama::CompletionModel> {
-    fn new(id: String, config: &AgentConfig) -> Result<Self> {
+    fn new(id: String, config: &AgentConfig, memory_config: &MemoryConfig) -> Result<Self> {
         let client: ollama::Client = ollama::Client::builder()
             .base_url(config.model.base_url.clone())
             .api_key(Nothing)
@@ -140,28 +159,32 @@ impl VizierAgentImpl<ollama::CompletionModel> {
 
         let agent = client
             .agent(config.model.name.clone())
-            .preamble("you are helpfull personal assistant")
+            .name(&*config.model.name.clone())
+            .preamble(&config.preamble)
             .build();
 
         Ok(Self {
             id: id.clone(),
             agent,
+            session_memory: SessionMemory::new(memory_config.clone()),
         })
     }
 }
 
 impl VizierAgentImpl<openrouter::CompletionModel> {
-    fn new(id: String, config: &AgentConfig) -> Result<Self> {
+    fn new(id: String, config: &AgentConfig, memory_config: &MemoryConfig) -> Result<Self> {
         let client: openrouter::Client = openrouter::Client::new(config.model.api_key.clone())?;
 
         let agent = client
             .agent(config.model.name.clone())
-            .preamble("you are helpfull personal assistant")
+            .name(&*config.model.name.clone())
+            .preamble(&config.preamble)
             .build();
 
         Ok(Self {
             id: id.clone(),
             agent,
+            session_memory: SessionMemory::new(memory_config.clone()),
         })
     }
 }

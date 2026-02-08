@@ -11,9 +11,21 @@ use serde::Deserialize;
 use crate::constant;
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct MemoryConfig {
+    pub session_memory_recall_depth: usize,
+    pub mongodb: Option<MongoDBConfig>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct MongoDBConfig {
+    pub connection_string: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct AgentConfig {
     pub name: Option<String>,
     pub model: ModelConfig,
+    pub preamble: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -42,6 +54,7 @@ pub type AgentConfigs = HashMap<String, AgentConfig>;
 pub struct VizierConfig {
     pub agents: AgentConfigs,
     pub channels: ChannelsConfig,
+    pub memory: MemoryConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -77,7 +90,14 @@ impl VizierConfig {
             .build()?;
 
         log::info!("config loaded: {:?}", path.to_str().unwrap());
-        let config = settings.try_deserialize::<AllConfig>()?;
+        let mut config = settings.try_deserialize::<AllConfig>()?;
+
+        // fill empty name with id
+        for (id, agent) in config.vizier.agents.iter_mut() {
+            if agent.name.is_none() {
+                agent.name = Some(id.to_string());
+            }
+        }
 
         Ok(config.vizier)
     }

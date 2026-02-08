@@ -81,6 +81,7 @@ impl EventHandler for Handler {
             let _ = self.0.request_writer.send((
                 VizierSession::DiscordChanel(msg.channel_id.get()),
                 VizierRequest {
+                    user: msg.author.display_name().to_string(),
                     content: msg.content,
                 },
             ));
