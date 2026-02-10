@@ -9,7 +9,7 @@ until curl -s http://localhost:11434/api/tags > /dev/null; do
 done
 
 # Pull the LLM Model model
-ollama pull deepseek-r1:1.5b
+ollama pull qwen3:4b
 
 # Pull embedding model
 ollama pull nomic-embed-text

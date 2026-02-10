@@ -52,6 +52,7 @@ pub async fn run() -> Result<()> {
             let mut agents = VizierAgents::new(
                 config.agents.clone(),
                 config.memory.clone(),
+                config.tools.clone(),
                 transport.clone(),
             )?;
             tokio::spawn(async move {

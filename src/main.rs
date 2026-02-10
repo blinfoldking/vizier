@@ -9,6 +9,7 @@ mod agent;
 mod channels;
 mod config;
 mod constant;
+mod error;
 mod transport;
 mod utils;
 mod vizier;

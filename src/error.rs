@@ -1,0 +1,15 @@
+#[derive(Debug, Clone)]
+pub struct VizierError(String);
+
+pub fn error<T, E: std::error::Error>(prefix: &str, err: E) -> Result<T, VizierError> {
+    log::error!("{}: {}", prefix, err);
+    Err(VizierError(format!("{}: {}", prefix, err.to_string())))
+}
+
+impl std::fmt::Display for VizierError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for VizierError {}

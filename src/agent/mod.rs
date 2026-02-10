@@ -10,7 +10,8 @@ use tokio::sync::Mutex;
 
 use crate::agent::memory::SessionMemory;
 use crate::agent::session::VizierSession;
-use crate::config::{AgentConfig, AgentConfigs, MemoryConfig};
+use crate::agent::tools::VizierTools;
+use crate::config::{AgentConfig, AgentConfigs, MemoryConfig, ToolsConfig};
 use crate::transport::{VizierRequest, VizierResponse, VizierTransport};
 use crate::utils::remove_think_tags;
 
@@ -24,18 +25,21 @@ pub struct VizierAgents {
     memory_config: MemoryConfig,
     transport: VizierTransport,
     sessions: HashMap<VizierSession, Arc<Mutex<VizierAgent>>>,
+    tools: VizierTools,
 }
 
 impl VizierAgents {
     pub fn new(
         config: AgentConfigs,
         memory_config: MemoryConfig,
+        tool_config: ToolsConfig,
         transport: VizierTransport,
     ) -> Result<Self> {
         Ok(Self {
             config: config,
             memory_config: memory_config,
             transport,
+            tools: VizierTools::new(tool_config),
             sessions: HashMap::new(),
         })
     }
@@ -103,12 +107,14 @@ impl VizierAgents {
             "openrouter" => {
                 VizierAgent::OpenRouter(VizierAgentImpl::<openrouter::CompletionModel>::new(
                     primary_config.name.clone(),
+                    self.tools.clone(),
                     primary_config,
                     &self.memory_config,
                 )?)
             }
             _ => VizierAgent::Ollama(VizierAgentImpl::<ollama::CompletionModel>::new(
                 primary_config.name.clone(),
+                self.tools.clone(),
                 primary_config,
                 &self.memory_config,
             )?),
@@ -162,7 +168,12 @@ impl<T: CompletionModel> VizierAgentImpl<T> {
 }
 
 impl VizierAgentImpl<ollama::CompletionModel> {
-    fn new(id: String, config: &AgentConfig, memory_config: &MemoryConfig) -> Result<Self> {
+    fn new(
+        id: String,
+        tool: VizierTools,
+        config: &AgentConfig,
+        memory_config: &MemoryConfig,
+    ) -> Result<Self> {
         let client: ollama::Client = ollama::Client::builder()
             .base_url(config.model.base_url.clone())
             .api_key(Nothing)
@@ -172,6 +183,8 @@ impl VizierAgentImpl<ollama::CompletionModel> {
             .agent(config.model.name.clone())
             .name(&*config.model.name.clone())
             .preamble(&config.preamble)
+            .tool_server_handle(tool.handle)
+            .default_max_turns(tool.turn_depth as usize)
             .build();
 
         Ok(Self {
@@ -183,13 +196,20 @@ impl VizierAgentImpl<ollama::CompletionModel> {
 }
 
 impl VizierAgentImpl<openrouter::CompletionModel> {
-    fn new(id: String, config: &AgentConfig, memory_config: &MemoryConfig) -> Result<Self> {
+    fn new(
+        id: String,
+        tool: VizierTools,
+        config: &AgentConfig,
+        memory_config: &MemoryConfig,
+    ) -> Result<Self> {
         let client: openrouter::Client = openrouter::Client::new(config.model.api_key.clone())?;
 
         let agent = client
             .agent(config.model.name.clone())
             .name(&*config.model.name.clone())
             .preamble(&config.preamble)
+            .tool_server_handle(tool.handle)
+            .default_max_turns(tool.turn_depth as usize)
             .build();
 
         Ok(Self {

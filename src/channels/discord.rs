@@ -108,15 +108,22 @@ impl VizierHandler for DiscordHandler {
 struct Handler(VizierTransport);
 #[async_trait]
 impl EventHandler for Handler {
-    async fn message(&self, _ctx: Context, msg: Message) {
-        if msg.author.name != "Vizier" {
-            let _ = self.0.request_writer.send((
-                VizierSession::DiscordChanel(msg.channel_id.get()),
-                VizierRequest {
-                    user: msg.author.display_name().to_string(),
-                    content: msg.content,
-                },
-            ));
+    async fn message(&self, ctx: Context, msg: Message) {
+        if let Ok(is_mention) = msg.mentions_me(ctx.http).await {
+            if !is_mention {
+                return;
+            }
+
+            let current_user = ctx.cache.current_user().discriminator;
+            if msg.author.discriminator != current_user {
+                let _ = self.0.request_writer.send((
+                    VizierSession::DiscordChanel(msg.channel_id.get()),
+                    VizierRequest {
+                        user: msg.author.display_name().to_string(),
+                        content: msg.content,
+                    },
+                ));
+            }
         }
     }
 }

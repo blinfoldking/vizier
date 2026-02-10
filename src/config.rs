@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    fs::{self, File},
-    str::FromStr,
-};
+use std::{fs, str::FromStr};
 
 use anyhow::Result;
 use config::Config;
@@ -56,10 +52,25 @@ pub struct AgentConfigs {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct ToolsConfig {
+    pub brave_search: Option<BraveSearchConfig>,
+    #[serde(default)]
+    pub turn_depth: u32,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct BraveSearchConfig {
+    pub api_key: String,
+    #[serde(default)]
+    pub safesearch: bool,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct VizierConfig {
     pub agents: AgentConfigs,
     pub channels: ChannelsConfig,
     pub memory: MemoryConfig,
+    pub tools: ToolsConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
