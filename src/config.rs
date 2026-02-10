@@ -23,8 +23,9 @@ pub struct MongoDBConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AgentConfig {
-    pub name: Option<String>,
+    pub name: String,
     pub model: ModelConfig,
+    #[serde(default)]
     pub preamble: String,
 }
 
@@ -48,7 +49,11 @@ pub struct DiscordChannelConfig {
     pub token: String,
 }
 
-pub type AgentConfigs = HashMap<String, AgentConfig>;
+#[derive(Debug, Deserialize, Clone)]
+pub struct AgentConfigs {
+    pub primary: AgentConfig,
+    pub embedding: Option<AgentConfig>,
+}
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct VizierConfig {
@@ -90,14 +95,7 @@ impl VizierConfig {
             .build()?;
 
         log::info!("config loaded: {:?}", path.to_str().unwrap());
-        let mut config = settings.try_deserialize::<AllConfig>()?;
-
-        // fill empty name with id
-        for (id, agent) in config.vizier.agents.iter_mut() {
-            if agent.name.is_none() {
-                agent.name = Some(id.to_string());
-            }
-        }
+        let config = settings.try_deserialize::<AllConfig>()?;
 
         Ok(config.vizier)
     }

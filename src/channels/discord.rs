@@ -1,12 +1,17 @@
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::Result;
-use serenity::all::ChannelId;
+use futures::future::try_join_all;
+use serenity::all::{ChannelId, Http};
 use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::prelude::*;
+use text_splitter::MarkdownSplitter;
 
 use crate::agent::session::VizierSession;
 use crate::channels::VizierHandler;
-use crate::config::DiscordChannelConfig;
+use crate::config::{self, DiscordChannelConfig};
 use crate::transport::{VizierRequest, VizierResponse, VizierTransport};
 use crate::utils::remove_think_tags;
 
@@ -31,6 +36,39 @@ impl DiscordHandler {
     }
 }
 
+async fn send_message(http: Arc<Http>, channel_id: &ChannelId, content: String) -> Result<()> {
+    if content.len() < 2000 {
+        let channel_id = channel_id.clone();
+        tokio::spawn(async move {
+            let content = content.clone();
+            if let Err(err) = channel_id.say(&http, content.clone()).await {
+                log::error!("{:?}", err);
+            }
+        });
+
+        return Ok(());
+    }
+
+    let splitter = MarkdownSplitter::new(2000);
+    let content = content.clone();
+    let chunks = splitter
+        .chunks(&content)
+        .into_iter()
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
+
+    let channel_id = channel_id.clone();
+    tokio::spawn(async move {
+        for msg in chunks.clone() {
+            if let Err(err) = channel_id.say(&http, msg).await {
+                log::error!("{:?}", err);
+            }
+        }
+    });
+
+    Ok(())
+}
+
 impl VizierHandler for DiscordHandler {
     async fn run(&mut self) -> Result<()> {
         let transport = self.transport.clone();
@@ -51,13 +89,8 @@ impl VizierHandler for DiscordHandler {
                             });
                         }
                         VizierResponse::Message(content) => {
-                            tokio::spawn(async move {
-                                if let Err(err) =
-                                    channel_id.say(&http, remove_think_tags(&content)).await
-                                {
-                                    log::error!("{:?}", err);
-                                }
-                            });
+                            let content = remove_think_tags(&content.clone());
+                            let _ = send_message(http, &channel_id, content).await;
                         }
                         _ => {}
                     }
@@ -73,7 +106,6 @@ impl VizierHandler for DiscordHandler {
 }
 
 struct Handler(VizierTransport);
-
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, _ctx: Context, msg: Message) {

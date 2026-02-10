@@ -5,6 +5,7 @@ use rig::completion::{Chat, CompletionModel};
 use rig::providers::{ollama, openrouter};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 
 use crate::agent::memory::SessionMemory;
@@ -15,6 +16,7 @@ use crate::utils::remove_think_tags;
 
 pub mod memory;
 pub mod session;
+pub mod tools;
 
 #[derive(Clone)]
 pub struct VizierAgents {
@@ -42,10 +44,18 @@ impl VizierAgents {
         let transport = self.transport.clone();
         loop {
             if let Ok((session, request)) = transport.request_reader.recv() {
-                // start thinking
-                let _ = transport
-                    .response_writer
-                    .send((session.clone(), VizierResponse::StartThinking));
+                // start thinking every 5 second until response ready
+                let thinking_transport = transport.clone();
+                let thinking_session = session.clone();
+                let thinking = tokio::spawn(async move {
+                    loop {
+                        let _ = thinking_transport
+                            .response_writer
+                            .send((thinking_session.clone(), VizierResponse::StartThinking));
+
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+                    }
+                });
 
                 let content = self.handle_request(&session.clone(), &request).await;
                 match content {
@@ -63,6 +73,7 @@ impl VizierAgents {
                 }
 
                 // stop thinking
+                thinking.abort();
                 let _ = transport
                     .response_writer
                     .send((session.clone(), VizierResponse::StopThinking));
@@ -87,17 +98,17 @@ impl VizierAgents {
 
     fn init_session(&mut self) -> Result<VizierAgent> {
         // TODO: hardcord to use primary only for now
-        let primary_config = self.config.get("primary").unwrap();
+        let primary_config = &self.config.primary;
         let agent = match &*primary_config.model.provider.clone() {
             "openrouter" => {
                 VizierAgent::OpenRouter(VizierAgentImpl::<openrouter::CompletionModel>::new(
-                    "primary".into(),
+                    primary_config.name.clone(),
                     primary_config,
                     &self.memory_config,
                 )?)
             }
             _ => VizierAgent::Ollama(VizierAgentImpl::<ollama::CompletionModel>::new(
-                "primary".into(),
+                primary_config.name.clone(),
                 primary_config,
                 &self.memory_config,
             )?),

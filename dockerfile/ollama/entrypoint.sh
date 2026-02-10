@@ -11,5 +11,8 @@ done
 # Pull the LLM Model model
 ollama pull deepseek-r1:1.5b
 
+# Pull embedding model
+ollama pull nomic-embed-text
+
 # Keep the container running
 wait
