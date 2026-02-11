@@ -8,18 +8,18 @@ use serenity::prelude::*;
 use text_splitter::MarkdownSplitter;
 
 use crate::agent::session::VizierSession;
-use crate::channels::VizierHandler;
+use crate::channels::VizierChannel;
 use crate::config::DiscordChannelConfig;
 use crate::transport::{VizierRequest, VizierResponse, VizierTransport, VizierTransportChannel};
 use crate::utils::remove_think_tags;
 
-pub struct DiscordHandler {
+pub struct DiscordChannel {
     transport: VizierTransport,
     config: DiscordChannelConfig,
     client: Client,
 }
 
-impl DiscordHandler {
+impl DiscordChannel {
     pub async fn new(config: DiscordChannelConfig, transport: VizierTransport) -> Result<Self> {
         let intents = GatewayIntents::all();
         let client = Client::builder(config.token.clone(), intents)
@@ -67,7 +67,7 @@ async fn send_message(http: Arc<Http>, channel_id: &ChannelId, content: String) 
     Ok(())
 }
 
-impl VizierHandler for DiscordHandler {
+impl VizierChannel for DiscordChannel {
     async fn run(&mut self) -> Result<()> {
         let transport = self.transport.clone();
         let http = self.client.http.clone();

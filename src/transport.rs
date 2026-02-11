@@ -9,7 +9,7 @@ use crate::agent::session::VizierSession;
 #[derive(Debug, Clone, Hash, PartialEq, Eq, EnumIter)]
 pub enum VizierTransportChannel {
     Discord,
-    Websocket,
+    API,
 }
 
 #[derive(Debug, Clone)]
@@ -132,7 +132,7 @@ impl VizierTransport {
 
                     let channel = match session {
                         VizierSession::DiscordChanel(_) => VizierTransportChannel::Discord,
-                        VizierSession::WebsocketRoom(_) => VizierTransportChannel::Websocket,
+                        VizierSession::API(_) => VizierTransportChannel::API,
                     };
 
                     let _ = channel_transport

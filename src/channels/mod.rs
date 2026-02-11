@@ -1,12 +1,15 @@
 use anyhow::Result;
 
 use crate::{
-    channels::discord::DiscordHandler, config::ChannelsConfig, transport::VizierTransport,
+    channels::{api::APIChannel, discord::DiscordChannel},
+    config::ChannelsConfig,
+    transport::VizierTransport,
 };
 
-pub mod discord;
+mod api;
+mod discord;
 
-pub trait VizierHandler {
+pub trait VizierChannel {
     async fn run(&mut self) -> Result<()>;
 }
 
@@ -23,10 +26,20 @@ impl VizierChannels {
     pub async fn run(&self) -> Result<()> {
         if let Some(discord_config) = &self.config.discord {
             let mut discord =
-                DiscordHandler::new(discord_config.clone(), self.transport.clone()).await?;
+                DiscordChannel::new(discord_config.clone(), self.transport.clone()).await?;
             tokio::spawn(async move {
                 if let Err(e) = discord.run().await {
                     log::error!("Err{:?}", e)
+                }
+            });
+        }
+
+        if let Some(api_config) = &self.config.api {
+            let mut api = APIChannel::new(api_config.clone(), self.transport.clone())?;
+
+            tokio::spawn(async move {
+                if let Err(e) = api.run().await {
+                    log::error!("Err{:?}", e);
                 }
             });
         }
