@@ -52,15 +52,15 @@ impl VizierAgents {
     pub async fn run(&mut self) -> Result<()> {
         let transport = self.transport.clone();
         loop {
-            if let Ok((session, request)) = transport.request_reader.recv() {
+            if let Ok((session, request)) = transport.read_request().await {
                 // start thinking every 5 second until response ready
                 let thinking_transport = transport.clone();
                 let thinking_session = session.clone();
                 let thinking = tokio::spawn(async move {
                     loop {
                         let _ = thinking_transport
-                            .response_writer
-                            .send((thinking_session.clone(), VizierResponse::StartThinking));
+                            .send_response(thinking_session.clone(), VizierResponse::StartThinking)
+                            .await;
 
                         tokio::time::sleep(Duration::from_secs(5)).await;
                     }
@@ -73,8 +73,8 @@ impl VizierAgents {
                     }
                     Ok(content) => {
                         if let Err(err) = transport
-                            .response_writer
-                            .send((session.clone(), VizierResponse::Message(content)))
+                            .send_response(session.clone(), VizierResponse::Message(content))
+                            .await
                         {
                             log::error!("{}", err);
                         }
@@ -84,8 +84,8 @@ impl VizierAgents {
                 // stop thinking
                 thinking.abort();
                 let _ = transport
-                    .response_writer
-                    .send((session.clone(), VizierResponse::StopThinking));
+                    .send_response(session.clone(), VizierResponse::StopThinking)
+                    .await;
             }
         }
     }

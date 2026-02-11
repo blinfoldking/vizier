@@ -4122,6 +4122,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "serenity",
+ "strum",
  "text-splitter",
  "tokio",
 ]

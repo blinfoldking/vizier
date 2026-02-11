@@ -86,8 +86,7 @@ async fn run(args: RunArgs) -> Result<()> {
         }
     });
 
-    // TODO: log transport
-    loop {}
+    transport.run().await
 }
 
 pub fn init_workspace(path: String) {

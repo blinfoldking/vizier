@@ -1,8 +1,6 @@
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::Result;
-use futures::future::try_join_all;
 use serenity::all::{ChannelId, Http};
 use serenity::async_trait;
 use serenity::model::channel::Message;
@@ -11,8 +9,8 @@ use text_splitter::MarkdownSplitter;
 
 use crate::agent::session::VizierSession;
 use crate::channels::VizierHandler;
-use crate::config::{self, DiscordChannelConfig};
-use crate::transport::{VizierRequest, VizierResponse, VizierTransport};
+use crate::config::DiscordChannelConfig;
+use crate::transport::{VizierRequest, VizierResponse, VizierTransport, VizierTransportChannel};
 use crate::utils::remove_think_tags;
 
 pub struct DiscordHandler {
@@ -76,8 +74,9 @@ impl VizierHandler for DiscordHandler {
 
         tokio::spawn(async move {
             loop {
-                if let Ok((VizierSession::DiscordChanel(channel_id), res)) =
-                    transport.response_reader.recv()
+                if let Ok((VizierSession::DiscordChanel(channel_id), res)) = transport
+                    .read_response(VizierTransportChannel::Discord)
+                    .await
                 {
                     let http = http.clone();
                     let channel_id = ChannelId::new(channel_id);
@@ -116,13 +115,16 @@ impl EventHandler for Handler {
 
         let current_user = ctx.cache.current_user().discriminator;
         if msg.author.discriminator != current_user {
-            let _ = self.0.request_writer.send((
-                VizierSession::DiscordChanel(msg.channel_id.get()),
-                VizierRequest {
-                    user: msg.author.display_name().to_string(),
-                    content: msg.content,
-                },
-            ));
+            let _ = self
+                .0
+                .send_request(
+                    VizierSession::DiscordChanel(msg.channel_id.get()),
+                    VizierRequest {
+                        user: msg.author.display_name().to_string(),
+                        content: msg.content,
+                    },
+                )
+                .await;
         }
         // }
     }
