@@ -14,6 +14,7 @@ mod request;
 mod response;
 
 pub trait SearchType {
+    const NAME: &'static str;
     fn result_filter() -> String;
     fn description() -> String {
         "search the general informations on certain topic on the internet".into()
@@ -22,6 +23,8 @@ pub trait SearchType {
 
 pub struct WebOnlySearch;
 impl SearchType for WebOnlySearch {
+    const NAME: &'static str = "web_search";
+
     fn result_filter() -> String {
         "web".into()
     }
@@ -29,6 +32,8 @@ impl SearchType for WebOnlySearch {
 
 pub struct NewsOnlySearch;
 impl SearchType for NewsOnlySearch {
+    const NAME: &'static str = "news_search";
+
     fn result_filter() -> String {
         "news".into()
     }
@@ -70,7 +75,7 @@ impl<T: SearchType> Tool for BraveSearch<T>
 where
     Self: Send + Sync,
 {
-    const NAME: &'static str = "brave_search";
+    const NAME: &'static str = T::NAME;
     type Error = VizierError;
     type Args = BraveSearchArgs;
     type Output = response::BraveResponse;
@@ -79,7 +84,7 @@ where
         let parameters = serde_json::to_value(schema_for!(Self::Args)).unwrap();
 
         ToolDefinition {
-            name: "brave_search".into(),
+            name: T::NAME.to_string(),
             description: T::description(),
             parameters,
         }

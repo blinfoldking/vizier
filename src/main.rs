@@ -17,5 +17,5 @@ mod vizier;
 #[tokio::main]
 async fn main() -> Result<()> {
     pretty_env_logger::init();
-    vizier::run().await
+    vizier::cli().await
 }

@@ -21,8 +21,6 @@ pub struct MongoDBConfig {
 pub struct AgentConfig {
     pub name: String,
     pub model: ModelConfig,
-    #[serde(default)]
-    pub preamble: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -67,6 +65,7 @@ pub struct BraveSearchConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct VizierConfig {
+    pub workspace: String,
     pub agents: AgentConfigs,
     pub channels: ChannelsConfig,
     pub memory: MemoryConfig,

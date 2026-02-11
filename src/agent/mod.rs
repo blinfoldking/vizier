@@ -3,6 +3,7 @@ use rig::agent::Agent;
 use rig::client::{CompletionClient, Nothing};
 use rig::completion::{Chat, CompletionModel};
 use rig::providers::{ollama, openrouter};
+use rig::streaming::StreamingChat;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -12,6 +13,7 @@ use crate::agent::memory::SessionMemory;
 use crate::agent::session::VizierSession;
 use crate::agent::tools::VizierTools;
 use crate::config::{AgentConfig, AgentConfigs, MemoryConfig, ToolsConfig};
+use crate::constant::BOOT_MD;
 use crate::transport::{VizierRequest, VizierResponse, VizierTransport};
 use crate::utils::remove_think_tags;
 
@@ -26,10 +28,12 @@ pub struct VizierAgents {
     transport: VizierTransport,
     sessions: HashMap<VizierSession, Arc<Mutex<VizierAgent>>>,
     tools: VizierTools,
+    workspace: String,
 }
 
 impl VizierAgents {
     pub fn new(
+        workspace: String,
         config: AgentConfigs,
         memory_config: MemoryConfig,
         tool_config: ToolsConfig,
@@ -39,8 +43,9 @@ impl VizierAgents {
             config: config,
             memory_config: memory_config,
             transport,
-            tools: VizierTools::new(tool_config),
+            tools: VizierTools::new(workspace.clone(), tool_config),
             sessions: HashMap::new(),
+            workspace,
         })
     }
 
@@ -179,10 +184,15 @@ impl VizierAgentImpl<ollama::CompletionModel> {
             .api_key(Nothing)
             .build()?;
 
+        let boot = std::fs::read_to_string(std::path::PathBuf::from(format!(
+            "{}/BOOT.MD",
+            tool.workspace
+        )))?;
+
         let agent = client
             .agent(config.model.name.clone())
             .name(&*config.model.name.clone())
-            .preamble(&config.preamble)
+            .preamble(&boot)
             .tool_server_handle(tool.handle)
             .default_max_turns(tool.turn_depth as usize)
             .build();
@@ -204,10 +214,15 @@ impl VizierAgentImpl<openrouter::CompletionModel> {
     ) -> Result<Self> {
         let client: openrouter::Client = openrouter::Client::new(config.model.api_key.clone())?;
 
+        let boot = std::fs::read_to_string(std::path::PathBuf::from(format!(
+            "{}/BOOT.MD",
+            tool.workspace
+        )))?;
+
         let agent = client
             .agent(config.model.name.clone())
             .name(&*config.model.name.clone())
-            .preamble(&config.preamble)
+            .preamble(&boot)
             .tool_server_handle(tool.handle)
             .default_max_turns(tool.turn_depth as usize)
             .build();
