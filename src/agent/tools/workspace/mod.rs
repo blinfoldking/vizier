@@ -15,7 +15,7 @@ pub trait PrimaryDocument {
 pub struct AgentDocument;
 
 impl PrimaryDocument for AgentDocument {
-    const NAME: &'static str = "AGENT.MD";
+    const NAME: &'static str = "AGENT.md";
     const READ_NAME: &'static str = "READ_AGENT_MD_FILE";
     const WRITE_NAME: &'static str = "WRITE_AGENT_MD_FILE";
 }
@@ -23,7 +23,7 @@ impl PrimaryDocument for AgentDocument {
 pub struct IdentDocument;
 
 impl PrimaryDocument for IdentDocument {
-    const NAME: &'static str = "IDENT.MD";
+    const NAME: &'static str = "IDENT.md";
     const READ_NAME: &'static str = "READ_IDENT_MD_FILE";
     const WRITE_NAME: &'static str = "WRITE_IDENT_MD_FILE";
 }
@@ -31,9 +31,17 @@ impl PrimaryDocument for IdentDocument {
 pub struct UserDocument;
 
 impl PrimaryDocument for UserDocument {
-    const NAME: &'static str = "USER.MD";
+    const NAME: &'static str = "USER.md";
     const READ_NAME: &'static str = "READ_USER_MD_FILE";
     const WRITE_NAME: &'static str = "WRITE_USER_MD_FILE";
+}
+
+pub struct ContextDocument;
+
+impl PrimaryDocument for ContextDocument {
+    const NAME: &'static str = "CONTEXT.md";
+    const READ_NAME: &'static str = "READ_CONTEXT_MD_FILE";
+    const WRITE_NAME: &'static str = "WRITE_CONTEXT_MD_FILE";
 }
 
 pub struct ReadPrimaryDocument<T: PrimaryDocument> {

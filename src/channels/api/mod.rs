@@ -75,6 +75,7 @@ async fn chat(
             VizierRequest {
                 user: request.user.clone(),
                 content: request.content.clone(),
+                ..Default::default()
             },
         )
         .await

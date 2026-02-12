@@ -4,7 +4,7 @@ use crate::{
     agent::tools::{
         brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
         workspace::{
-            AgentDocument, IdentDocument, ReadPrimaryDocument, UserDocument,
+            AgentDocument, ContextDocument, IdentDocument, ReadPrimaryDocument, UserDocument,
             WritePrimaryDocument,
         },
     },
@@ -24,20 +24,20 @@ pub struct VizierTools {
 impl VizierTools {
     pub fn new(workspace: String, config: ToolsConfig) -> Self {
         let mut tool_server_builder = ToolServer::new()
-            .tool(ReadPrimaryDocument::<AgentDocument>::new(
-                workspace.clone(),
-            ))
-            .tool(ReadPrimaryDocument::<IdentDocument>::new(
-                workspace.clone(),
-            ))
+            .tool(ReadPrimaryDocument::<AgentDocument>::new(workspace.clone()))
+            .tool(ReadPrimaryDocument::<IdentDocument>::new(workspace.clone()))
             .tool(ReadPrimaryDocument::<UserDocument>::new(workspace.clone()))
+            .tool(ReadPrimaryDocument::<ContextDocument>::new(
+                workspace.clone(),
+            ))
             .tool(WritePrimaryDocument::<AgentDocument>::new(
                 workspace.clone(),
             ))
             .tool(WritePrimaryDocument::<IdentDocument>::new(
                 workspace.clone(),
             ))
-            .tool(WritePrimaryDocument::<UserDocument>::new(
+            .tool(WritePrimaryDocument::<UserDocument>::new(workspace.clone()))
+            .tool(WritePrimaryDocument::<ContextDocument>::new(
                 workspace.clone(),
             ));
 

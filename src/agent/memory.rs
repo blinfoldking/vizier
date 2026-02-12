@@ -98,17 +98,26 @@ impl SessionMemory {
     }
 
     pub fn summary_prompt(&self) -> String {
-        match self.summary.clone() {
-            Some(summary) => format!(
-                r"
+        let content = match self.summary.clone() {
+            Some(summary) => summary,
+            _ => self.format_messages_for_summary(),
+        };
+
+        format!(
+            r"
             ## Context
 
-            Context for our current session: {}
+            Context for our current session: 
+
+            {}
                 ",
-                summary
-            ),
-            _ => "".to_string(),
-        }
+            content,
+        )
+    }
+
+    pub fn flush(&mut self) {
+        self.messages.clear();
+        self.summary = None;
     }
 }
 

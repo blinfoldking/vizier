@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use anyhow::Result;
-use futures::future::join_all;
+use serde_json::json;
 use strum::{EnumIter, IntoEnumIterator};
 
 use crate::agent::session::VizierSession;
@@ -12,21 +12,34 @@ pub enum VizierTransportChannel {
     API,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct VizierRequest {
     pub user: String,
     pub content: String,
+    pub is_silent_read: bool,
+    pub metadata: serde_json::Value,
 }
 
 impl VizierRequest {
-    pub fn to_prompt(&self) -> String {
-        format!("{}: {}", self.user, self.content)
+    pub fn to_prompt(&self) -> Result<String> {
+        Ok(format!(
+            "---\n{}\n---\n\n{}",
+            self.generate_frontmatter()?,
+            self.content
+        ))
+    }
+
+    pub fn generate_frontmatter(&self) -> Result<String> {
+        Ok(serde_yaml::to_string(&json!({
+            "sender": self.user,
+            "metadata": self.metadata,
+        }))?)
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum VizierResponse {
-    StartThinking,
+    Thinking,
     StopThinking,
     Message(String),
 }
@@ -110,13 +123,13 @@ impl VizierTransport {
         // transport request
         let request_reader = self.request_reader.clone();
         let agent_transport = self.agent_transport.clone();
-        let agent_handle = tokio::spawn(async move {
+        tokio::spawn(async move {
             loop {
                 if let Ok((session, request)) = request_reader.recv() {
                     // TODO: middleware here
                     log::info!("request {:?} -> {:?}", session, request);
 
-                    let _ = agent_transport.0.send((session, request));
+                    let _ = agent_transport.clone().0.send((session, request));
                 }
             }
         });
@@ -124,7 +137,7 @@ impl VizierTransport {
         // transport per channels
         let channel_transport = self.channel_transport.clone();
         let response_reader = self.response_reader.clone();
-        let channel_handle = tokio::spawn(async move {
+        tokio::spawn(async move {
             loop {
                 if let Ok((session, response)) = response_reader.recv() {
                     // TODO middleware here
@@ -139,12 +152,12 @@ impl VizierTransport {
                         .get(&channel)
                         .unwrap()
                         .0
+                        .clone()
                         .send((session, response));
                 }
             }
         });
 
-        join_all(vec![agent_handle, channel_handle]).await;
-        Ok(())
+        loop {}
     }
 }

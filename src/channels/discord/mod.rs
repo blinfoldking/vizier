@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use serenity::all::{ChannelId, Http};
+use chrono::Utc;
+use serde_json::json;
+use serenity::all::{
+    ChannelId, Command, CreateCommand, CreateInteractionResponseMessage, Http, Interaction, Ready,
+};
 use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::prelude::*;
@@ -37,12 +41,10 @@ impl DiscordChannel {
 async fn send_message(http: Arc<Http>, channel_id: &ChannelId, content: String) -> Result<()> {
     if content.len() < 2000 {
         let channel_id = channel_id.clone();
-        tokio::spawn(async move {
-            let content = content.clone();
-            if let Err(err) = channel_id.say(&http, content.clone()).await {
-                log::error!("{:?}", err);
-            }
-        });
+        let content = content.clone();
+        if let Err(err) = channel_id.say(&http, content.clone()).await {
+            log::error!("{:?}", err);
+        }
 
         return Ok(());
     }
@@ -70,19 +72,20 @@ async fn send_message(http: Arc<Http>, channel_id: &ChannelId, content: String) 
 impl VizierChannel for DiscordChannel {
     async fn run(&mut self) -> Result<()> {
         let transport = self.transport.clone();
-        let http = self.client.http.clone();
+        let token = self.config.token.clone();
 
         tokio::spawn(async move {
             loop {
+                let http = Arc::new(Http::new(&token));
                 if let Ok((VizierSession::DiscordChanel(channel_id), res)) = transport
                     .read_response(VizierTransportChannel::Discord)
                     .await
                 {
-                    let http = http.clone();
+                    let http = http;
                     let channel_id = ChannelId::new(channel_id);
 
                     match res {
-                        VizierResponse::StartThinking => {
+                        VizierResponse::Thinking => {
                             tokio::spawn(async move {
                                 let _ = channel_id.broadcast_typing(&http).await;
                             });
@@ -105,27 +108,130 @@ impl VizierChannel for DiscordChannel {
 }
 
 struct Handler(VizierTransport);
+
 #[async_trait]
 impl EventHandler for Handler {
-    async fn message(&self, ctx: Context, msg: Message) {
-        // if let Ok(is_mention) = msg.mentions_me(ctx.http).await {
-        //     if !is_mention {
-        //         return;
-        //     }
+    async fn ready(&self, ctx: Context, _ready: Ready) {
+        let ping = CreateCommand::new("ping").description("a simple ping");
+        let lobotomy = CreateCommand::new("lobotomy")
+            .description("Reset current conversation in this channel");
 
-        let current_user = ctx.cache.current_user().discriminator;
-        if msg.author.discriminator != current_user {
-            let _ = self
-                .0
-                .send_request(
-                    VizierSession::DiscordChanel(msg.channel_id.get()),
-                    VizierRequest {
-                        user: msg.author.display_name().to_string(),
-                        content: msg.content,
-                    },
-                )
-                .await;
+        let _ = Command::create_global_command(ctx.http.clone(), ping).await;
+        let _ = Command::create_global_command(ctx.http.clone(), lobotomy).await;
+    }
+
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        if let Interaction::Command(command) = interaction {
+            if command.data.name == "ping" {
+                let _ = command
+                    .create_response(
+                        ctx.http.clone(),
+                        serenity::all::CreateInteractionResponse::Message(
+                            CreateInteractionResponseMessage::new().content("Pong!"),
+                        ),
+                    )
+                    .await;
+            }
+
+            if command.data.name == "lobotomy" {
+                let _ = command
+                    .create_response(
+                        ctx.http.clone(),
+                        serenity::all::CreateInteractionResponse::Message(
+                            CreateInteractionResponseMessage::new().content("NOOOOOOOOO!!!"),
+                        ),
+                    )
+                    .await;
+
+                let metadata = json!({
+                    "sent_at": Utc::now().to_string(),
+                    "discord_channel_id": command.channel_id.to_string(),
+                });
+
+                if let Err(err) = self
+                    .0
+                    .send_request(
+                        VizierSession::DiscordChanel(command.channel_id.get()),
+                        VizierRequest {
+                            user: format!(
+                                "@{} (DiscordId: {})",
+                                command.user.display_name(),
+                                command.user.id.to_string()
+                            ),
+                            content: "/lobotomy".into(),
+                            is_silent_read: true,
+                            metadata,
+                            ..Default::default()
+                        },
+                    )
+                    .await
+                {
+                    log::error!("{}", err)
+                }
+            }
         }
-        // }
+    }
+
+    async fn message(&self, ctx: Context, msg: Message) {
+        if let Ok(is_mention) = msg.mentions_me(ctx.http).await {
+            let transport = self.0.clone();
+            let current_user = ctx.cache.current_user().discriminator;
+            if msg.author.discriminator == current_user {
+                return;
+            }
+
+            let metadata = json!({
+                "sent_at": Utc::now().to_string(),
+                "discord_channel_id": msg.channel_id.to_string(),
+            });
+
+            if !is_mention {
+                tokio::spawn(async move {
+                    if let Err(err) = transport
+                        .send_request(
+                            VizierSession::DiscordChanel(msg.channel_id.get()),
+                            VizierRequest {
+                                user: format!(
+                                    "@{} (DiscordId: {})",
+                                    msg.author.display_name(),
+                                    msg.author.id.to_string()
+                                ),
+                                content: msg.content,
+                                is_silent_read: true,
+                                metadata,
+                                ..Default::default()
+                            },
+                        )
+                        .await
+                    {
+                        log::error!("{}", err)
+                    }
+                });
+
+                return;
+            }
+
+            tokio::spawn(async move {
+                if let Err(err) = transport
+                    .send_request(
+                        VizierSession::DiscordChanel(msg.channel_id.get()),
+                        VizierRequest {
+                            user: format!(
+                                "@{} (DiscordId: {})",
+                                msg.author.display_name(),
+                                msg.author.id.to_string()
+                            ),
+                            content: msg.content,
+                            metadata,
+
+                            ..Default::default()
+                        },
+                    )
+                    .await
+                {
+                    log::error!("{}", err)
+                }
+            });
+        }
     }
 }
