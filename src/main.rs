@@ -14,7 +14,7 @@ mod transport;
 mod utils;
 mod vizier;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 8)]
 async fn main() -> Result<()> {
     pretty_env_logger::init();
     vizier::cli().await
