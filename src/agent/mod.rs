@@ -30,7 +30,7 @@ pub struct VizierAgents {
 }
 
 impl VizierAgents {
-    pub fn new(
+    pub async fn new(
         workspace: String,
         config: AgentConfigs,
         memory_config: MemoryConfig,
@@ -41,7 +41,7 @@ impl VizierAgents {
             config: config,
             memory_config: memory_config,
             transport,
-            tools: VizierTools::new(workspace.clone(), tool_config),
+            tools: VizierTools::new(workspace.clone(), tool_config).await,
             sessions: HashMap::new(),
         })
     }

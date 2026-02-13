@@ -5,4 +5,3 @@ pub const BOOT_MD: &str = include_str!("../templates/BOOT.md");
 pub const AGENT_MD: &str = include_str!("../templates/AGENT.md");
 pub const IDENT_MD: &str = include_str!("../templates/IDENT.md");
 pub const USER_MD: &str = include_str!("../templates/USER.md");
-pub const CONTEXT_MD: &str = include_str!("../templates/CONTEXT.md");

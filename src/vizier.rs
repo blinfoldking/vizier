@@ -7,7 +7,7 @@ use crate::{
     agent::VizierAgents,
     channels::VizierChannels,
     config::VizierConfig,
-    constant::{AGENT_MD, BOOT_MD, CONTEXT_MD, IDENT_MD, USER_MD},
+    constant::{AGENT_MD, BOOT_MD, IDENT_MD, USER_MD},
     transport::VizierTransport,
 };
 
@@ -72,7 +72,8 @@ async fn run(args: RunArgs) -> Result<()> {
         config.memory.clone(),
         config.tools.clone(),
         transport.clone(),
-    )?;
+    )
+    .await?;
     tokio::spawn(async move {
         if let Err(err) = agents.run().await {
             log::error!("{}", err);
@@ -96,7 +97,6 @@ pub fn init_workspace(path: String) {
     let user_path = PathBuf::from(format!("{}/USER.md", path.clone()));
     let agent_path = PathBuf::from(format!("{}/AGENT.md", path.clone()));
     let ident_path = PathBuf::from(format!("{}/IDENT.md", path.clone()));
-    let context_path = PathBuf::from(format!("{}/CONTEXT.md", path.clone()));
 
     let create_file_if_not_exists = |path: PathBuf, content: &str| {
         if !path.exists() {
@@ -114,5 +114,4 @@ pub fn init_workspace(path: String) {
     create_file_if_not_exists(user_path, USER_MD);
     create_file_if_not_exists(agent_path, AGENT_MD);
     create_file_if_not_exists(ident_path, IDENT_MD);
-    create_file_if_not_exists(context_path, CONTEXT_MD);
 }

@@ -1,8 +1,7 @@
-use mongodb::{Client, options::ClientOptions};
 use rig::{
-    Embed, OneOrMany,
+    Embed,
     completion::{CompletionModel, Prompt},
-    message::{Message, UserContent},
+    message::Message,
 };
 use serde::{Deserialize, Serialize};
 
@@ -118,24 +117,5 @@ impl SessionMemory {
     pub fn flush(&mut self) {
         self.messages.clear();
         self.summary = None;
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Embed, Clone)]
-pub struct VizierMemory {
-    #[embed]
-    content: String,
-    timestamp: String,
-}
-
-pub struct VizierMemoryStore {}
-impl VizierMemoryStore {
-    // TODO: add additional vector store
-    pub async fn new(config: MemoryConfig) -> anyhow::Result<()> {
-        let client_options = ClientOptions::parse("mongodb://localhost").await?;
-        let client = Client::with_options(client_options)?;
-        let db = client.database("vizier");
-
-        Ok(())
     }
 }

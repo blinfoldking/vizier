@@ -52,12 +52,12 @@ pub struct APIChannelConfig {
 #[derive(Debug, Deserialize, Clone)]
 pub struct AgentConfigs {
     pub primary: AgentConfig,
-    pub embedding: Option<AgentConfig>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct ToolsConfig {
     pub brave_search: Option<BraveSearchConfig>,
+    pub vector_memory: Option<VectorMemoryConfig>,
     #[serde(default)]
     pub turn_depth: u32,
 }
@@ -67,6 +67,12 @@ pub struct BraveSearchConfig {
     pub api_key: String,
     #[serde(default)]
     pub safesearch: bool,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct VectorMemoryConfig {
+    pub model: ModelConfig,
+    pub pg_connection: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]

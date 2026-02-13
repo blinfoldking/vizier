@@ -1,17 +1,21 @@
-use rig::tool::server::{ToolServer, ToolServerHandle};
+use rig::tool::{
+    Tool,
+    server::{ToolServer, ToolServerHandle},
+};
 
 use crate::{
     agent::tools::{
         brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
+        vector_memory::init_vector_memory,
         workspace::{
-            AgentDocument, ContextDocument, IdentDocument, ReadPrimaryDocument, UserDocument,
-            WritePrimaryDocument,
+            AgentDocument, IdentDocument, ReadPrimaryDocument, UserDocument, WritePrimaryDocument,
         },
     },
     config::ToolsConfig,
 };
 
 mod brave_search;
+mod vector_memory;
 mod workspace;
 
 #[derive(Clone)]
@@ -22,29 +26,29 @@ pub struct VizierTools {
 }
 
 impl VizierTools {
-    pub fn new(workspace: String, config: ToolsConfig) -> Self {
+    pub async fn new(workspace: String, config: ToolsConfig) -> Self {
         let mut tool_server_builder = ToolServer::new()
             .tool(ReadPrimaryDocument::<AgentDocument>::new(workspace.clone()))
             .tool(ReadPrimaryDocument::<IdentDocument>::new(workspace.clone()))
             .tool(ReadPrimaryDocument::<UserDocument>::new(workspace.clone()))
-            .tool(ReadPrimaryDocument::<ContextDocument>::new(
-                workspace.clone(),
-            ))
             .tool(WritePrimaryDocument::<AgentDocument>::new(
                 workspace.clone(),
             ))
             .tool(WritePrimaryDocument::<IdentDocument>::new(
                 workspace.clone(),
             ))
-            .tool(WritePrimaryDocument::<UserDocument>::new(workspace.clone()))
-            .tool(WritePrimaryDocument::<ContextDocument>::new(
-                workspace.clone(),
-            ));
+            .tool(WritePrimaryDocument::<UserDocument>::new(workspace.clone()));
 
         if let Some(brave_search) = config.brave_search {
             tool_server_builder =
                 tool_server_builder.tool(BraveSearch::<WebOnlySearch>::new(&brave_search));
             // .tool(BraveSearch::<NewsOnlySearch>::new(&brave_search));
+        }
+
+        if let Some(vector_memory) = config.vector_memory {
+            let (read_memory, write_memory) = init_vector_memory(vector_memory).await.unwrap();
+
+            tool_server_builder = tool_server_builder.tool(read_memory).tool(write_memory);
         }
 
         let tool_server = tool_server_builder.run();

@@ -64,7 +64,8 @@ async fn send_message(http: Arc<Http>, channel_id: &ChannelId, content: String) 
                 log::error!("{:?}", err);
             }
         }
-    });
+    })
+    .await?;
 
     Ok(())
 }
@@ -182,6 +183,7 @@ impl EventHandler for Handler {
 
             let metadata = json!({
                 "sent_at": Utc::now().to_string(),
+                "message_id": msg.id.to_string(),
                 "discord_channel_id": msg.channel_id.to_string(),
             });
 

@@ -36,14 +36,6 @@ impl PrimaryDocument for UserDocument {
     const WRITE_NAME: &'static str = "WRITE_USER_MD_FILE";
 }
 
-pub struct ContextDocument;
-
-impl PrimaryDocument for ContextDocument {
-    const NAME: &'static str = "CONTEXT.md";
-    const READ_NAME: &'static str = "READ_CONTEXT_MD_FILE";
-    const WRITE_NAME: &'static str = "WRITE_CONTEXT_MD_FILE";
-}
-
 pub struct ReadPrimaryDocument<T: PrimaryDocument> {
     workspace: String,
     _phantom_data: PhantomData<T>,
