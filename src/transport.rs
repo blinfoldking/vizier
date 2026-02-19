@@ -9,7 +9,7 @@ use crate::agent::session::VizierSession;
 #[derive(Debug, Clone, Hash, PartialEq, Eq, EnumIter)]
 pub enum VizierTransportChannel {
     Discord,
-    API,
+    HTTP,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -40,7 +40,6 @@ impl VizierRequest {
 #[derive(Debug, Clone)]
 pub enum VizierResponse {
     Thinking,
-    StopThinking,
     Message(String),
 }
 
@@ -105,7 +104,7 @@ impl VizierTransport {
     }
 
     pub async fn read_request(&self) -> Result<(VizierSession, VizierRequest)> {
-        let res = self.agent_transport.1.recv()?;
+        let res = self.agent_transport.1.recv_async().await?;
 
         Ok(res)
     }
@@ -114,7 +113,13 @@ impl VizierTransport {
         &self,
         channel: VizierTransportChannel,
     ) -> Result<(VizierSession, VizierResponse)> {
-        let res = self.channel_transport.get(&channel).unwrap().1.recv()?;
+        let res = self
+            .channel_transport
+            .get(&channel)
+            .unwrap()
+            .1
+            .recv_async()
+            .await?;
 
         Ok(res)
     }
@@ -125,7 +130,7 @@ impl VizierTransport {
         let agent_transport = self.agent_transport.clone();
         tokio::spawn(async move {
             loop {
-                if let Ok((session, request)) = request_reader.recv() {
+                if let Ok((session, request)) = request_reader.recv_async().await {
                     // TODO: middleware here
                     log::info!("request {:?} -> {:?}", session, request);
 
@@ -139,13 +144,13 @@ impl VizierTransport {
         let response_reader = self.response_reader.clone();
         tokio::spawn(async move {
             loop {
-                if let Ok((session, response)) = response_reader.recv() {
+                if let Ok((session, response)) = response_reader.recv_async().await {
                     // TODO middleware here
                     log::info!("response {:?} -> {:?}", session, response);
 
                     let channel = match session {
                         VizierSession::DiscordChanel(_) => VizierTransportChannel::Discord,
-                        VizierSession::API(_) => VizierTransportChannel::API,
+                        VizierSession::HTTP(_) => VizierTransportChannel::HTTP,
                     };
 
                     let _ = channel_transport

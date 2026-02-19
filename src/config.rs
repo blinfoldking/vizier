@@ -36,7 +36,7 @@ pub struct ModelConfig {
 #[derive(Debug, Deserialize, Clone)]
 pub struct ChannelsConfig {
     pub discord: Option<DiscordChannelConfig>,
-    pub api: Option<APIChannelConfig>,
+    pub http: Option<HTTPChannelConfig>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -45,7 +45,7 @@ pub struct DiscordChannelConfig {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct APIChannelConfig {
+pub struct HTTPChannelConfig {
     pub port: u32,
 }
 

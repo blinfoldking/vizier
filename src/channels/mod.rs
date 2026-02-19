@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use crate::{
-    channels::{api::APIChannel, discord::DiscordChannel},
+    channels::{api::HTTPChannel, discord::DiscordChannel},
     config::ChannelsConfig,
     transport::VizierTransport,
 };
@@ -34,11 +34,11 @@ impl VizierChannels {
             });
         }
 
-        if let Some(api_config) = &self.config.api {
-            let mut api = APIChannel::new(api_config.clone(), self.transport.clone())?;
+        if let Some(http) = &self.config.http {
+            let mut http = HTTPChannel::new(http.clone(), self.transport.clone())?;
 
             tokio::spawn(async move {
-                if let Err(e) = api.run().await {
+                if let Err(e) = http.run().await {
                     log::error!("Err{:?}", e);
                 }
             });

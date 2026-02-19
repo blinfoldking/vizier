@@ -5,13 +5,39 @@ use rig::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{agent::VizierAgentImpl, config::MemoryConfig, transport::VizierRequest};
+use crate::{
+    agent::VizierAgentImpl,
+    config::MemoryConfig,
+    transport::{VizierRequest, VizierResponse},
+};
 
 #[derive(Debug, Clone)]
-pub struct Memory {
-    sender: String,
-    content: String,
-    is_agent: bool,
+pub enum Memory {
+    Response(String),
+    Request(VizierRequest),
+}
+
+impl Memory {
+    fn simple(&self) -> String {
+        match self {
+            Self::Request(req) => format!("{}: {}", req.user, req.content),
+            Self::Response(content) => format!("answer: {}", content),
+        }
+    }
+
+    fn to_string(&self) -> String {
+        match self {
+            Self::Request(req) => req.to_prompt().unwrap(),
+            Self::Response(content) => content.into(),
+        }
+    }
+
+    fn to_message(&self) -> Message {
+        match self {
+            Self::Request(req) => Message::user(req.to_prompt().unwrap()),
+            Self::Response(content) => Message::assistant(content),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -31,19 +57,11 @@ impl SessionMemory {
     }
 
     pub fn push_user_message(&mut self, req: VizierRequest) {
-        self.messages.push(Memory {
-            sender: req.user,
-            content: req.content,
-            is_agent: false,
-        });
+        self.messages.push(Memory::Request(req));
     }
 
-    pub fn push_agent(&mut self, agent: String, response: String) {
-        self.messages.push(Memory {
-            sender: agent,
-            content: response,
-            is_agent: true,
-        });
+    pub fn push_agent(&mut self, response: String) {
+        self.messages.push(Memory::Response(response));
     }
 
     pub fn recall(&self) -> Vec<Memory> {
@@ -56,16 +74,7 @@ impl SessionMemory {
     }
 
     pub fn recall_as_messages(&self) -> Vec<Message> {
-        self.recall()
-            .iter()
-            .map(|item| {
-                if item.is_agent {
-                    Message::assistant_with_id(item.sender.clone(), item.content.clone())
-                } else {
-                    Message::user(format!("{}: {}", item.sender, item.content))
-                }
-            })
-            .collect()
+        self.recall().iter().map(|item| item.to_message()).collect()
     }
 
     pub async fn try_summarize<T: CompletionModel>(
@@ -91,27 +100,26 @@ impl SessionMemory {
     fn format_messages_for_summary(&self) -> String {
         self.messages
             .iter()
-            .map(|msg| format!("- {}: {:?}\n", msg.sender, msg.content))
+            .map(|msg| msg.simple())
             .collect::<Vec<_>>()
             .join("\n")
     }
 
     pub fn summary_prompt(&self) -> String {
-        let content = match self.summary.clone() {
-            Some(summary) => summary,
-            _ => self.format_messages_for_summary(),
-        };
-
-        format!(
-            r"
+        if let Some(summary) = self.summary.clone() {
+            format!(
+                r"
             ## Context
 
             Context for our current session: 
 
             {}
                 ",
-            content,
-        )
+                summary,
+            )
+        } else {
+            "".into()
+        }
     }
 
     pub fn flush(&mut self) {

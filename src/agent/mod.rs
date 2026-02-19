@@ -3,7 +3,7 @@ use axum::http::request;
 use rig::agent::Agent;
 use rig::client::{CompletionClient, Nothing};
 use rig::completion::{Chat, CompletionModel, Prompt};
-use rig::providers::{ollama, openrouter};
+use rig::providers::{deepseek, ollama, openrouter};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -161,6 +161,12 @@ impl VizierAgents {
                     &self.memory_config,
                 )?)
             }
+            "deepseek" => VizierAgent::Deepseek(VizierAgentImpl::<deepseek::CompletionModel>::new(
+                primary_config.name.clone(),
+                self.tools.clone(),
+                primary_config,
+                &self.memory_config,
+            )?),
             _ => VizierAgent::Ollama(VizierAgentImpl::<ollama::CompletionModel>::new(
                 primary_config.name.clone(),
                 self.tools.clone(),
@@ -177,6 +183,7 @@ impl VizierAgents {
 pub enum VizierAgent {
     Ollama(VizierAgentImpl<ollama::CompletionModel>),
     OpenRouter(VizierAgentImpl<openrouter::CompletionModel>),
+    Deepseek(VizierAgentImpl<deepseek::CompletionModel>),
 }
 
 impl VizierAgent {
@@ -184,6 +191,7 @@ impl VizierAgent {
         let response = match self {
             Self::Ollama(agent) => agent.chat(req).await,
             Self::OpenRouter(agent) => agent.chat(req).await,
+            Self::Deepseek(agent) => agent.chat(req).await,
         }?;
 
         Ok(response.to_string())
@@ -193,6 +201,7 @@ impl VizierAgent {
         let _ = match self {
             Self::Ollama(agent) => agent.silent_read(req).await,
             Self::OpenRouter(agent) => agent.silent_read(req).await,
+            Self::Deepseek(agent) => agent.silent_read(req).await,
         }?;
 
         Ok(())
@@ -202,6 +211,7 @@ impl VizierAgent {
         let _ = match self {
             Self::Ollama(agent) => agent.lobotomy().await,
             Self::OpenRouter(agent) => agent.lobotomy().await,
+            Self::Deepseek(agent) => agent.lobotomy().await,
         };
 
         Ok(())
@@ -220,19 +230,18 @@ impl<T: CompletionModel> VizierAgentImpl<T> {
         self.session_memory.push_user_message(req.clone());
         let response = self
             .agent
-            .prompt(
+            .chat(
                 format!(
                     "{}\n\n{}",
                     req.to_prompt()?,
                     self.session_memory.summary_prompt()
                 ),
-                // self.session_memory.recall_as_messages(),
+                self.session_memory.recall_as_messages(),
             )
             .await?;
 
         let response_msg = remove_think_tags(&*response.to_string());
-        self.session_memory
-            .push_agent(self.agent.name.clone().unwrap(), response_msg);
+        self.session_memory.push_agent(response_msg);
 
         self.session_memory.try_summarize(self.clone()).await?;
 
@@ -291,6 +300,36 @@ impl VizierAgentImpl<openrouter::CompletionModel> {
         memory_config: &MemoryConfig,
     ) -> Result<Self> {
         let client: openrouter::Client = openrouter::Client::new(config.model.api_key.clone())?;
+
+        let boot = std::fs::read_to_string(std::path::PathBuf::from(format!(
+            "{}/BOOT.md",
+            tool.workspace
+        )))?;
+
+        let agent = client
+            .agent(config.model.name.clone())
+            .name(&*config.model.name.clone())
+            .preamble(&boot)
+            .tool_server_handle(tool.handle)
+            .default_max_turns(tool.turn_depth as usize)
+            .build();
+
+        Ok(Self {
+            id: id.clone(),
+            agent,
+            session_memory: SessionMemory::new(memory_config.clone()),
+        })
+    }
+}
+
+impl VizierAgentImpl<deepseek::CompletionModel> {
+    fn new(
+        id: String,
+        tool: VizierTools,
+        config: &AgentConfig,
+        memory_config: &MemoryConfig,
+    ) -> Result<Self> {
+        let client: deepseek::Client = deepseek::Client::new(config.model.api_key.clone())?;
 
         let boot = std::fs::read_to_string(std::path::PathBuf::from(format!(
             "{}/BOOT.md",

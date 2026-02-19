@@ -24,14 +24,12 @@ use crate::error::{VizierError, error};
 pub async fn init_vector_memory(config: VectorMemoryConfig) -> Result<(MemoryRead, MemoryWrite)> {
     let embedder = match &*config.model.provider {
         _ => {
-            println!("called");
             let client: ollama::Client = ollama::Client::builder()
                 .base_url(config.model.base_url)
                 .api_key(Nothing)
                 .build()
                 .unwrap();
 
-            println!("called");
             client.embedding_model_with_ndims(config.model.name, 384)
         }
     };
@@ -51,6 +49,7 @@ pub async fn init_vector_memory(config: VectorMemoryConfig) -> Result<(MemoryRea
 pub struct Memory {
     pub id: String,
     pub title: String,
+    #[serde(skip)]
     #[embed]
     pub content: String,
 }
