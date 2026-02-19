@@ -4,11 +4,15 @@ use rig::tool::{
 };
 
 use crate::{
-    agent::tools::{
-        brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
-        vector_memory::init_vector_memory,
-        workspace::{
-            AgentDocument, IdentDocument, ReadPrimaryDocument, UserDocument, WritePrimaryDocument,
+    agent::{
+        exec::ExecCliFromWorkspace,
+        tools::{
+            brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
+            vector_memory::init_vector_memory,
+            workspace::{
+                AgentDocument, IdentDocument, ReadPrimaryDocument, UserDocument,
+                WritePrimaryDocument,
+            },
         },
     },
     config::ToolsConfig,
@@ -50,6 +54,9 @@ impl VizierTools {
 
             tool_server_builder = tool_server_builder.tool(read_memory).tool(write_memory);
         }
+
+        let exec_cli_from_workspace = ExecCliFromWorkspace(workspace.clone());
+        tool_server_builder = tool_server_builder.tool(exec_cli_from_workspace);
 
         let tool_server = tool_server_builder.run();
 

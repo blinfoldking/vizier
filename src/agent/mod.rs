@@ -1,8 +1,7 @@
 use anyhow::Result;
-use axum::http::request;
 use rig::agent::Agent;
 use rig::client::{CompletionClient, Nothing};
-use rig::completion::{Chat, CompletionModel, Prompt};
+use rig::completion::{Chat, CompletionModel};
 use rig::providers::{deepseek, ollama, openrouter};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -16,6 +15,7 @@ use crate::config::{AgentConfig, AgentConfigs, MemoryConfig, ToolsConfig};
 use crate::transport::{VizierRequest, VizierResponse, VizierTransport};
 use crate::utils::remove_think_tags;
 
+pub mod exec;
 pub mod memory;
 pub mod session;
 pub mod tools;
