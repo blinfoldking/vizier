@@ -13,7 +13,6 @@ dirs = "6.0.0"
 flume = "0.12.0"
 form_urlencoded = "1.2.2"
 futures = "0.3.31"
-iocraft = "0.7.17"
 log = "0.4.29"
 pretty_env_logger = "0.5.0"
 regex = "1.12.3"
@@ -36,3 +35,6 @@ tokio = { version = "1.49.0", features = [
   "signal",
 ] }
 uuid = { version = "1.21.0", features = ["serde", "v4"] }
+duration-string = { version = "0.5.3", features = ["serde"] }
+inquire = { version = "0.9.3", features = ["chrono"] }
+toml = "1.0.3"

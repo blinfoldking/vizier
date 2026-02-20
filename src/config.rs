@@ -1,29 +1,25 @@
-use std::{fs, str::FromStr};
+use std::{fs, str::FromStr, time::Duration};
 
 use anyhow::Result;
 use config::Config;
-use serde::Deserialize;
+use duration_string::DurationString;
+use serde::{Deserialize, Serialize};
 
 use crate::constant;
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MemoryConfig {
     pub session_memory_recall_depth: usize,
-    pub mongodb: Option<MongoDBConfig>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct MongoDBConfig {
-    pub connection_string: String,
-}
-
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AgentConfig {
     pub name: String,
     pub model: ModelConfig,
+    pub session_ttl: DurationString,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ModelConfig {
     pub provider: String,
     pub name: String,
@@ -33,49 +29,50 @@ pub struct ModelConfig {
     pub base_url: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChannelsConfig {
     pub discord: Option<DiscordChannelConfig>,
     pub http: Option<HTTPChannelConfig>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiscordChannelConfig {
     pub token: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HTTPChannelConfig {
     pub port: u32,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AgentConfigs {
     pub primary: AgentConfig,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ToolsConfig {
+    pub dangerously_enable_cli_access: bool,
     pub brave_search: Option<BraveSearchConfig>,
     pub vector_memory: Option<VectorMemoryConfig>,
     #[serde(default)]
     pub turn_depth: u32,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BraveSearchConfig {
     pub api_key: String,
     #[serde(default)]
     pub safesearch: bool,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VectorMemoryConfig {
     pub model: ModelConfig,
     pub pg_connection: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VizierConfig {
     pub workspace: String,
     pub agents: AgentConfigs,
@@ -84,7 +81,7 @@ pub struct VizierConfig {
     pub tools: ToolsConfig,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct AllConfig {
     vizier: VizierConfig,
 }
@@ -128,6 +125,24 @@ impl VizierConfig {
         }
 
         let _ = fs::write(&path, constant::DEFAULT_CONFIG_TOML)?;
+
+        Ok(())
+    }
+
+    pub fn save(&self, path: std::path::PathBuf, addition: String) -> Result<()> {
+        if let Some(parent_dir) = path.parent() {
+            let _ = std::fs::create_dir_all(parent_dir)?;
+        }
+
+        let _ = fs::write(
+            &path,
+            format!(
+                "{}\n\n{addition}",
+                toml::to_string(&AllConfig {
+                    vizier: self.clone(),
+                })?
+            ),
+        )?;
 
         Ok(())
     }

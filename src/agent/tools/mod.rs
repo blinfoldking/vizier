@@ -55,8 +55,10 @@ impl VizierTools {
             tool_server_builder = tool_server_builder.tool(read_memory).tool(write_memory);
         }
 
-        let exec_cli_from_workspace = ExecCliFromWorkspace(workspace.clone());
-        tool_server_builder = tool_server_builder.tool(exec_cli_from_workspace);
+        if config.dangerously_enable_cli_access {
+            let exec_cli_from_workspace = ExecCliFromWorkspace(workspace.clone());
+            tool_server_builder = tool_server_builder.tool(exec_cli_from_workspace);
+        }
 
         let tool_server = tool_server_builder.run();
 

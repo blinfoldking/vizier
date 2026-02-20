@@ -1,4 +1,5 @@
 use anyhow::Result;
+use chrono::Utc;
 use rig::agent::Agent;
 use rig::client::{CompletionClient, Nothing};
 use rig::completion::{Chat, CompletionModel};
@@ -48,7 +49,17 @@ impl VizierAgents {
 
     pub async fn run(&mut self) -> Result<()> {
         let transport = self.transport.clone();
+
         loop {
+            // stale agent session killer
+            // let lookup = self.sessions.clone();
+            // for (session, agent) in lookup.iter() {
+            //     let agent = agent.lock().await;
+            //     if agent.is_stale().await {
+            //         self.sessions.remove(session);
+            //     }
+            // }
+
             if let Ok((session, request)) = transport.read_request().await {
                 // handle user requested lobotomy
                 let lobotomy_transport = self.transport.clone();
@@ -216,6 +227,16 @@ impl VizierAgent {
 
         Ok(())
     }
+
+    pub async fn is_stale(&self) -> bool {
+        let res = match self {
+            Self::Ollama(agent) => agent.is_stale().await,
+            Self::OpenRouter(agent) => agent.is_stale().await,
+            Self::Deepseek(agent) => agent.is_stale().await,
+        };
+
+        res
+    }
 }
 
 #[derive(Clone)]
@@ -223,6 +244,8 @@ pub struct VizierAgentImpl<T: CompletionModel> {
     id: String,
     agent: Agent<T>,
     session_memory: SessionMemory,
+    session_ttl: Duration,
+    last_interact_at: chrono::DateTime<Utc>,
 }
 
 impl<T: CompletionModel> VizierAgentImpl<T> {
@@ -241,21 +264,31 @@ impl<T: CompletionModel> VizierAgentImpl<T> {
             .await?;
 
         let response_msg = remove_think_tags(&*response.to_string());
-        self.session_memory.push_agent(response_msg);
 
+        self.session_memory.push_agent(response_msg);
         self.session_memory.try_summarize(self.clone()).await?;
 
+        self.last_interact_at = Utc::now();
         Ok(response.to_string())
     }
 
     async fn silent_read(&mut self, req: VizierRequest) -> Result<()> {
         self.session_memory.push_user_message(req.clone());
+        self.session_memory.try_summarize(self.clone()).await?;
 
+        self.last_interact_at = Utc::now();
         Ok(())
     }
 
     async fn lobotomy(&mut self) {
+        self.last_interact_at = Utc::now();
         self.session_memory.flush();
+    }
+
+    async fn is_stale(&self) -> bool {
+        let diff = Utc::now() - self.last_interact_at;
+
+        diff.to_std().unwrap() > self.session_ttl
     }
 }
 
@@ -288,6 +321,8 @@ impl VizierAgentImpl<ollama::CompletionModel> {
             id: id.clone(),
             agent,
             session_memory: SessionMemory::new(memory_config.clone()),
+            session_ttl: *config.session_ttl,
+            last_interact_at: Utc::now(),
         })
     }
 }
@@ -318,6 +353,8 @@ impl VizierAgentImpl<openrouter::CompletionModel> {
             id: id.clone(),
             agent,
             session_memory: SessionMemory::new(memory_config.clone()),
+            session_ttl: *config.session_ttl,
+            last_interact_at: Utc::now(),
         })
     }
 }
@@ -348,6 +385,8 @@ impl VizierAgentImpl<deepseek::CompletionModel> {
             id: id.clone(),
             agent,
             session_memory: SessionMemory::new(memory_config.clone()),
+            session_ttl: *config.session_ttl,
+            last_interact_at: Utc::now(),
         })
     }
 }

@@ -1,7 +1,7 @@
-use std::{fs, path::PathBuf, str::FromStr};
+use std::{fs, path::PathBuf};
 
 use anyhow::Result;
-use clap::{Args, Parser, Subcommand};
+use clap::Args;
 
 use crate::{
     agent::VizierAgents,
@@ -10,26 +10,6 @@ use crate::{
     constant::{AGENT_MD, BOOT_MD, IDENT_MD, USER_MD},
     transport::VizierTransport,
 };
-
-#[derive(Parser, Debug)]
-#[command(version, about, long_about=None)]
-#[command(propagate_version = true)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Debug, Subcommand)]
-enum Commands {
-    /// Run vizier agents, servers and channels
-    Run(RunArgs),
-    /// Onboard new user, and generate configurations
-    Onboard,
-    /// generate new config, non-interactively
-    Configure,
-    /// Open tui client
-    Tui,
-}
 
 #[derive(Debug, Args, Clone)]
 pub struct RunArgs {
@@ -46,21 +26,7 @@ pub struct RunArgs {
     tui: bool,
 }
 
-pub async fn cli() -> Result<()> {
-    let cli = Cli::parse();
-
-    match &cli.command {
-        Commands::Onboard => (),
-        Commands::Run(args) => run(args.clone()).await?,
-        _ => {
-            unimplemented!("TODO: unimplemented");
-        }
-    }
-
-    Ok(())
-}
-
-async fn run(args: RunArgs) -> Result<()> {
+pub async fn run(args: RunArgs) -> Result<()> {
     let config = VizierConfig::load(args.config)?;
     let transport = VizierTransport::new();
 

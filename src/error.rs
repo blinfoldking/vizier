@@ -1,5 +1,5 @@
 #[derive(Debug, Clone)]
-pub struct VizierError(String);
+pub struct VizierError(pub String);
 
 pub fn error<T, E: std::error::Error>(prefix: &str, err: E) -> Result<T, VizierError> {
     log::error!("{}: {}", prefix, err);
