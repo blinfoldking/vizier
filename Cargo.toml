@@ -1,5 +1,5 @@
 [package]
-name = "vizier"
+name = "vizier-ai"
 version = "0.1.0"
 edition = "2024"
 authors = ["Ganesha Danu <hi@blinfoldking.dev>"]
