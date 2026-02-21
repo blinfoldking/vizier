@@ -1,14 +1,14 @@
 use axum::Json;
 use reqwest::StatusCode;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 pub type Response<T> = (StatusCode, Json<APIResponse<T>>);
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct APIResponse<T: Serialize + Clone> {
-    status: String,
-    message: Option<String>,
-    data: Option<T>,
+    pub status: String,
+    pub message: Option<String>,
+    pub data: Option<T>,
 }
 
 impl<T: Serialize + Clone> APIResponse<T> {

@@ -24,7 +24,7 @@ use crate::{
     transport::{VizierRequest, VizierResponse, VizierTransport, VizierTransportChannel},
 };
 
-mod response;
+pub mod response;
 
 pub struct HTTPChannel {
     config: HTTPChannelConfig,
@@ -69,7 +69,6 @@ impl VizierChannel for HTTPChannel {
             .route("/session/{session_id}/chat", any(ws))
             .with_state(chat_transport.clone());
 
-        log::info!("http listening on port {}", self.config.port);
         let listener =
             tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.config.port)).await?;
 
@@ -129,7 +128,9 @@ impl VizierChannel for HTTPChannel {
             }
         });
 
-        axum::serve(listener, app).await?;
+        let server = axum::serve(listener, app);
+        log::info!("http listening on port {}", self.config.port);
+        server.await?;
         request_handle.abort();
         response_handle.abort();
 
@@ -168,20 +169,20 @@ async fn create_session(sessions: State<ChatTransport>) -> response::Response<Se
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-struct SessionResponse {
-    session_id: String,
+pub struct SessionResponse {
+    pub session_id: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-struct ChatRequest {
-    user: String,
-    content: String,
+pub struct ChatRequest {
+    pub user: String,
+    pub content: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
-struct ChatResponse {
-    content: String,
-    thinking: bool,
+pub struct ChatResponse {
+    pub content: String,
+    pub thinking: bool,
 }
 
 async fn ws(
@@ -189,6 +190,7 @@ async fn ws(
     ws: WebSocketUpgrade,
     state: State<ChatTransport>,
 ) -> axum::response::Response {
+    log::debug!("connect {}", session_id);
     let responses = state.reponses.lock().await;
     let session = responses.get(&session_id);
     if let Some(session) = session {
@@ -227,6 +229,7 @@ async fn handle_socket(
             match message {
                 Message::Text(text) => {
                     if let Ok(request) = serde_json::from_str::<ChatRequest>(&text.to_string()) {
+                        log::debug!("{:?}", request);
                         let _ = requests.0.send_async((session_id.clone(), request)).await;
                     }
                 }

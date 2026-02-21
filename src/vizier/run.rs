@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::{env, fs, path::PathBuf};
 
 use anyhow::Result;
 use clap::Args;
@@ -9,6 +9,7 @@ use crate::{
     config::VizierConfig,
     constant::{AGENT_MD, BOOT_MD, IDENT_MD, USER_MD},
     transport::VizierTransport,
+    vizier::tui::{self, TuiArgs},
 };
 
 #[derive(Debug, Args, Clone)]
@@ -26,8 +27,7 @@ pub struct RunArgs {
     tui: bool,
 }
 
-pub async fn run(args: RunArgs) -> Result<()> {
-    let config = VizierConfig::load(args.config)?;
+pub async fn run_server(config: VizierConfig) -> Result<()> {
     let transport = VizierTransport::new();
 
     init_workspace(config.workspace.clone());
@@ -54,8 +54,47 @@ pub async fn run(args: RunArgs) -> Result<()> {
     });
 
     transport.run().await?;
+    Ok(())
+}
 
-    loop {}
+pub async fn run(args: RunArgs) -> Result<()> {
+    let config = VizierConfig::load(args.config.clone())?;
+
+    if args.tui {
+        let handle = tokio::spawn(async move {
+            run_server(config.clone()).await.unwrap();
+        });
+
+        tui::run(TuiArgs {
+            base_url: None,
+            config: Some(args.config.unwrap()),
+        })
+        .await?;
+
+        handle.abort();
+    } else {
+        if env::var("RUST_LOG").is_err() {
+            pretty_env_logger::formatted_builder()
+                .filter_level(log::LevelFilter::Debug)
+                .filter_module("rig", log::LevelFilter::Error)
+                .filter_module("serenity", log::LevelFilter::Error)
+                .filter_module("sqlx", log::LevelFilter::Error)
+                .filter_module("reqwest", log::LevelFilter::Error)
+                .filter_module("hyper", log::LevelFilter::Error)
+                .filter_module("tungstenite", log::LevelFilter::Error)
+                .filter_module("sqlx", log::LevelFilter::Error)
+                .filter_module("h2", log::LevelFilter::Error)
+                .filter_module("tracing", log::LevelFilter::Off)
+                .filter_module("rustls", log::LevelFilter::Off)
+                .init();
+        } else {
+            pretty_env_logger::init();
+        }
+
+        run_server(config.clone()).await?;
+    }
+
+    Ok(())
 }
 
 pub fn init_workspace(path: String) {

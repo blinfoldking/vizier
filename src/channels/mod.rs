@@ -6,8 +6,8 @@ use crate::{
     transport::VizierTransport,
 };
 
-mod api;
-mod discord;
+pub mod api;
+pub mod discord;
 
 pub trait VizierChannel {
     async fn run(&mut self) -> Result<()>;
@@ -25,9 +25,13 @@ impl VizierChannels {
 
     pub async fn run(&self) -> Result<()> {
         if let Some(discord_config) = &self.config.discord {
-            let mut discord =
-                DiscordChannel::new(discord_config.clone(), self.transport.clone()).await?;
+            let transport = self.transport.clone();
+            let discord_config = discord_config.clone();
             tokio::spawn(async move {
+                let mut discord = DiscordChannel::new(discord_config.clone(), transport.clone())
+                    .await
+                    .unwrap();
+
                 if let Err(e) = discord.run().await {
                     log::error!("Err{:?}", e)
                 }

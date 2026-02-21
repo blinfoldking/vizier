@@ -4,6 +4,7 @@ use clap::{Parser, Subcommand};
 
 mod onboard;
 mod run;
+mod tui;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about=None)]
@@ -22,7 +23,7 @@ enum Commands {
     /// generate new config, non-interactively
     Configure,
     /// Open tui client
-    Tui,
+    Tui(tui::TuiArgs),
 }
 
 pub async fn cli() -> Result<()> {
@@ -31,6 +32,7 @@ pub async fn cli() -> Result<()> {
     match &cli.command {
         Commands::Onboard => onboard::onboard().await?,
         Commands::Run(args) => run::run(args.clone()).await?,
+        Commands::Tui(args) => tui::run(args.clone()).await?,
         _ => {
             unimplemented!("TODO: unimplemented");
         }

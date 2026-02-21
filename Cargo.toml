@@ -37,4 +37,8 @@ tokio = { version = "1.49.0", features = [
 uuid = { version = "1.21.0", features = ["serde", "v4"] }
 duration-string = { version = "0.5.3", features = ["serde"] }
 inquire = { version = "0.9.3", features = ["chrono"] }
+tokio-tungstenite = "0.26.0"
+tungstenite = "0.28.0"
 toml = "1.0.3"
+cursive = "0.21.1"
+nanoid = "0.4.0"
