@@ -40,7 +40,6 @@ vizier onboard
 - `src/`: Rust source code
 - `templates/`: Template files for agent configuration
 - `migrations/`: Database migrations (if using SQL)
-- `data/`: Persistent data storage
 - `.vizier/`: Workspace directory for runtime data
 
 ### Available Commands

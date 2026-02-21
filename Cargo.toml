@@ -2,6 +2,9 @@
 name = "vizier"
 version = "0.1.0"
 edition = "2024"
+authors = ["Ganesha Danu <hi@blinfoldking.dev>"]
+description = "21st Century Digital Steward; Right hand agent for you majesty"
+license = "MIT"
 
 [dependencies]
 axum = { version = "0.8.8", features = ["ws"] }
