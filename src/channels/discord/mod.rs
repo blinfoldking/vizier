@@ -116,9 +116,11 @@ impl EventHandler for Handler {
         let ping = CreateCommand::new("ping").description("a simple ping");
         let lobotomy = CreateCommand::new("lobotomy")
             .description("Reset current conversation in this channel");
+        let help = CreateCommand::new("help").description("How to use me");
 
         let _ = Command::create_global_command(ctx.http.clone(), ping).await;
         let _ = Command::create_global_command(ctx.http.clone(), lobotomy).await;
+        let _ = Command::create_global_command(ctx.http.clone(), help).await;
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -164,6 +166,26 @@ impl EventHandler for Handler {
                             metadata,
                             ..Default::default()
                         },
+                    )
+                    .await
+                {
+                    log::error!("{}", err)
+                }
+            }
+
+            if command.data.name == "help" {
+                if let Err(err) = command
+                    .create_response(
+                        ctx.http.clone(),
+                        serenity::all::CreateInteractionResponse::Message(
+                            CreateInteractionResponseMessage::new().content(
+                                r#"
+Just mention `@vizier` when you need to summon me.
+I will only read the chat otherwise.
+If I am halucinating, feel free to `/lobotomy` me
+                            "#,
+                            ),
+                        ),
                     )
                     .await
                 {
