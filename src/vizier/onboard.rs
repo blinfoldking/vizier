@@ -147,7 +147,6 @@ pub async fn onboard() -> Result<()> {
 }
 
 const COMMENTED_CONFIGS: &'static str = r#"
-
 # allow the agent to search the web
 # [vizier.tools.brave_search]
 # api_key = "YOUR_BRAVE_API_KEY"
@@ -155,6 +154,4 @@ const COMMENTED_CONFIGS: &'static str = r#"
 # enabling dynamic vector memory 
 # [vizier.tools.vector_memory]
 # model = { provider = "ollama", name = "nomic-embed-text", base_url = "http://localhost:11434" }
-# pg_connection = "postgresql://postgres:postgres@127.0.0.1:5432/vizier"
-
 "#;
