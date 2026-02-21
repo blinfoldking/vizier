@@ -1,4 +1,6 @@
-# Vizier - Multi-Channel AI Assistant Framework
+# Vizier
+
+> 21st Century Digital Steward; Right-hand agent for you majesty
 
 Vizier is a Rust-based AI agent framework that provides a unified interface for AI assistants across multiple communication channels (Discord, HTTP, etc.) with memory, tool usage, and extensible architecture.
 
@@ -8,30 +10,43 @@ Vizier is a Rust-based AI agent framework that provides a unified interface for 
 - **AI Model Integration**: Support for multiple AI providers (DeepSeek, OpenRouter, Ollama, etc.)
 - **Memory System**: Session-based memory with configurable recall depth
 - **Tool System**: Extensible tool framework with CLI access, web search, and vector memory
-- **TUI Interface**: Built-in terminal user interface for local interaction
-- **Docker Support**: Easy deployment with Docker and Docker Compose
+- **TUI Interface**: Built-in terminal user interface for local interaction (WIP)
 - **Configuration Driven**: Flexible configuration via TOML files
 
-## Architecture
+## Installation and Configuration
 
-Vizier follows a modular architecture:
-
-```
-src/
-├── agent/           # Core agent logic and session management
-├── channels/        # Communication channel implementations
-├── config.rs        # Configuration parsing and management
-├── transport.rs     # Message transport layer
-├── utils/          # Utility functions
-└── vizier/         # Main application logic and CLI
-```
-
-## Configuration
+**you need to have [cargo](https://rust-lang.org/) installed**
 
 to setup your initial config, run this command:
 ```sh
-vizier onboard
+# install vizier
+cargo install vizier-ai
+
+# generate config and workspace
+vizier-ai onboard
+
+## run the agent
+vizier-ai run
 ```
+
+## Planned Features
+
+- [ ] additional channels and client
+    - [ ] web ui
+    - [ ] tui (on progress)
+- [ ] additional providers support
+    - [ ] google
+    - [ ] openai
+    - [ ] etch
+- [ ] support openai embedding model
+- [ ] additional tools
+    - [ ] mcp
+    - [ ] built-in http client
+- [ ] scheduler and task system
+- [ ] skill system
+- [ ] misc
+    - [ ] webpage
+    - [ ] logo
 
 ## Development
 
