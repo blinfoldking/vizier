@@ -9,19 +9,42 @@ use rig::vector_store::request::VectorSearchRequest;
 use rig::{
     client::{EmbeddingsClient, Nothing},
     providers::ollama,
-    vector_store::{InsertDocuments, VectorStoreIndex},
+    vector_store::VectorStoreIndex,
 };
-use rig_postgres::PostgresVectorStore;
+use rig_sqlite::{
+    Column, ColumnValue, SqliteVectorIndex, SqliteVectorStore, SqliteVectorStoreTable,
+};
+use rusqlite::ffi::sqlite3_api_routines;
+use rusqlite::ffi::{sqlite3, sqlite3_auto_extension};
 use schemars::schema_for;
 use serde::{Deserialize, Serialize};
 use slugify::slugify;
-use sqlx::postgres::PgPoolOptions;
+use sqlite_vec::sqlite3_vec_init;
+use tokio_rusqlite::Connection;
 
 use crate::config::VectorMemoryConfig;
 use crate::error::{VizierError, error};
 
+type SqliteExtensionFn =
+    unsafe extern "C" fn(*mut sqlite3, *mut *mut i8, *const sqlite3_api_routines) -> i32;
+
 // TODO: handle openai embedder
-pub async fn init_vector_memory(config: VectorMemoryConfig) -> Result<(MemoryRead, MemoryWrite)> {
+pub async fn init_vector_memory(
+    workspace: String,
+    config: VectorMemoryConfig,
+) -> Result<(
+    SqliteVectorIndex<ollama::EmbeddingModel, Memory>,
+    MemoryRead,
+    MemoryWrite,
+)> {
+    unsafe {
+        sqlite3_auto_extension(Some(std::mem::transmute::<*const (), SqliteExtensionFn>(
+            sqlite3_vec_init as *const (),
+        )));
+    }
+
+    let conn = Connection::open(format!("{}/db/memory.db", workspace)).await?;
+
     let embedder = match &*config.model.provider {
         _ => {
             let client: ollama::Client = ollama::Client::builder()
@@ -30,18 +53,16 @@ pub async fn init_vector_memory(config: VectorMemoryConfig) -> Result<(MemoryRea
                 .build()
                 .unwrap();
 
-            client.embedding_model_with_ndims(config.model.name, 384)
+            client.embedding_model(config.model.name)
         }
     };
 
-    let pool = PgPoolOptions::new().connect(&config.pg_connection).await?;
-    sqlx::migrate!("./migrations").run(&pool).await?;
-
-    let vector_store = Arc::new(PostgresVectorStore::with_defaults(embedder.clone(), pool));
+    let store = SqliteVectorStore::new(conn, &embedder.clone()).await?;
 
     Ok((
-        MemoryRead::new(vector_store.clone()),
-        MemoryWrite::new(vector_store.clone(), embedder),
+        store.clone().index(embedder.clone()),
+        MemoryRead::new(store.clone(), embedder.clone()),
+        MemoryWrite::new(store.clone(), embedder.clone()),
     ))
 }
 
@@ -54,12 +75,44 @@ pub struct Memory {
     pub content: String,
 }
 
+impl SqliteVectorStoreTable for Memory {
+    fn name() -> &'static str {
+        "documents"
+    }
+
+    fn schema() -> Vec<Column> {
+        vec![
+            Column::new("id", "TEXT PRIMARY KEY"),
+            Column::new("title", "TEXT"),
+            Column::new("content", "TEXT"),
+        ]
+    }
+
+    fn id(&self) -> String {
+        self.id.clone()
+    }
+
+    fn column_values(&self) -> Vec<(&'static str, Box<dyn ColumnValue>)> {
+        vec![
+            ("id", Box::new(self.id.clone())),
+            ("title", Box::new(self.title.clone())),
+            ("content", Box::new(self.content.clone())),
+        ]
+    }
+}
+
 pub type MemoryRead = ReadVectorMemory;
-pub struct ReadVectorMemory(Arc<PostgresVectorStore<ollama::EmbeddingModel>>);
+pub struct ReadVectorMemory(
+    SqliteVectorStore<ollama::EmbeddingModel, Memory>,
+    ollama::EmbeddingModel,
+);
 
 impl MemoryRead {
-    fn new(store: Arc<PostgresVectorStore<ollama::EmbeddingModel>>) -> Self {
-        Self(store)
+    fn new(
+        store: SqliteVectorStore<ollama::EmbeddingModel, Memory>,
+        embedder: ollama::EmbeddingModel,
+    ) -> Self {
+        Self(store, embedder)
     }
 }
 
@@ -94,7 +147,10 @@ impl Tool for MemoryRead {
             .build()
             .unwrap();
 
-        match self.0.top_n::<Memory>(req).await {
+        let embedder = self.1.clone();
+        let store = self.0.clone();
+        let index = store.index(embedder);
+        match index.top_n::<Memory>(req).await {
             Err(err) => crate::error::error("read_memory", err),
             Ok(data) => return Ok(data.iter().map(|(_, _, memory)| memory.clone()).collect()),
         }
@@ -103,13 +159,13 @@ impl Tool for MemoryRead {
 
 pub type MemoryWrite = WriteVectorMemory;
 pub struct WriteVectorMemory(
-    Arc<PostgresVectorStore<ollama::EmbeddingModel>>,
+    SqliteVectorStore<ollama::EmbeddingModel, Memory>,
     ollama::EmbeddingModel,
 );
 
 impl MemoryWrite {
     fn new(
-        store: Arc<PostgresVectorStore<ollama::EmbeddingModel>>,
+        store: SqliteVectorStore<ollama::EmbeddingModel, Memory>,
         model: ollama::EmbeddingModel,
     ) -> Self {
         Self(store, model)
@@ -158,7 +214,7 @@ impl Tool for MemoryWrite {
         }
 
         let document = document.unwrap();
-        if let Err(err) = self.0.insert_documents(document).await {
+        if let Err(err) = self.0.add_rows(document).await {
             return error("memory_write", err);
         }
 

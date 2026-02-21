@@ -42,7 +42,7 @@ impl VizierAgents {
             config: config,
             memory_config: memory_config,
             transport,
-            tools: VizierTools::new(workspace.clone(), tool_config).await,
+            tools: VizierTools::new(workspace.clone(), tool_config).await?,
             sessions: HashMap::new(),
         })
     }

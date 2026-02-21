@@ -1,3 +1,4 @@
+use anyhow::Result;
 use rig::tool::{
     Tool,
     server::{ToolServer, ToolServerHandle},
@@ -30,7 +31,7 @@ pub struct VizierTools {
 }
 
 impl VizierTools {
-    pub async fn new(workspace: String, config: ToolsConfig) -> Self {
+    pub async fn new(workspace: String, config: ToolsConfig) -> Result<Self> {
         let mut tool_server_builder = ToolServer::new()
             .tool(ReadPrimaryDocument::<AgentDocument>::new(workspace.clone()))
             .tool(ReadPrimaryDocument::<IdentDocument>::new(workspace.clone()))
@@ -50,9 +51,13 @@ impl VizierTools {
         }
 
         if let Some(vector_memory) = config.vector_memory {
-            let (read_memory, write_memory) = init_vector_memory(vector_memory).await.unwrap();
+            let (index, read_memory, write_memory) =
+                init_vector_memory(workspace.clone(), vector_memory).await?;
 
-            tool_server_builder = tool_server_builder.tool(read_memory).tool(write_memory);
+            tool_server_builder = tool_server_builder
+                .tool(index)
+                .tool(read_memory)
+                .tool(write_memory);
         }
 
         if config.dangerously_enable_cli_access {
@@ -62,10 +67,10 @@ impl VizierTools {
 
         let tool_server = tool_server_builder.run();
 
-        Self {
+        Ok(Self {
             workspace,
             turn_depth: config.turn_depth,
             handle: tool_server,
-        }
+        })
     }
 }

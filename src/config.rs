@@ -69,7 +69,6 @@ pub struct BraveSearchConfig {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VectorMemoryConfig {
     pub model: ModelConfig,
-    pub pg_connection: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
