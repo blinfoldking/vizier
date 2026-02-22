@@ -29,6 +29,19 @@ vizier-ai onboard
 vizier-ai run
 ```
 
+## Update Installed Version
+
+1. install `cargo-update` if you haven't installed it
+```sh
+cargo install cargo-update
+```
+
+2. update the binary
+```sh
+cargo install-update vizier-ai
+```
+
+
 ## Planned Features
 
 - [ ] additional channels and client
