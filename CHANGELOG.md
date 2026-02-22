@@ -25,6 +25,7 @@
 - Fix undetected github workflow
 - Add workflow cache
 - Fail to push release
+- Release v0.1.3
 ## [0.1.1] - 2026-02-21
 
 ### 🚀 Features
