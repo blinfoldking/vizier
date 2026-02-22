@@ -20,7 +20,14 @@ pub enum Memory {
 impl Memory {
     fn simple(&self) -> String {
         match self {
-            Self::Request(req) => format!("{}: {}", req.user, req.content),
+            Self::Request(req) => format!(
+                r"
+---
+{}: {}
+---
+                ",
+                req.user, req.content
+            ),
             Self::Response(content) => format!("answer: {}", content),
         }
     }
@@ -86,8 +93,9 @@ impl SessionMemory {
         }
 
         let response =        agent.agent.prompt(format!(r"
-            Provided below is our recent conversation. 
-            Summarize it, make it as concise as possible, yet maintain clarity and avoid information loss as much as possible
+            Provided below is your recent conversation. 
+            Summarize and remember it on your memory. 
+            make it as concise as possible, yet maintain clarity and avoid information loss as much as possible
             {}", self.format_messages_for_summary())).await?;
 
         self.messages.clear();
