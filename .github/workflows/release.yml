@@ -56,7 +56,7 @@ jobs:
           git add Cargo.toml Cargo.lock CHANGELOG.md
           git commit -m "chore: release v${{ env.NEW_VERSION }}"
           git tag -a v${{ env.NEW_VERSION }} -m "Release v${{ env.NEW_VERSION }}"
-          git push origin main --tags
+          git push origin master --tags
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
