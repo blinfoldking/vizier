@@ -37,7 +37,7 @@ vizier-ai run
 - [ ] additional providers support
     - [ ] google
     - [ ] openai
-    - [ ] etch
+    - [ ] etc
 - [ ] support openai embedding model
 - [ ] additional tools
     - [ ] mcp
