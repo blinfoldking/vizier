@@ -1,4 +1,6 @@
 use std::ffi::c_char;
+use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -43,6 +45,8 @@ pub async fn init_vector_memory(
             sqlite3_vec_init as *const (),
         )));
     }
+
+    let _ = std::fs::create_dir_all(PathBuf::from_str(&format!("{workspace}/db"))?);
 
     let conn = Connection::open(format!("{}/db/memory.db", workspace)).await?;
 
