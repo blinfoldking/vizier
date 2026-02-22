@@ -1,3 +1,4 @@
+use std::ffi::c_char;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -26,7 +27,7 @@ use crate::config::VectorMemoryConfig;
 use crate::error::{VizierError, error};
 
 type SqliteExtensionFn =
-    unsafe extern "C" fn(*mut sqlite3, *mut *mut i8, *const sqlite3_api_routines) -> i32;
+    unsafe extern "C" fn(*mut sqlite3, *mut *mut c_char, *const sqlite3_api_routines) -> i32;
 
 // TODO: handle openai embedder
 pub async fn init_vector_memory(
