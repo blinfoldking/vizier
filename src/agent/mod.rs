@@ -26,7 +26,7 @@ pub struct VizierAgents {
     config: AgentConfigs,
     memory_config: MemoryConfig,
     transport: VizierTransport,
-    sessions: HashMap<VizierSession, Arc<Mutex<VizierAgent>>>,
+    sessions: Arc<Mutex<HashMap<VizierSession, VizierAgent>>>,
     tools: VizierTools,
 }
 
@@ -43,80 +43,83 @@ impl VizierAgents {
             memory_config: memory_config,
             transport,
             tools: VizierTools::new(workspace.clone(), tool_config).await?,
-            sessions: HashMap::new(),
+            sessions: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
     pub async fn run(&mut self) -> Result<()> {
+        let sessions = self.sessions.clone();
+
+        let cleanup_sessions = self.sessions.clone();
+        // stale agent session killer
+        let cleanup_handle = tokio::spawn(async move {
+            loop {
+                let lookup = cleanup_sessions.lock().await.clone();
+                for (session, agent) in lookup.iter() {
+                    if agent.is_stale().await {
+                        sessions.lock().await.remove(session);
+                    }
+                }
+            }
+        });
+
         let transport = self.transport.clone();
-
-        loop {
-            // stale agent session killer
-            // let lookup = self.sessions.clone();
-            // for (session, agent) in lookup.iter() {
-            //     let agent = agent.lock().await;
-            //     if agent.is_stale().await {
-            //         self.sessions.remove(session);
-            //     }
-            // }
-
-            if let Ok((session, request)) = transport.read_request().await {
-                // handle user requested lobotomy
-                let lobotomy_transport = self.transport.clone();
-                if request.content == "/lobotomy" {
-                    let _ = self.handle_lobotomy(&session).await;
-                    tokio::spawn(async move {
-                        if let Err(err) = lobotomy_transport
-                            .send_response(
-                                session.clone(),
-                                VizierResponse::Message("YIPEEEE".into()),
-                            )
-                            .await
-                        {
-                            log::error!("{}", err);
-                        }
-                    });
-
-                    continue;
-                }
-
-                if request.is_silent_read {
-                    self.handle_silent_read(&session, &request).await?;
-                    continue;
-                }
-
-                // start thinking every 5 second until response ready
-                let thinking_transport = transport.clone();
-                let thinking_session = session.clone();
-                let thinking = tokio::spawn(async move {
-                    loop {
-                        let _ = thinking_transport
-                            .send_response(thinking_session.clone(), VizierResponse::Thinking)
-                            .await;
-
-                        tokio::time::sleep(Duration::from_secs(5)).await;
+        while let Ok((session, request)) = transport.read_request().await {
+            // handle user requested lobotomy
+            let lobotomy_transport = self.transport.clone();
+            if request.content == "/lobotomy" {
+                let _ = self.handle_lobotomy(&session).await;
+                tokio::spawn(async move {
+                    if let Err(err) = lobotomy_transport
+                        .send_response(session.clone(), VizierResponse::Message("YIPEEEE".into()))
+                        .await
+                    {
+                        log::error!("{}", err);
                     }
                 });
 
-                let content = self.handle_chat(&session.clone(), &request).await;
-                match content {
-                    Err(err) => {
+                continue;
+            }
+
+            if request.is_silent_read {
+                self.handle_silent_read(&session, &request).await?;
+                continue;
+            }
+
+            // start thinking every 5 second until response ready
+            let thinking_transport = transport.clone();
+            let thinking_session = session.clone();
+            let thinking = tokio::spawn(async move {
+                loop {
+                    let _ = thinking_transport
+                        .send_response(thinking_session.clone(), VizierResponse::Thinking)
+                        .await;
+
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                }
+            });
+
+            let content = self.handle_chat(&session.clone(), &request).await;
+            match content {
+                Err(err) => {
+                    log::error!("{}", err);
+                }
+                Ok(content) => {
+                    if let Err(err) = transport
+                        .send_response(session.clone(), VizierResponse::Message(content))
+                        .await
+                    {
                         log::error!("{}", err);
                     }
-                    Ok(content) => {
-                        if let Err(err) = transport
-                            .send_response(session.clone(), VizierResponse::Message(content))
-                            .await
-                        {
-                            log::error!("{}", err);
-                        }
-                    }
                 }
-
-                // stop thinking
-                thinking.abort();
             }
+
+            // stop thinking
+            thinking.abort();
         }
+
+        cleanup_handle.abort();
+        Ok(())
     }
 
     pub async fn handle_silent_read(
@@ -125,12 +128,15 @@ impl VizierAgents {
         req: &VizierRequest,
     ) -> Result<()> {
         // find session, if none found, make it then retry
-        if let Some(agent) = self.sessions.get(session) {
-            agent.lock().await.handle_silent_read(req.clone()).await?
+        if let Some(agent) = self.sessions.lock().await.get_mut(session) {
+            agent.handle_silent_read(req.clone()).await?
         } else {
-            let agent = Arc::new(Mutex::new(self.init_session()?));
-            self.sessions.insert(session.clone(), agent.clone());
-            agent.lock().await.handle_silent_read(req.clone()).await?;
+            let mut agent = self.init_session()?;
+            agent.handle_silent_read(req.clone()).await?;
+            self.sessions
+                .lock()
+                .await
+                .insert(session.clone(), agent.clone());
         }
 
         Ok(())
@@ -142,19 +148,24 @@ impl VizierAgents {
         req: &VizierRequest,
     ) -> Result<String> {
         // find session, if none found, make it then retry
-        if let Some(agent) = self.sessions.get(session) {
-            agent.lock().await.handle_chat(req.clone()).await
+        if let Some(agent) = self.sessions.lock().await.get_mut(session) {
+            agent.handle_chat(req.clone()).await
         } else {
-            let agent = Arc::new(Mutex::new(self.init_session()?));
-            self.sessions.insert(session.clone(), agent.clone());
-            agent.lock().await.handle_chat(req.clone()).await
+            let mut agent = self.init_session()?;
+            let response = agent.handle_chat(req.clone()).await?;
+            self.sessions
+                .lock()
+                .await
+                .insert(session.clone(), agent.clone());
+
+            Ok(response)
         }
     }
 
     pub async fn handle_lobotomy(&mut self, session: &VizierSession) -> Result<()> {
         // find session, if none found, make it then retry
-        if let Some(agent) = self.sessions.get(session) {
-            agent.lock().await.handle_lobotomy().await?;
+        if let Some(agent) = self.sessions.lock().await.get_mut(session) {
+            agent.handle_lobotomy().await?;
         }
 
         Ok(())
@@ -241,6 +252,7 @@ impl VizierAgent {
 
 #[derive(Clone)]
 pub struct VizierAgentImpl<T: CompletionModel> {
+    #[allow(unused)]
     id: String,
     agent: Agent<T>,
     session_memory: SessionMemory,
