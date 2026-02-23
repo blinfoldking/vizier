@@ -4,19 +4,11 @@ use anyhow::Result;
 use dirs::home_dir;
 use duration_string::DurationString;
 use inquire::{Confirm, CustomType, Password, Select, Text};
-use rig::http_client::HttpClientExt;
 
-use crate::{
-    config::{
-        AgentConfig, AgentConfigs, ChannelsConfig, DiscordChannelConfig, HTTPChannelConfig,
-        MemoryConfig, ModelConfig, ToolsConfig, VizierConfig,
-    },
-    error::VizierError,
+use crate::config::{
+    AgentConfig, AgentConfigs, ChannelsConfig, DiscordChannelConfig, HTTPChannelConfig,
+    MemoryConfig, ModelConfig, ToolsConfig, VizierConfig,
 };
-
-fn input_error(section: String) -> VizierError {
-    VizierError(format!("error when inputing {}", section))
-}
 
 pub async fn onboard() -> Result<()> {
     let home = home_dir().unwrap();

@@ -39,7 +39,7 @@ impl SearchType for NewsOnlySearch {
     }
 
     fn description() -> String {
-        "find latest news on the topic(s)".into()
+        "find the latest news".into()
     }
 }
 

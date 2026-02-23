@@ -1,15 +1,9 @@
 use rig::{
-    Embed,
     completion::{CompletionModel, Prompt},
     message::Message,
 };
-use serde::{Deserialize, Serialize};
 
-use crate::{
-    agent::VizierAgentImpl,
-    config::MemoryConfig,
-    transport::{VizierRequest, VizierResponse},
-};
+use crate::{agent::VizierAgentImpl, config::MemoryConfig, transport::VizierRequest};
 
 #[derive(Debug, Clone)]
 pub enum Memory {
@@ -32,6 +26,7 @@ impl Memory {
         }
     }
 
+    #[allow(unused)]
     fn to_string(&self) -> String {
         match self {
             Self::Request(req) => req.to_prompt().unwrap(),

@@ -1,8 +1,5 @@
 use anyhow::Result;
-use rig::tool::{
-    Tool,
-    server::{ToolServer, ToolServerHandle},
-};
+use rig::tool::server::{ToolServer, ToolServerHandle};
 
 use crate::{
     agent::{
@@ -45,9 +42,9 @@ impl VizierTools {
             .tool(WritePrimaryDocument::<UserDocument>::new(workspace.clone()));
 
         if let Some(brave_search) = config.brave_search {
-            tool_server_builder =
-                tool_server_builder.tool(BraveSearch::<WebOnlySearch>::new(&brave_search));
-            // .tool(BraveSearch::<NewsOnlySearch>::new(&brave_search));
+            tool_server_builder = tool_server_builder
+                .tool(BraveSearch::<WebOnlySearch>::new(&brave_search))
+                .tool(BraveSearch::<NewsOnlySearch>::new(&brave_search));
         }
 
         if let Some(vector_memory) = config.vector_memory {
