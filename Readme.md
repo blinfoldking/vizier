@@ -26,7 +26,7 @@ cargo install vizier-ai
 vizier-ai onboard
 
 ## run the agent
-vizier-ai run
+vizier-ai run --config "PATH_TO_YOUR_CONFIG"
 ```
 
 ## Update Installed Version
