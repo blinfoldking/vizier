@@ -266,11 +266,7 @@ impl<T: CompletionModel> VizierAgentImpl<T> {
         let response = self
             .agent
             .chat(
-                format!(
-                    "{}\n\n{}",
-                    req.to_prompt()?,
-                    self.session_memory.summary_prompt()
-                ),
+                format!("{}", req.to_prompt()?,),
                 self.session_memory.recall_as_messages(),
             )
             .await?;
