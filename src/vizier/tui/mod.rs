@@ -20,7 +20,10 @@ use serde_json::Value;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 use crate::{
-    channels::api::{ChatRequest, ChatResponse, SessionResponse, response::APIResponse},
+    channels::http::{
+        models::response::APIResponse, models::session::ChatRequest, models::session::ChatResponse,
+        models::session::SessionResponse,
+    },
     config::VizierConfig,
 };
 
@@ -49,7 +52,7 @@ fn status_label(label: &str, value: &str) -> StyledString {
 }
 
 fn chat_message(actor: &str, value: String, is_agent: bool) -> impl IntoBoxedView {
-    let mut speaker = if !is_agent {
+    let speaker = if !is_agent {
         StyledString::styled(
             actor,
             ColorStyle::new(Color::Light(BaseColor::Blue), Color::TerminalDefault),
@@ -118,7 +121,7 @@ pub async fn run(args: TuiArgs) -> Result<()> {
     let (output_writer, output_reader) = flume::unbounded::<ChatResponse>();
     let output_writer = Arc::new(output_writer);
 
-    let loading_state = vec!["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+    // let loading_state = vec!["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
     let mut siv = cursive::default();
 
@@ -169,7 +172,7 @@ pub async fn run(args: TuiArgs) -> Result<()> {
                     .with_name("input")
                     .full_width(),
             ))
-            .child(Button::new_raw("[Send]", |s| {}))
+            // .child(Button::new_raw("[Send]", |s| {}))
             .full_width(),
     );
 

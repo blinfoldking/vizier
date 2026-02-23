@@ -1,13 +1,13 @@
 use anyhow::Result;
 
 use crate::{
-    channels::{api::HTTPChannel, discord::DiscordChannel},
+    channels::{discord::DiscordChannel, http::HTTPChannel},
     config::ChannelsConfig,
     transport::VizierTransport,
 };
 
-pub mod api;
 pub mod discord;
+pub mod http;
 
 pub trait VizierChannel {
     async fn run(&mut self) -> Result<()>;

@@ -1,3 +1,4 @@
+#![allow(unused)]
 use cursive::{
     Printer,
     style::{BaseColor, Color, ColorStyle},
