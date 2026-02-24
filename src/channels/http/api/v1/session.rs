@@ -18,20 +18,45 @@ pub async fn create_custom_session(
     Path(session_id): Path<String>,
     sessions: State<ChatTransport>,
 ) -> models::response::Response<SessionResponse> {
-    sessions
+    let mut sessions = sessions.0.reponses.lock().await;
+    // skip if already exists
+    if sessions.get_mut(&session_id).is_some() {
+        return api_response(StatusCode::OK, SessionResponse { session_id });
+    }
+
+    sessions.insert(session_id.clone(), flume::unbounded());
+
+    api_response(StatusCode::OK, SessionResponse { session_id })
+}
+
+pub async fn delete_sessions(
+    Path(session_id): Path<String>,
+    sessions: State<ChatTransport>,
+) -> models::response::Response<()> {
+    let _ = sessions.0.reponses.lock().await.remove(&session_id);
+
+    api_response(StatusCode::OK, ())
+}
+
+pub async fn list_sessions(
+    sessions: State<ChatTransport>,
+) -> models::response::Response<Vec<String>> {
+    let sessions = sessions
         .0
         .reponses
         .lock()
         .await
-        .insert(session_id.clone(), flume::unbounded());
+        .iter()
+        .map(|(session_id, _)| session_id.clone())
+        .collect::<Vec<_>>();
 
-    api_response(StatusCode::OK, SessionResponse { session_id })
+    api_response(StatusCode::OK, sessions)
 }
 
 pub async fn create_session(
     sessions: State<ChatTransport>,
 ) -> models::response::Response<SessionResponse> {
-    let session_id = uuid::Uuid::new_v4().to_string();
+    let session_id = nanoid::nanoid!(10);
     sessions
         .0
         .reponses
@@ -48,18 +73,14 @@ pub async fn chat(
     state: State<ChatTransport>,
 ) -> axum::response::Response {
     log::debug!("connect {}", session_id);
-    let responses = state.reponses.lock().await;
-    let session = responses.get(&session_id);
-    if let Some(session) = session {
-        let requests = state.requests.clone();
-        let responses = session.clone();
-        return ws.on_upgrade(|socket| handle_socket(socket, session_id, requests, responses));
-    } else {
-        axum::response::Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body("not found".into())
-            .unwrap()
-    }
+    let mut responses = state.reponses.lock().await;
+    let session = responses
+        .entry(session_id.clone())
+        .or_insert(flume::unbounded());
+
+    let requests = state.requests.clone();
+    let responses = session.clone();
+    ws.on_upgrade(|socket| handle_socket(socket, session_id, requests, responses))
 }
 
 pub async fn handle_socket(

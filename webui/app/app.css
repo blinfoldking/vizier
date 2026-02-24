@@ -1,0 +1,127 @@
+@import 'tailwindcss';
+@import './animation.css';
+
+@plugin "@tailwindcss/typography";
+
+:root {
+    --light: #eeeeee;
+    --dark: oklch(21% 0.034 264.665);
+    --background: var(--light);
+    --foreground: var(--dark);
+}
+
+@theme {
+    --color-white: var(--light);
+    --color-black: var(--dark);
+}
+
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --font-sans: 'IBM Plex Sans Variable';
+    --font-mono: 'IBM Plex Mono';
+
+    --animate-appear-l-500: appear-l 500ms ease-in-out;
+    --animate-appear-l-750: appear-l 750ms ease-in-out;
+    --animate-appear-l-1000: appear-l 1000ms ease-in-out;
+
+    @keyframes appear-l {
+        0% {
+            opacity: 0;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    --animate-appear-500: appear 500ms ease-in-out;
+    --animate-disappear-500: disappear 500ms ease-in-out;
+
+    @keyframes appear {
+        0% {
+            opacity: 0;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    @keyframes disappear {
+        0% {
+            opacity: 1;
+        }
+
+        100% {
+            opacity: 0;
+        }
+    }
+}
+
+@font-face {
+    font-family: Epetri_Regular1;
+    src: url(../../public/Epetri-AIRY-regular2.otf);
+}
+
+@theme {
+    --inset-shadow-md: inset 0 2px 3px rgba(0, 0, 0, 0.25);
+    --font-epetri: Epetri_Regular1, 'IBM Plex Mono';
+}
+
+/* @media (prefers-color-scheme: dark) { */
+/*   :root { */
+/*     --background: var(--dark); */
+/*     --foreground: var(--light); */
+/*   } */
+/* } */
+
+body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: 'IBM Plex Mono', sans-serif;
+}
+
+a:hover {
+    background: var(--foreground);
+    color: var(--background);
+}
+
+@layer utilities {
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        /* IE and Edge */
+        scrollbar-width: none;
+        /* Firefox */
+    }
+}
+
+.vertical-text {
+    writing-mode: vertical-lr;
+    text-orientation: upright;
+}
+
+@layer utilities {
+    /* Chrome, Safari and Opera */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        /* IE and Edge */
+        scrollbar-width: none;
+        /* Firefox */
+    }
+}
+
+.prose p {
+    padding: 0 !important;
+    margin: 0 !important;
+}

@@ -1,8 +1,13 @@
 use anyhow::Result;
 use axum::{
     Router,
-    routing::{any, get, post},
+    routing::{any, delete, get, post},
 };
+use reqwest::{
+    Method,
+    header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
+};
+use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
     channels::{VizierChannel, http::state::ChatTransport},
@@ -31,6 +36,18 @@ impl VizierChannel for HTTPChannel {
     async fn run(&mut self) -> Result<()> {
         let chat_transport = ChatTransport::new();
 
+        let cors = CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods([
+                Method::GET,
+                Method::POST,
+                Method::PUT,
+                Method::PATCH,
+                Method::DELETE,
+                Method::OPTIONS,
+            ])
+            .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
+
         let app = Router::new()
             // webui
             .route("/", get(webui::index))
@@ -38,15 +55,21 @@ impl VizierChannel for HTTPChannel {
             // api
             .route("/api/v1/ping", get(api::v1::ping))
             // session api
+            .route("/api/v1/session", get(api::v1::session::list_sessions))
             .route("/api/v1/session", post(api::v1::session::create_session))
             .route(
                 "/api/v1/session/{session_id}",
                 post(api::v1::session::create_custom_session),
             )
             .route(
+                "/api/v1/session/{session_id}",
+                delete(api::v1::session::delete_sessions),
+            )
+            .route(
                 "/api/v1/session/{session_id}/chat",
                 any(api::v1::session::chat),
             )
+            .layer(cors)
             .with_state(chat_transport.clone());
 
         let listener =

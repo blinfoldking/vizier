@@ -2,11 +2,11 @@ use axum::{extract::Path, http::HeaderMap, response::IntoResponse};
 use reqwest::{StatusCode, header};
 
 #[derive(rust_embed::RustEmbed)]
-#[folder = "webui/build/"]
+#[folder = "webui/build/client"]
 struct WebUI;
 
 pub async fn index() -> impl IntoResponse {
-    match WebUI::get("200.html") {
+    match WebUI::get("index.html") {
         Some(content) => {
             let mut headers = HeaderMap::new();
             headers.insert(header::CONTENT_TYPE, "text/html".parse().unwrap());
