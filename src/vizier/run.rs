@@ -1,4 +1,4 @@
-use std::{env, fs, path::PathBuf};
+use std::{env, fs, path::PathBuf, str::FromStr};
 
 use anyhow::Result;
 use clap::Args;
@@ -8,6 +8,7 @@ use crate::{
     channels::VizierChannels,
     config::VizierConfig,
     constant::{AGENT_MD, BOOT_MD, IDENT_MD, USER_MD},
+    dependencies::VizierDependencies,
     transport::VizierTransport,
     vizier::tui::{self, TuiArgs},
 };
@@ -28,7 +29,12 @@ pub struct RunArgs {
 }
 
 pub async fn run_server(config: VizierConfig) -> Result<()> {
-    let transport = VizierTransport::new();
+    let _ = std::fs::create_dir_all(PathBuf::from_str(&format!(
+        "{}/db",
+        config.workspace.clone()
+    ))?);
+
+    let deps = VizierDependencies::new(config.clone()).await?;
 
     init_workspace(config.workspace.clone());
 
@@ -37,7 +43,7 @@ pub async fn run_server(config: VizierConfig) -> Result<()> {
         config.agents.clone(),
         config.memory.clone(),
         config.tools.clone(),
-        transport.clone(),
+        deps.clone(),
     )
     .await?;
     tokio::spawn(async move {
@@ -46,14 +52,14 @@ pub async fn run_server(config: VizierConfig) -> Result<()> {
         }
     });
 
-    let channels = VizierChannels::new(config.channels.clone(), transport.clone())?;
+    let channels = VizierChannels::new(config.channels.clone(), deps.clone())?;
     tokio::spawn(async move {
         if let Err(err) = channels.run().await {
             log::error!("{}", err);
         }
     });
 
-    transport.run().await?;
+    deps.run().await?;
     Ok(())
 }
 
@@ -86,6 +92,7 @@ pub async fn run(args: RunArgs) -> Result<()> {
                 .filter_module("h2", log::LevelFilter::Error)
                 .filter_module("tracing", log::LevelFilter::Off)
                 .filter_module("rustls", log::LevelFilter::Off)
+                // .filter_module("surrealdb", log::LevelFilter::Off)
                 .init();
         } else {
             pretty_env_logger::init();

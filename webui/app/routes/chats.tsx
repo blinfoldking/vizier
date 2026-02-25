@@ -82,7 +82,7 @@ const Chat = () => {
       </div>
       <div className="absolute w-full flex flex-col justify-between bottom-0 p-5">
         <div></div>
-        <div className="flex items-center">
+        <div className="flex items-center h-full">
           <Editor onSubmit={send} />
           <div
             className="w-15 h-15 bg-white flex justify-center items-center ml-5 shadow-md hover:shadow-xl rounded-full"

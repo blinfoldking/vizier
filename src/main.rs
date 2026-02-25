@@ -11,6 +11,8 @@ mod agent;
 mod channels;
 mod config;
 mod constant;
+mod database;
+mod dependencies;
 mod error;
 mod transport;
 mod utils;

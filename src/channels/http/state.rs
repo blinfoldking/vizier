@@ -10,8 +10,15 @@ use tokio::sync::Mutex;
 use crate::{
     agent::session::VizierSession,
     channels::http::models::session::{ChatRequest, ChatResponse},
+    database::VizierDatabases,
     transport::{VizierRequest, VizierResponse, VizierTransport, VizierTransportChannel},
 };
+
+#[derive(Debug, Clone)]
+pub struct HTTPState {
+    pub transport: ChatTransport,
+    pub db: VizierDatabases,
+}
 
 pub type ChatRequestTransport = (
     Sender<(String, ChatRequest)>,

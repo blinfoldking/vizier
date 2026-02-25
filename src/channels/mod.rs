@@ -3,6 +3,7 @@ use anyhow::Result;
 use crate::{
     channels::{discord::DiscordChannel, http::HTTPChannel},
     config::ChannelsConfig,
+    dependencies::VizierDependencies,
     transport::VizierTransport,
 };
 
@@ -15,17 +16,17 @@ pub trait VizierChannel {
 
 pub struct VizierChannels {
     config: ChannelsConfig,
-    transport: VizierTransport,
+    deps: VizierDependencies,
 }
 
 impl VizierChannels {
-    pub fn new(config: ChannelsConfig, transport: VizierTransport) -> Result<Self> {
-        Ok(Self { config, transport })
+    pub fn new(config: ChannelsConfig, deps: VizierDependencies) -> Result<Self> {
+        Ok(Self { config, deps })
     }
 
     pub async fn run(&self) -> Result<()> {
         if let Some(discord_config) = &self.config.discord {
-            let transport = self.transport.clone();
+            let transport = self.deps.transport.clone();
             let discord_config = discord_config.clone();
             tokio::spawn(async move {
                 let mut discord = DiscordChannel::new(discord_config.clone(), transport.clone())
@@ -39,7 +40,7 @@ impl VizierChannels {
         }
 
         if let Some(http) = &self.config.http {
-            let mut http = HTTPChannel::new(http.clone(), self.transport.clone())?;
+            let mut http = HTTPChannel::new(http.clone(), self.deps.clone())?;
 
             tokio::spawn(async move {
                 if let Err(e) = http.run().await {

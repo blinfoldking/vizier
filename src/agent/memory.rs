@@ -6,12 +6,12 @@ use rig::{
 use crate::{agent::VizierAgentImpl, config::MemoryConfig, transport::VizierRequest};
 
 #[derive(Debug, Clone)]
-pub enum Memory {
+pub enum SessionMemory {
     Response(String),
     Request(VizierRequest),
 }
 
-impl Memory {
+impl SessionMemory {
     fn simple(&self) -> String {
         match self {
             Self::Request(req) => format!(
@@ -43,13 +43,13 @@ impl Memory {
 }
 
 #[derive(Debug, Clone)]
-pub struct SessionMemory {
-    messages: Vec<Memory>,
+pub struct SessionMemories {
+    messages: Vec<SessionMemory>,
     session_memory_recall_depth: usize,
     summary: Option<String>,
 }
 
-impl SessionMemory {
+impl SessionMemories {
     pub fn new(config: MemoryConfig) -> Self {
         Self {
             messages: vec![],
@@ -59,14 +59,14 @@ impl SessionMemory {
     }
 
     pub fn push_user_message(&mut self, req: VizierRequest) {
-        self.messages.push(Memory::Request(req));
+        self.messages.push(SessionMemory::Request(req));
     }
 
     pub fn push_agent(&mut self, response: String) {
-        self.messages.push(Memory::Response(response));
+        self.messages.push(SessionMemory::Response(response));
     }
 
-    pub fn recall(&self) -> Vec<Memory> {
+    pub fn recall(&self) -> Vec<SessionMemory> {
         self.messages
             .iter()
             .rev()
@@ -106,23 +106,6 @@ impl SessionMemory {
             .map(|msg| msg.simple())
             .collect::<Vec<_>>()
             .join("\n")
-    }
-
-    pub fn summary_prompt(&self) -> String {
-        if let Some(summary) = self.summary.clone() {
-            format!(
-                r"
-            ## Context
-
-            Context for our current session: 
-
-            {}
-                ",
-                summary,
-            )
-        } else {
-            "".into()
-        }
     }
 
     pub fn flush(&mut self) {

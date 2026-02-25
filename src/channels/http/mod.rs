@@ -10,8 +10,15 @@ use reqwest::{
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
-    channels::{VizierChannel, http::state::ChatTransport},
+    channels::{
+        VizierChannel,
+        http::{
+            api::v1::memory::get_all_memories,
+            state::{ChatTransport, HTTPState},
+        },
+    },
     config::HTTPChannelConfig,
+    dependencies::VizierDependencies,
     transport::VizierTransport,
 };
 
@@ -23,12 +30,12 @@ mod webui;
 
 pub struct HTTPChannel {
     config: HTTPChannelConfig,
-    transport: VizierTransport,
+    deps: VizierDependencies,
 }
 
 impl HTTPChannel {
-    pub fn new(config: HTTPChannelConfig, transport: VizierTransport) -> Result<Self> {
-        Ok(Self { config, transport })
+    pub fn new(config: HTTPChannelConfig, deps: VizierDependencies) -> Result<Self> {
+        Ok(Self { config, deps })
     }
 }
 
@@ -69,13 +76,18 @@ impl VizierChannel for HTTPChannel {
                 "/api/v1/session/{session_id}/chat",
                 any(api::v1::session::chat),
             )
+            // memory api
+            .route("/api/v1/memory", get(get_all_memories))
             .layer(cors)
-            .with_state(chat_transport.clone());
+            .with_state(HTTPState {
+                db: self.deps.database.clone(),
+                transport: chat_transport.clone(),
+            });
 
         let listener =
             tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.config.port)).await?;
 
-        let transport = self.transport.clone();
+        let transport = self.deps.transport.clone();
         let transport_handle = tokio::spawn(async move {
             let _ = chat_transport.run(transport).await;
         });

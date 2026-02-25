@@ -9,10 +9,11 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 
-use crate::agent::memory::SessionMemory;
+use crate::agent::memory::SessionMemories;
 use crate::agent::session::VizierSession;
 use crate::agent::tools::VizierTools;
 use crate::config::{AgentConfig, AgentConfigs, MemoryConfig, ToolsConfig};
+use crate::dependencies::VizierDependencies;
 use crate::transport::{VizierRequest, VizierResponse, VizierTransport};
 use crate::utils::remove_think_tags;
 
@@ -25,7 +26,7 @@ pub mod tools;
 pub struct VizierAgents {
     config: AgentConfigs,
     memory_config: MemoryConfig,
-    transport: VizierTransport,
+    deps: VizierDependencies,
     sessions: Arc<Mutex<HashMap<VizierSession, VizierAgent>>>,
     tools: VizierTools,
 }
@@ -36,14 +37,14 @@ impl VizierAgents {
         config: AgentConfigs,
         memory_config: MemoryConfig,
         tool_config: ToolsConfig,
-        transport: VizierTransport,
+        deps: VizierDependencies,
     ) -> Result<Self> {
         Ok(Self {
             config: config,
             memory_config: memory_config,
-            transport,
-            tools: VizierTools::new(workspace.clone(), tool_config).await?,
+            tools: VizierTools::new(workspace.clone(), tool_config, deps.clone()).await?,
             sessions: Arc::new(Mutex::new(HashMap::new())),
+            deps,
         })
     }
 
@@ -63,10 +64,10 @@ impl VizierAgents {
             }
         });
 
-        let transport = self.transport.clone();
+        let transport = self.deps.transport.clone();
         while let Ok((session, request)) = transport.read_request().await {
             // handle user requested lobotomy
-            let lobotomy_transport = self.transport.clone();
+            let lobotomy_transport = self.deps.transport.clone();
             if request.content == "/lobotomy" {
                 let _ = self.handle_lobotomy(&session).await;
                 tokio::spawn(async move {
@@ -255,7 +256,7 @@ pub struct VizierAgentImpl<T: CompletionModel> {
     #[allow(unused)]
     id: String,
     agent: Agent<T>,
-    session_memory: SessionMemory,
+    session_memory: SessionMemories,
     session_ttl: Duration,
     last_interact_at: chrono::DateTime<Utc>,
 }
@@ -328,7 +329,7 @@ impl VizierAgentImpl<ollama::CompletionModel> {
         Ok(Self {
             id: id.clone(),
             agent,
-            session_memory: SessionMemory::new(memory_config.clone()),
+            session_memory: SessionMemories::new(memory_config.clone()),
             session_ttl: *config.session_ttl,
             last_interact_at: Utc::now(),
         })
@@ -360,7 +361,7 @@ impl VizierAgentImpl<openrouter::CompletionModel> {
         Ok(Self {
             id: id.clone(),
             agent,
-            session_memory: SessionMemory::new(memory_config.clone()),
+            session_memory: SessionMemories::new(memory_config.clone()),
             session_ttl: *config.session_ttl,
             last_interact_at: Utc::now(),
         })
@@ -392,7 +393,7 @@ impl VizierAgentImpl<deepseek::CompletionModel> {
         Ok(Self {
             id: id.clone(),
             agent,
-            session_memory: SessionMemory::new(memory_config.clone()),
+            session_memory: SessionMemories::new(memory_config.clone()),
             session_ttl: *config.session_ttl,
             last_interact_at: Utc::now(),
         })

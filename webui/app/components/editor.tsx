@@ -15,7 +15,10 @@ const Editor = (props: { onSubmit: (value: string) => void }) => {
   const [onFocus, setOnFocus] = useState(false)
 
   const submit = (value: string) => {
-    console.log({ value })
+    if (value.trim().length == 0) {
+      return
+    }
+
     props.onSubmit(value)
     setValue('')
     ref?.current?.setMarkdown('')
@@ -43,7 +46,7 @@ const Editor = (props: { onSubmit: (value: string) => void }) => {
         <div className="w-full max-h-[25vh] overflow-y-scroll no-scrollbar">
           <MDXEditor
             ref={ref}
-            className="max-h-[25vh] prose"
+            className="max-h-[25vh] prose w-full"
             markdown={value}
             plugins={[
               headingsPlugin(),
@@ -59,7 +62,10 @@ const Editor = (props: { onSubmit: (value: string) => void }) => {
             onBlur={() => setOnFocus(false)}
           />
         </div>
-        <div className="h-full max-h-[25vh] flex pt-2.5 pb-2.5">
+        <div
+          className="h-full max-h-[25vh] flex pt-2.5 pb-2.5"
+          style={{ height: '-webkit-fill-available' }}
+        >
           <div
             className="active:inset-shadow-md hover:inset-shadow-xs h-10 w-10 flex justify-center items-center rounded-full text-gray-500 hover:text-black"
             onClick={() => submit(value)}

@@ -14,6 +14,7 @@ use crate::{
         },
     },
     config::ToolsConfig,
+    dependencies::VizierDependencies,
 };
 
 mod brave_search;
@@ -28,7 +29,11 @@ pub struct VizierTools {
 }
 
 impl VizierTools {
-    pub async fn new(workspace: String, config: ToolsConfig) -> Result<Self> {
+    pub async fn new(
+        workspace: String,
+        config: ToolsConfig,
+        deps: VizierDependencies,
+    ) -> Result<Self> {
         let mut tool_server_builder = ToolServer::new()
             .tool(ReadPrimaryDocument::<AgentDocument>::new(workspace.clone()))
             .tool(ReadPrimaryDocument::<IdentDocument>::new(workspace.clone()))
@@ -48,13 +53,10 @@ impl VizierTools {
         }
 
         if let Some(vector_memory) = config.vector_memory {
-            let (index, read_memory, write_memory) =
-                init_vector_memory(workspace.clone(), vector_memory).await?;
+            let (read_memory, write_memory) =
+                init_vector_memory(workspace.clone(), vector_memory, deps).await?;
 
-            tool_server_builder = tool_server_builder
-                .tool(index)
-                .tool(read_memory)
-                .tool(write_memory);
+            tool_server_builder = tool_server_builder.tool(read_memory).tool(write_memory);
         }
 
         if config.dangerously_enable_cli_access {
