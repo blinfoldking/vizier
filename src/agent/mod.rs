@@ -3,8 +3,11 @@ use chrono::Utc;
 use rig::agent::Agent;
 use rig::client::{CompletionClient, Nothing};
 use rig::completion::{Chat, CompletionModel};
+use rig::message::Message;
 use rig::providers::{deepseek, ollama, openrouter};
 use std::collections::HashMap;
+use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -29,6 +32,13 @@ pub struct VizierAgents {
     deps: VizierDependencies,
     sessions: Arc<Mutex<HashMap<VizierSession, VizierAgent>>>,
     tools: VizierTools,
+    workspace: String,
+}
+
+fn read_md_file(workspace: String, file: String) -> String {
+    let path = PathBuf::from(format!("{}/{}", workspace, file));
+
+    fs::read_to_string(path).unwrap()
 }
 
 impl VizierAgents {
@@ -45,6 +55,7 @@ impl VizierAgents {
             tools: VizierTools::new(workspace.clone(), tool_config, deps.clone()).await?,
             sessions: Arc::new(Mutex::new(HashMap::new())),
             deps,
+            workspace,
         })
     }
 
@@ -182,6 +193,7 @@ impl VizierAgents {
                     self.tools.clone(),
                     primary_config,
                     &self.memory_config,
+                    self.workspace.clone(),
                 )?)
             }
             "deepseek" => VizierAgent::Deepseek(VizierAgentImpl::<deepseek::CompletionModel>::new(
@@ -189,12 +201,14 @@ impl VizierAgents {
                 self.tools.clone(),
                 primary_config,
                 &self.memory_config,
+                self.workspace.clone(),
             )?),
             _ => VizierAgent::Ollama(VizierAgentImpl::<ollama::CompletionModel>::new(
                 primary_config.name.clone(),
                 self.tools.clone(),
                 primary_config,
                 &self.memory_config,
+                self.workspace.clone(),
             )?),
         };
 
@@ -259,21 +273,31 @@ pub struct VizierAgentImpl<T: CompletionModel> {
     session_memory: SessionMemories,
     session_ttl: Duration,
     last_interact_at: chrono::DateTime<Utc>,
+    workspace: String,
 }
 
 impl<T: CompletionModel> VizierAgentImpl<T> {
     async fn chat(&mut self, req: VizierRequest) -> Result<String> {
-        self.session_memory.push_user_message(req.clone());
+        let agent_md = read_md_file(self.workspace.clone(), "AGENT.md".into());
+        let ident_md = read_md_file(self.workspace.clone(), "IDENT.md".into());
+        let user_md = read_md_file(self.workspace.clone(), "USER.md".into());
+
+        let mut history = vec![
+            Message::user(agent_md),
+            Message::user(ident_md),
+            Message::user(user_md),
+        ];
+
+        history.extend(self.session_memory.recall_as_messages());
+
         let response = self
             .agent
-            .chat(
-                format!("{}", req.to_prompt()?,),
-                self.session_memory.recall_as_messages(),
-            )
+            .chat(format!("{}", req.to_prompt()?,), history)
             .await?;
 
         let response_msg = remove_think_tags(&*response.to_string());
 
+        self.session_memory.push_user_message(req.clone());
         self.session_memory.push_agent(response_msg);
         self.session_memory.try_summarize(self.clone()).await?;
 
@@ -307,6 +331,7 @@ impl VizierAgentImpl<ollama::CompletionModel> {
         tool: VizierTools,
         config: &AgentConfig,
         memory_config: &MemoryConfig,
+        workspace: String,
     ) -> Result<Self> {
         let client: ollama::Client = ollama::Client::builder()
             .base_url(config.model.base_url.clone())
@@ -332,6 +357,7 @@ impl VizierAgentImpl<ollama::CompletionModel> {
             session_memory: SessionMemories::new(memory_config.clone()),
             session_ttl: *config.session_ttl,
             last_interact_at: Utc::now(),
+            workspace,
         })
     }
 }
@@ -342,6 +368,7 @@ impl VizierAgentImpl<openrouter::CompletionModel> {
         tool: VizierTools,
         config: &AgentConfig,
         memory_config: &MemoryConfig,
+        workspace: String,
     ) -> Result<Self> {
         let client: openrouter::Client = openrouter::Client::new(config.model.api_key.clone())?;
 
@@ -364,6 +391,7 @@ impl VizierAgentImpl<openrouter::CompletionModel> {
             session_memory: SessionMemories::new(memory_config.clone()),
             session_ttl: *config.session_ttl,
             last_interact_at: Utc::now(),
+            workspace,
         })
     }
 }
@@ -374,6 +402,7 @@ impl VizierAgentImpl<deepseek::CompletionModel> {
         tool: VizierTools,
         config: &AgentConfig,
         memory_config: &MemoryConfig,
+        workspace: String,
     ) -> Result<Self> {
         let client: deepseek::Client = deepseek::Client::new(config.model.api_key.clone())?;
 
@@ -396,6 +425,7 @@ impl VizierAgentImpl<deepseek::CompletionModel> {
             session_memory: SessionMemories::new(memory_config.clone()),
             session_ttl: *config.session_ttl,
             last_interact_at: Utc::now(),
+            workspace,
         })
     }
 }

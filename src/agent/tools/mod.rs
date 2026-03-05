@@ -35,9 +35,6 @@ impl VizierTools {
         deps: VizierDependencies,
     ) -> Result<Self> {
         let mut tool_server_builder = ToolServer::new()
-            .tool(ReadPrimaryDocument::<AgentDocument>::new(workspace.clone()))
-            .tool(ReadPrimaryDocument::<IdentDocument>::new(workspace.clone()))
-            .tool(ReadPrimaryDocument::<UserDocument>::new(workspace.clone()))
             .tool(WritePrimaryDocument::<AgentDocument>::new(
                 workspace.clone(),
             ))
