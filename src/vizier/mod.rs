@@ -19,7 +19,7 @@ enum Commands {
     /// Run vizier agents, servers and channels
     Run(run::RunArgs),
     /// Onboard new user, and generate configurations
-    Onboard,
+    Onboard(onboard::OnboardArgs),
     /// generate new config, non-interactively
     Configure,
     /// Open tui client
@@ -30,7 +30,7 @@ pub async fn cli() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Onboard => onboard::onboard().await?,
+        Commands::Onboard(args) => onboard::onboard(args.clone()).await?,
         Commands::Run(args) => run::run(args.clone()).await?,
         Commands::Tui(args) => tui::run(args.clone()).await?,
         _ => {

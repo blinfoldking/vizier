@@ -1,6 +1,7 @@
 use std::{path::PathBuf, str::FromStr};
 
 use anyhow::Result;
+use clap::Args;
 use dirs::home_dir;
 use duration_string::DurationString;
 use inquire::{Confirm, CustomType, Password, Select, Text};
@@ -10,13 +11,22 @@ use crate::config::{
     MemoryConfig, ModelConfig, ToolsConfig, VizierConfig,
 };
 
-pub async fn onboard() -> Result<()> {
+#[derive(Debug, Args, Clone)]
+pub struct OnboardArgs {
+    #[arg(short, long, value_name = "PATH", help = "path to workspace")]
+    pub path: Option<String>,
+}
+
+pub async fn onboard(args: OnboardArgs) -> Result<()> {
     let home = home_dir().unwrap();
     let default_workspace = format!("{}/.vizier", home.to_str().unwrap());
 
-    let workspace = Text::new("agent workspace directory: ")
-        .with_default(&default_workspace)
-        .prompt()?;
+    let workspace = match args.path {
+        None => Text::new("agent workspace directory: ")
+            .with_default(&default_workspace)
+            .prompt()?,
+        Some(path) => path,
+    };
 
     // agents config
     // setup primary agetn
