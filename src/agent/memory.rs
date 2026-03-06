@@ -3,7 +3,7 @@ use rig::{
     message::Message,
 };
 
-use crate::{agent::VizierAgentImpl, config::MemoryConfig, transport::VizierRequest};
+use crate::{agent::VizierAgentImpl, config::agent::MemoryConfig, transport::VizierRequest};
 
 #[derive(Debug, Clone)]
 pub enum SessionMemory {
@@ -113,3 +113,4 @@ impl SessionMemories {
         self.summary = None;
     }
 }
+

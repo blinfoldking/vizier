@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -11,23 +12,23 @@ use serenity::model::channel::Message;
 use serenity::prelude::*;
 use text_splitter::MarkdownSplitter;
 
-use crate::agent::session::VizierSession;
+use crate::agent::session::{SessionId, VizierSession};
 use crate::channels::VizierChannel;
 use crate::config::DiscordChannelConfig;
 use crate::transport::{VizierRequest, VizierResponse, VizierTransport, VizierTransportChannel};
 use crate::utils::remove_think_tags;
 
-pub struct DiscordChannel {
+pub struct DiscordChannelReader {
     transport: VizierTransport,
     config: DiscordChannelConfig,
     client: Client,
 }
 
-impl DiscordChannel {
+impl DiscordChannelReader {
     pub async fn new(config: DiscordChannelConfig, transport: VizierTransport) -> Result<Self> {
         let intents = GatewayIntents::all();
         let client = Client::builder(config.token.clone(), intents)
-            .event_handler(Handler(transport.clone()))
+            .event_handler(Handler(config.agent_id.clone(), transport.clone()))
             .await?;
 
         Ok(Self {
@@ -70,19 +71,46 @@ async fn send_message(http: Arc<Http>, channel_id: &ChannelId, content: String) 
     Ok(())
 }
 
-impl VizierChannel for DiscordChannel {
+impl VizierChannel for DiscordChannelReader {
+    async fn run(&mut self) -> Result<()> {
+        if let Err(err) = self.client.start().await {
+            log::error!("{:?}", err);
+        }
+        Ok(())
+    }
+}
+
+pub struct DiscordChannelWriter {
+    transport: VizierTransport,
+    config: Vec<DiscordChannelConfig>,
+}
+
+impl DiscordChannelWriter {
+    pub fn new(transport: VizierTransport, config: Vec<DiscordChannelConfig>) -> Self {
+        Self { transport, config }
+    }
+}
+
+impl VizierChannel for DiscordChannelWriter {
     async fn run(&mut self) -> Result<()> {
         let transport = self.transport.clone();
-        let token = self.config.token.clone();
 
-        tokio::spawn(async move {
+        let mut token_map = HashMap::new();
+        for config in self.config.iter() {
+            token_map.insert(
+                config.agent_id.clone(),
+                Arc::new(Http::new(&config.token.clone())),
+            );
+        }
+
+        let _ = tokio::spawn(async move {
             loop {
-                let http = Arc::new(Http::new(&token));
-                if let Ok((VizierSession::DiscordChanel(channel_id), res)) = transport
-                    .read_response(VizierTransportChannel::Discord)
-                    .await
+                if let Ok((VizierSession(agent_id, SessionId::DiscordChanel(channel_id)), res)) =
+                    transport
+                        .read_response(VizierTransportChannel::Discord)
+                        .await
                 {
-                    let http = http;
+                    let http = token_map.get(&agent_id).unwrap().clone();
                     let channel_id = ChannelId::new(channel_id);
 
                     match res {
@@ -93,22 +121,19 @@ impl VizierChannel for DiscordChannel {
                         }
                         VizierResponse::Message(content) => {
                             let content = remove_think_tags(&content.clone());
-                            let _ = send_message(http, &channel_id, content).await;
+                            let _ = send_message(http.clone(), &channel_id, content).await;
                         }
-                        _ => {}
                     }
                 }
             }
-        });
+        })
+        .await;
 
-        if let Err(err) = self.client.start().await {
-            log::error!("{:?}", err);
-        }
         Ok(())
     }
 }
 
-struct Handler(VizierTransport);
+struct Handler(String, VizierTransport);
 
 #[async_trait]
 impl EventHandler for Handler {
@@ -125,6 +150,8 @@ impl EventHandler for Handler {
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::Command(command) = interaction {
+            let agent_id = self.0.clone();
+
             if command.data.name == "ping" {
                 let _ = command
                     .create_response(
@@ -152,9 +179,9 @@ impl EventHandler for Handler {
                 });
 
                 if let Err(err) = self
-                    .0
+                    .1
                     .send_request(
-                        VizierSession::DiscordChanel(command.channel_id.get()),
+                        VizierSession(agent_id, SessionId::DiscordChanel(command.channel_id.get())),
                         VizierRequest {
                             user: format!(
                                 "@{} (DiscordId: {})",
@@ -197,7 +224,8 @@ If I am halucinating, feel free to `/lobotomy` me
 
     async fn message(&self, ctx: Context, msg: Message) {
         if let Ok(is_mention) = msg.mentions_me(ctx.http).await {
-            let transport = self.0.clone();
+            let agent_id = self.0.clone();
+            let transport = self.1.clone();
             let current_user = ctx.cache.current_user().discriminator;
             if msg.author.discriminator == current_user {
                 return;
@@ -213,7 +241,7 @@ If I am halucinating, feel free to `/lobotomy` me
                 tokio::spawn(async move {
                     if let Err(err) = transport
                         .send_request(
-                            VizierSession::DiscordChanel(msg.channel_id.get()),
+                            VizierSession(agent_id, SessionId::DiscordChanel(msg.channel_id.get())),
                             VizierRequest {
                                 user: format!(
                                     "@{} (DiscordId: {})",
@@ -238,7 +266,7 @@ If I am halucinating, feel free to `/lobotomy` me
             tokio::spawn(async move {
                 if let Err(err) = transport
                     .send_request(
-                        VizierSession::DiscordChanel(msg.channel_id.get()),
+                        VizierSession(agent_id, SessionId::DiscordChanel(msg.channel_id.get())),
                         VizierRequest {
                             user: format!(
                                 "@{} (DiscordId: {})",

@@ -3,12 +3,11 @@ use std::sync::Arc;
 use anyhow::Result;
 use rig::completion::ToolDefinition;
 use rig::tool::Tool;
-use rig::vector_store::VectorStoreIndex;
-use rig::vector_store::request::VectorSearchRequest;
 use schemars::schema_for;
 use serde::{Deserialize, Serialize};
 use slugify::slugify;
 
+use crate::agent::session::AgentId;
 use crate::config::VectorMemoryConfig;
 use crate::database::schema::Memory;
 use crate::database::{DistanceFunction, VizierDatabases};
@@ -16,7 +15,8 @@ use crate::dependencies::VizierDependencies;
 use crate::embedding;
 use crate::error::VizierError;
 
-pub async fn init_vector_memory(
+pub fn init_vector_memory(
+    agent_id: String,
     workspace: String,
     config: VectorMemoryConfig,
     deps: VizierDependencies,
@@ -26,17 +26,21 @@ pub async fn init_vector_memory(
     );
 
     Ok((
-        MemoryRead::new(deps.database.clone(), embedder.clone()),
-        MemoryWrite::new(deps.database.clone(), embedder.clone()),
+        MemoryRead::new(agent_id.clone(), deps.database.clone(), embedder.clone()),
+        MemoryWrite::new(agent_id.clone(), deps.database.clone(), embedder.clone()),
     ))
 }
 
 pub type MemoryRead = ReadVectorMemory;
-pub struct ReadVectorMemory(VizierDatabases, Arc<embedding::EmbeddingModel>);
+pub struct ReadVectorMemory(AgentId, VizierDatabases, Arc<embedding::EmbeddingModel>);
 
 impl MemoryRead {
-    fn new(store: VizierDatabases, model: Arc<embedding::EmbeddingModel>) -> Self {
-        Self(store, model)
+    fn new(
+        agent_id: AgentId,
+        store: VizierDatabases,
+        model: Arc<embedding::EmbeddingModel>,
+    ) -> Self {
+        Self(agent_id, store, model)
     }
 }
 
@@ -66,8 +70,15 @@ impl Tool for MemoryRead {
         log::info!("read_memory: {}", args.query.clone());
 
         let res = self
-            .0
-            .query_memory(&self.1, args.query, DistanceFunction::Euclidean, 10, 0.)
+            .1
+            .query_memory(
+                &self.2,
+                self.0.clone(),
+                args.query,
+                DistanceFunction::Euclidean,
+                10,
+                0.,
+            )
             .await
             .unwrap();
 
@@ -76,11 +87,15 @@ impl Tool for MemoryRead {
 }
 
 pub type MemoryWrite = WriteVectorMemory;
-pub struct WriteVectorMemory(VizierDatabases, Arc<embedding::EmbeddingModel>);
+pub struct WriteVectorMemory(AgentId, VizierDatabases, Arc<embedding::EmbeddingModel>);
 
 impl MemoryWrite {
-    fn new(store: VizierDatabases, model: Arc<embedding::EmbeddingModel>) -> Self {
-        Self(store, model)
+    fn new(
+        agent_id: AgentId,
+        store: VizierDatabases,
+        model: Arc<embedding::EmbeddingModel>,
+    ) -> Self {
+        Self(agent_id, store, model)
     }
 }
 
@@ -114,8 +129,14 @@ impl Tool for MemoryWrite {
         log::info!("write_memory: {:?}", slug.clone());
 
         let _ = self
-            .0
-            .write_memory(&self.1, Some(slug.clone()), args.title, args.content)
+            .1
+            .write_memory(
+                &self.2,
+                self.0.clone(),
+                Some(slug.clone()),
+                args.title,
+                args.content,
+            )
             .await;
 
         Ok(format!("memory {slug} is written"))

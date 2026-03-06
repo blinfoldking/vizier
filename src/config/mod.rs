@@ -5,40 +5,24 @@ use config::Config;
 use duration_string::DurationString;
 use serde::{Deserialize, Serialize};
 
+pub mod agent;
 pub mod embedding;
+pub mod provider;
 
-use crate::{config::embedding::VizierEmbeddingModel, constant};
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct MemoryConfig {
-    pub session_memory_recall_depth: usize,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct AgentConfig {
-    pub name: String,
-    pub model: ModelConfig,
-    pub session_ttl: DurationString,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ModelConfig {
-    pub provider: String,
-    pub name: String,
-    #[serde(default)]
-    pub api_key: String,
-    #[serde(default)]
-    pub base_url: String,
-}
+use crate::{
+    config::{agent::AgentConfigs, embedding::VizierEmbeddingModel, provider::ProviderConfig},
+    constant,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChannelsConfig {
-    pub discord: Option<DiscordChannelConfig>,
+    pub discord: Option<Vec<DiscordChannelConfig>>,
     pub http: Option<HTTPChannelConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiscordChannelConfig {
+    pub agent_id: String,
     pub token: String,
 }
 
@@ -48,17 +32,10 @@ pub struct HTTPChannelConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct AgentConfigs {
-    pub primary: AgentConfig,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ToolsConfig {
     pub dangerously_enable_cli_access: bool,
     pub brave_search: Option<BraveSearchConfig>,
     pub vector_memory: Option<VectorMemoryConfig>,
-    #[serde(default)]
-    pub turn_depth: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -76,9 +53,9 @@ pub struct VectorMemoryConfig {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VizierConfig {
     pub workspace: String,
+    pub providers: ProviderConfig,
     pub agents: AgentConfigs,
     pub channels: ChannelsConfig,
-    pub memory: MemoryConfig,
     pub tools: ToolsConfig,
 }
 

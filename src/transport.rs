@@ -4,7 +4,7 @@ use anyhow::Result;
 use serde_json::json;
 use strum::{EnumIter, IntoEnumIterator};
 
-use crate::agent::session::VizierSession;
+use crate::agent::session::{SessionId, VizierSession};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, EnumIter)]
 pub enum VizierTransportChannel {
@@ -148,9 +148,9 @@ impl VizierTransport {
                     // TODO middleware here
                     log::info!("response {:?} -> {:?}", session, response);
 
-                    let channel = match session {
-                        VizierSession::DiscordChanel(_) => VizierTransportChannel::Discord,
-                        VizierSession::HTTP(_) => VizierTransportChannel::HTTP,
+                    let channel = match session.1 {
+                        SessionId::DiscordChanel(_) => VizierTransportChannel::Discord,
+                        SessionId::HTTP(_) => VizierTransportChannel::HTTP,
                     };
 
                     let _ = channel_transport

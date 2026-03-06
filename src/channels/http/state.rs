@@ -8,21 +8,23 @@ use serde_json::json;
 use tokio::sync::Mutex;
 
 use crate::{
-    agent::session::VizierSession,
+    agent::session::{AgentId, SessionId, VizierSession},
     channels::http::models::session::{ChatRequest, ChatResponse},
+    config::VizierConfig,
     database::VizierDatabases,
     transport::{VizierRequest, VizierResponse, VizierTransport, VizierTransportChannel},
 };
 
 #[derive(Debug, Clone)]
 pub struct HTTPState {
+    pub config: Arc<VizierConfig>,
     pub transport: ChatTransport,
     pub db: VizierDatabases,
 }
 
 pub type ChatRequestTransport = (
-    Sender<(String, ChatRequest)>,
-    Receiver<(String, ChatRequest)>,
+    Sender<((AgentId, String), ChatRequest)>,
+    Receiver<((AgentId, String), ChatRequest)>,
 );
 
 pub type ChatReponseTransport = (Sender<ChatResponse>, Receiver<ChatResponse>);
@@ -30,7 +32,7 @@ pub type ChatReponseTransport = (Sender<ChatResponse>, Receiver<ChatResponse>);
 #[derive(Debug, Clone)]
 pub struct ChatTransport {
     pub requests: ChatRequestTransport,
-    pub reponses: Arc<Mutex<HashMap<String, ChatReponseTransport>>>,
+    pub reponses: Arc<Mutex<HashMap<(AgentId, String), ChatReponseTransport>>>,
 }
 
 impl ChatTransport {
@@ -45,7 +47,9 @@ impl ChatTransport {
         let req_transport = transport.clone();
         let req_chat_transport = self.clone();
         let request_handle = tokio::spawn(async move {
-            while let Ok((session_id, request)) = req_chat_transport.requests.1.recv_async().await {
+            while let Ok(((agent_id, session_id), request)) =
+                req_chat_transport.requests.1.recv_async().await
+            {
                 let metadata = json!({
                     "sent_at": Utc::now().to_string(),
                     "websocket_session_id": session_id,
@@ -53,7 +57,7 @@ impl ChatTransport {
 
                 let _ = req_transport
                     .send_request(
-                        VizierSession::HTTP(session_id),
+                        VizierSession(agent_id, SessionId::HTTP(session_id)),
                         VizierRequest {
                             user: request.user,
                             content: request.content,
@@ -68,12 +72,13 @@ impl ChatTransport {
         let res_transport = transport.clone();
         let res_chat_transport = self.clone();
         let response_handle = tokio::spawn(async move {
-            while let Ok((VizierSession::HTTP(session_id), response)) = res_transport
-                .read_response(VizierTransportChannel::HTTP)
-                .await
+            while let Ok((VizierSession(agent_id, SessionId::HTTP(session_id)), response)) =
+                res_transport
+                    .read_response(VizierTransportChannel::HTTP)
+                    .await
             {
                 let response_transport = res_chat_transport.reponses.lock().await;
-                if let Some(transport) = response_transport.get(&session_id).clone() {
+                if let Some(transport) = response_transport.get(&(agent_id, session_id)).clone() {
                     let (writer, _) = transport.clone();
                     match response {
                         VizierResponse::Thinking => {

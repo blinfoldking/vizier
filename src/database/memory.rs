@@ -13,6 +13,7 @@ impl VizierDatabases {
     pub async fn write_memory(
         &self,
         embedder: &embedding::EmbeddingModel,
+        agent_id: String,
         slug: Option<String>,
         title: String,
         content: String,
@@ -20,6 +21,7 @@ impl VizierDatabases {
         let slug = slug.unwrap_or_else(|| slugify!(&title));
         let mut memory = Memory {
             slug: slug.clone(),
+            agent_id,
             title,
             content: content.clone(),
             timestamp: Utc::now(),
@@ -37,6 +39,7 @@ impl VizierDatabases {
     pub async fn query_memory(
         &self,
         embedder: &embedding::EmbeddingModel,
+        agent_id: String,
         query: String,
         distance_function: DistanceFunction,
         limit: usize,
@@ -49,11 +52,12 @@ impl VizierDatabases {
             .query(format!(
                 r#"SELECT * 
                     FROM type::table($table) 
-                    WHERE {distance_function}($query, embedding) >= $threshold 
+                    WHERE {distance_function}($query, embedding) >= $threshold AND agent_id = $agent_id
                     ORDER BY distance ASC 
                     LIMIT $limit"#
             ))
             .bind(("table", "memory"))
+            .bind(("agent_id", agent_id))
             .bind(("query", query))
             .bind(("limit", limit))
             .bind(("threshold", threshold))

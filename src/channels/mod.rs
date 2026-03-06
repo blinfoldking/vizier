@@ -1,10 +1,13 @@
 use anyhow::Result;
 
 use crate::{
-    channels::{discord::DiscordChannel, http::HTTPChannel},
+    channels::{
+        discord::{DiscordChannelReader, DiscordChannelWriter},
+        http::HTTPChannel,
+    },
     config::ChannelsConfig,
     dependencies::VizierDependencies,
-    transport::VizierTransport,
+    transport::{self, VizierTransport},
 };
 
 pub mod discord;
@@ -25,15 +28,30 @@ impl VizierChannels {
     }
 
     pub async fn run(&self) -> Result<()> {
-        if let Some(discord_config) = &self.config.discord {
+        if let Some(discord_configs) = &self.config.discord {
             let transport = self.deps.transport.clone();
-            let discord_config = discord_config.clone();
-            tokio::spawn(async move {
-                let mut discord = DiscordChannel::new(discord_config.clone(), transport.clone())
-                    .await
-                    .unwrap();
+            for discord_config in discord_configs.iter() {
+                let transport = transport.clone();
+                let discord_config = discord_config.clone();
+                tokio::spawn(async move {
+                    let mut discord_reader =
+                        DiscordChannelReader::new(discord_config.clone(), transport.clone())
+                            .await
+                            .unwrap();
 
-                if let Err(e) = discord.run().await {
+                    if let Err(e) = discord_reader.run().await {
+                        log::error!("Err{:?}", e)
+                    }
+                });
+            }
+
+            let transport = self.deps.transport.clone();
+            let discord_configs = discord_configs.clone();
+            tokio::spawn(async move {
+                let mut discord_writer =
+                    DiscordChannelWriter::new(transport.clone(), discord_configs.clone());
+
+                if let Err(e) = discord_writer.run().await {
                     log::error!("Err{:?}", e)
                 }
             });

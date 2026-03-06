@@ -1,4 +1,8 @@
-use axum::extract::{Path, State};
+use axum::{
+    Router,
+    extract::{Path, State},
+    routing::{delete, get},
+};
 use reqwest::StatusCode;
 
 use crate::{
@@ -12,13 +16,26 @@ use crate::{
     database::schema::Memory,
 };
 
+pub fn memory() -> Router<HTTPState> {
+    Router::new()
+        .route("/", get(get_all_memories))
+        .route("/{slug}", get(get_memory_detail))
+        .route("/{slug}", delete(delete_memory))
+}
+
 pub async fn get_all_memories(
+    Path(agent_id): Path<String>,
     State(state): State<HTTPState>,
 ) -> models::response::Response<Vec<serde_json::Value>> {
+    if !state.config.is_agent_exists(&agent_id) {
+        return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
+    }
+
     match state
         .db
         .conn
-        .query("SELECT slug, title, timestamp FROM type::table(memory)")
+        .query("SELECT slug, title, timestamp FROM type::table(memory) WHERE agent_id = $agent_id")
+        .bind(("agent_id", agent_id))
         .await
     {
         Ok(mut data) => {
@@ -31,14 +48,19 @@ pub async fn get_all_memories(
 }
 
 pub async fn get_memory_detail(
-    Path(slug): Path<String>,
+    Path((agent_id, slug)): Path<(String, String)>,
     State(state): State<HTTPState>,
 ) -> models::response::Response<Option<serde_json::Value>> {
+    if !state.config.is_agent_exists(&agent_id) {
+        return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
+    }
+
     match state
         .db
         .conn
-        .query("SELECT slug, title, content, timestamp FROM type::table(memory) WHERE slug = $slug")
+        .query("SELECT slug, title, content, timestamp FROM type::table(memory) WHERE slug = $slug AND agent_id = $agent_id")
         .bind(("slug", slug))
+        .bind(("agent_id", agent_id))
         .await
     {
         Ok(mut data) => {
@@ -51,9 +73,13 @@ pub async fn get_memory_detail(
 }
 
 pub async fn delete_memory(
-    Path(slug): Path<String>,
+    Path((agent_id, slug)): Path<(String, String)>,
     State(state): State<HTTPState>,
 ) -> models::response::Response<String> {
+    if !state.config.is_agent_exists(&agent_id) {
+        return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
+    }
+
     match state
         .db
         .conn

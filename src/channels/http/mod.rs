@@ -1,8 +1,5 @@
 use anyhow::Result;
-use axum::{
-    Router,
-    routing::{any, delete, get, post},
-};
+use axum::{Router, routing::get};
 use reqwest::{
     Method,
     header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
@@ -52,38 +49,13 @@ impl VizierChannel for HTTPChannel {
             .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
         let app = Router::new()
+            .nest("/api", api::api())
             // webui
             .route("/", get(webui::index))
             .route("/{*path}", get(webui::assets))
-            // api
-            .route("/api/v1/ping", get(api::v1::ping))
-            // session api
-            .route("/api/v1/session", get(api::v1::session::list_sessions))
-            .route("/api/v1/session", post(api::v1::session::create_session))
-            .route(
-                "/api/v1/session/{session_id}",
-                post(api::v1::session::create_custom_session),
-            )
-            .route(
-                "/api/v1/session/{session_id}",
-                delete(api::v1::session::delete_sessions),
-            )
-            .route(
-                "/api/v1/session/{session_id}/chat",
-                any(api::v1::session::chat),
-            )
-            // memory api
-            .route("/api/v1/memory", get(api::v1::memory::get_all_memories))
-            .route(
-                "/api/v1/memory/{slug}",
-                get(api::v1::memory::get_memory_detail),
-            )
-            .route(
-                "/api/v1/memory/{slug}",
-                delete(api::v1::memory::delete_memory),
-            )
             .layer(cors)
             .with_state(HTTPState {
+                config: self.deps.config.clone(),
                 db: self.deps.database.clone(),
                 transport: chat_transport.clone(),
             });

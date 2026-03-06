@@ -15,10 +15,11 @@ use tokio::sync::Mutex;
 use crate::agent::memory::SessionMemories;
 use crate::agent::session::VizierSession;
 use crate::agent::tools::VizierTools;
-use crate::config::{AgentConfig, AgentConfigs, MemoryConfig, ToolsConfig};
+use crate::config::ToolsConfig;
+use crate::config::provider::ProviderVariant;
 use crate::dependencies::VizierDependencies;
-use crate::transport::{VizierRequest, VizierResponse, VizierTransport};
-use crate::utils::remove_think_tags;
+use crate::transport::{VizierRequest, VizierResponse};
+use crate::utils::{agent_workspace, init_workspace, remove_think_tags};
 
 pub mod exec;
 pub mod memory;
@@ -27,12 +28,8 @@ pub mod tools;
 
 #[derive(Clone)]
 pub struct VizierAgents {
-    config: AgentConfigs,
-    memory_config: MemoryConfig,
     deps: VizierDependencies,
     sessions: Arc<Mutex<HashMap<VizierSession, VizierAgent>>>,
-    tools: VizierTools,
-    workspace: String,
 }
 
 fn read_md_file(workspace: String, file: String) -> String {
@@ -42,20 +39,10 @@ fn read_md_file(workspace: String, file: String) -> String {
 }
 
 impl VizierAgents {
-    pub async fn new(
-        workspace: String,
-        config: AgentConfigs,
-        memory_config: MemoryConfig,
-        tool_config: ToolsConfig,
-        deps: VizierDependencies,
-    ) -> Result<Self> {
+    pub async fn new(deps: VizierDependencies) -> Result<Self> {
         Ok(Self {
-            config: config,
-            memory_config: memory_config,
-            tools: VizierTools::new(workspace.clone(), tool_config, deps.clone()).await?,
-            sessions: Arc::new(Mutex::new(HashMap::new())),
             deps,
-            workspace,
+            sessions: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
@@ -143,7 +130,7 @@ impl VizierAgents {
         if let Some(agent) = self.sessions.lock().await.get_mut(session) {
             agent.handle_silent_read(req.clone()).await?
         } else {
-            let mut agent = self.init_session()?;
+            let mut agent = self.init_session(session.0.clone())?;
             agent.handle_silent_read(req.clone()).await?;
             self.sessions
                 .lock()
@@ -163,7 +150,7 @@ impl VizierAgents {
         if let Some(agent) = self.sessions.lock().await.get_mut(session) {
             agent.handle_chat(req.clone()).await
         } else {
-            let mut agent = self.init_session()?;
+            let mut agent = self.init_session(session.0.clone())?;
             let response = agent.handle_chat(req.clone()).await?;
             self.sessions
                 .lock()
@@ -183,32 +170,28 @@ impl VizierAgents {
         Ok(())
     }
 
-    fn init_session(&mut self) -> Result<VizierAgent> {
+    fn init_session(&mut self, id: String) -> Result<VizierAgent> {
+        println!("{id}");
         // TODO: hardcord to use primary only for now
-        let primary_config = &self.config.primary;
-        let agent = match &*primary_config.model.provider.clone() {
-            "openrouter" => {
+        let agent_config = &self.deps.config.agents.get(&id).unwrap();
+        let agent = match &agent_config.provider {
+            ProviderVariant::openrouter => {
                 VizierAgent::OpenRouter(VizierAgentImpl::<openrouter::CompletionModel>::new(
-                    primary_config.name.clone(),
-                    self.tools.clone(),
-                    primary_config,
-                    &self.memory_config,
-                    self.workspace.clone(),
+                    id.clone(),
+                    self.deps.clone(),
                 )?)
             }
-            "deepseek" => VizierAgent::Deepseek(VizierAgentImpl::<deepseek::CompletionModel>::new(
-                primary_config.name.clone(),
-                self.tools.clone(),
-                primary_config,
-                &self.memory_config,
-                self.workspace.clone(),
+
+            ProviderVariant::deepseek => VizierAgent::Deepseek(VizierAgentImpl::<
+                deepseek::CompletionModel,
+            >::new(
+                id.clone(), self.deps.clone()
             )?),
-            _ => VizierAgent::Ollama(VizierAgentImpl::<ollama::CompletionModel>::new(
-                primary_config.name.clone(),
-                self.tools.clone(),
-                primary_config,
-                &self.memory_config,
-                self.workspace.clone(),
+
+            ProviderVariant::ollama => VizierAgent::Ollama(VizierAgentImpl::<
+                ollama::CompletionModel,
+            >::new(
+                id.clone(), self.deps.clone()
             )?),
         };
 
@@ -278,9 +261,11 @@ pub struct VizierAgentImpl<T: CompletionModel> {
 
 impl<T: CompletionModel> VizierAgentImpl<T> {
     async fn chat(&mut self, req: VizierRequest) -> Result<String> {
-        let agent_md = read_md_file(self.workspace.clone(), "AGENT.md".into());
-        let ident_md = read_md_file(self.workspace.clone(), "IDENT.md".into());
-        let user_md = read_md_file(self.workspace.clone(), "USER.md".into());
+        let agent_workspace = agent_workspace(&self.workspace, &self.id);
+
+        let agent_md = read_md_file(agent_workspace.clone(), "AGENT.md".into());
+        let ident_md = read_md_file(agent_workspace.clone(), "IDENT.md".into());
+        let user_md = read_md_file(agent_workspace.clone(), "USER.md".into());
 
         let mut history = vec![
             Message::user(agent_md),
@@ -326,106 +311,111 @@ impl<T: CompletionModel> VizierAgentImpl<T> {
 }
 
 impl VizierAgentImpl<ollama::CompletionModel> {
-    fn new(
-        id: String,
-        tool: VizierTools,
-        config: &AgentConfig,
-        memory_config: &MemoryConfig,
-        workspace: String,
-    ) -> Result<Self> {
+    fn new(id: String, deps: VizierDependencies) -> Result<Self> {
+        let agent_workspace = agent_workspace(&deps.config.workspace, &id);
+        init_workspace(agent_workspace.clone());
+
+        let agent_config = deps.config.agents.get(&id).unwrap();
+
         let client: ollama::Client = ollama::Client::builder()
-            .base_url(config.model.base_url.clone())
+            .base_url(deps.config.providers.ollama.clone().unwrap().base_url)
             .api_key(Nothing)
             .build()?;
 
         let boot = std::fs::read_to_string(std::path::PathBuf::from(format!(
             "{}/BOOT.md",
-            tool.workspace
+            agent_workspace
         )))?;
 
+        let tool = VizierTools::new(id.clone(), deps.clone())?;
+
         let agent = client
-            .agent(config.model.name.clone())
-            .name(&*config.model.name.clone())
+            .agent(agent_config.model.clone())
+            .name(&agent_config.name.clone())
             .preamble(&boot)
             .tool_server_handle(tool.handle)
-            .default_max_turns(tool.turn_depth as usize)
+            .default_max_turns(agent_config.turn_depth)
             .build();
 
         Ok(Self {
             id: id.clone(),
             agent,
-            session_memory: SessionMemories::new(memory_config.clone()),
-            session_ttl: *config.session_ttl,
+            session_memory: SessionMemories::new(agent_config.memory.clone()),
+            session_ttl: *agent_config.session_ttl,
             last_interact_at: Utc::now(),
-            workspace,
+            workspace: deps.config.workspace.clone(),
         })
     }
 }
 
 impl VizierAgentImpl<openrouter::CompletionModel> {
-    fn new(
-        id: String,
-        tool: VizierTools,
-        config: &AgentConfig,
-        memory_config: &MemoryConfig,
-        workspace: String,
-    ) -> Result<Self> {
-        let client: openrouter::Client = openrouter::Client::new(config.model.api_key.clone())?;
+    fn new(id: String, deps: VizierDependencies) -> Result<Self> {
+        let agent_workspace = agent_workspace(&deps.config.workspace, &id);
+        init_workspace(agent_workspace.clone());
+
+        let agent_config = deps.config.agents.get(&id).unwrap();
+
+        let client: openrouter::Client =
+            openrouter::Client::new(deps.config.providers.openrouter.clone().unwrap().api_key)?;
 
         let boot = std::fs::read_to_string(std::path::PathBuf::from(format!(
             "{}/BOOT.md",
-            tool.workspace
+            agent_workspace
         )))?;
 
+        let tool = VizierTools::new(id.clone(), deps.clone())?;
+
         let agent = client
-            .agent(config.model.name.clone())
-            .name(&*config.model.name.clone())
+            .agent(agent_config.model.clone())
+            .name(&agent_config.name)
             .preamble(&boot)
             .tool_server_handle(tool.handle)
-            .default_max_turns(tool.turn_depth as usize)
+            .default_max_turns(agent_config.turn_depth)
             .build();
 
         Ok(Self {
             id: id.clone(),
             agent,
-            session_memory: SessionMemories::new(memory_config.clone()),
-            session_ttl: *config.session_ttl,
+            session_memory: SessionMemories::new(agent_config.memory.clone()),
+            session_ttl: *agent_config.session_ttl,
             last_interact_at: Utc::now(),
-            workspace,
+            workspace: deps.config.workspace.clone(),
         })
     }
 }
 
 impl VizierAgentImpl<deepseek::CompletionModel> {
-    fn new(
-        id: String,
-        tool: VizierTools,
-        config: &AgentConfig,
-        memory_config: &MemoryConfig,
-        workspace: String,
-    ) -> Result<Self> {
-        let client: deepseek::Client = deepseek::Client::new(config.model.api_key.clone())?;
+    fn new(id: String, deps: VizierDependencies) -> Result<Self> {
+        let agent_workspace = agent_workspace(&deps.config.workspace, &id);
+        init_workspace(agent_workspace.clone());
+
+        let agent_config = deps.config.agents.get(&id).unwrap();
+
+        let client: deepseek::Client =
+            deepseek::Client::new(deps.config.providers.deepseek.clone().unwrap().api_key)?;
 
         let boot = std::fs::read_to_string(std::path::PathBuf::from(format!(
             "{}/BOOT.md",
-            tool.workspace
+            agent_workspace
         )))?;
 
+        let tool = VizierTools::new(id.clone(), deps.clone())?;
+
         let agent = client
-            .agent(config.model.name.clone())
-            .name(&*config.model.name.clone())
+            .agent(agent_config.model.clone())
+            .name(&agent_config.name)
             .preamble(&boot)
             .tool_server_handle(tool.handle)
-            .default_max_turns(tool.turn_depth as usize)
+            .default_max_turns(agent_config.turn_depth)
             .build();
 
         Ok(Self {
             id: id.clone(),
             agent,
-            session_memory: SessionMemories::new(memory_config.clone()),
-            session_ttl: *config.session_ttl,
+            session_memory: SessionMemories::new(agent_config.memory.clone()),
+            session_ttl: *agent_config.session_ttl,
             last_interact_at: Utc::now(),
-            workspace,
+            workspace: deps.config.workspace.clone(),
         })
     }
 }

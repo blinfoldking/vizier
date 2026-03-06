@@ -1,5 +1,4 @@
 use chrono::Utc;
-use rig::Embed;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -16,6 +15,7 @@ pub struct Memory {
     pub content: String,
     pub timestamp: chrono::DateTime<Utc>,
     pub embedding: Vec<f64>,
+    pub agent_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
