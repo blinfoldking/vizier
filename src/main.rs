@@ -16,6 +16,7 @@ mod database;
 mod dependencies;
 mod embedding;
 mod error;
+mod scheduler;
 mod transport;
 mod utils;
 

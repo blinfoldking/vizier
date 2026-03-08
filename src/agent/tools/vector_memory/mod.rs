@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use chrono::Utc;
 use rig::completion::ToolDefinition;
 use rig::tool::Tool;
 use schemars::schema_for;
@@ -128,6 +129,13 @@ impl Tool for MemoryWrite {
         let slug = slugify!(&args.title).to_string();
         log::info!("write_memory: {:?}", slug.clone());
 
+        let content = format!(
+            "#{}\n\n{}\n\n timestamp: {}",
+            args.title,
+            args.content,
+            Utc::now()
+        );
+
         let _ = self
             .1
             .write_memory(
@@ -135,7 +143,7 @@ impl Tool for MemoryWrite {
                 self.0.clone(),
                 Some(slug.clone()),
                 args.title,
-                args.content,
+                content,
             )
             .await;
 

@@ -7,6 +7,8 @@ use crate::{
         session::AgentId,
         tools::{
             brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
+            discord::new_discord_tools,
+            scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
             vector_memory::init_vector_memory,
             workspace::{AgentDocument, IdentDocument, WritePrimaryDocument},
         },
@@ -16,6 +18,8 @@ use crate::{
 };
 
 mod brave_search;
+mod discord;
+mod scheduler;
 mod vector_memory;
 mod workspace;
 
@@ -37,7 +41,26 @@ impl VizierTools {
             ))
             .tool(WritePrimaryDocument::<IdentDocument>::new(
                 agent_workspace.clone(),
-            ));
+            ))
+            .tool(ScheduleOneTimeTask {
+                agent_id: agent_id.clone(),
+                db: deps.database.clone(),
+            })
+            .tool(ScheduleCronTask {
+                agent_id: agent_id.clone(),
+                db: deps.database.clone(),
+            });
+
+        if let Some(discord) = &deps.config.channels.discord {
+            if let Some(discord) = discord.iter().find(|discord| discord.agent_id == agent_id) {
+                let (send_message, react_message, get_message) =
+                    new_discord_tools(discord.token.clone());
+                tool_server_builder = tool_server_builder
+                    .tool(send_message)
+                    .tool(react_message)
+                    .tool(get_message);
+            }
+        }
 
         if agent_config.tools.enable_brave_search {
             if let Some(brave_search) = tool_config.brave_search {

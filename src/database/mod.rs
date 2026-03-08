@@ -7,7 +7,9 @@ use surrealdb::Surreal;
 use surrealdb::engine::local::{Db, RocksDb};
 
 pub mod memory;
+pub mod query;
 pub mod schema;
+pub mod task;
 
 #[derive(Debug, Clone)]
 pub struct VizierDatabases {
@@ -19,12 +21,16 @@ impl VizierDatabases {
         let db = Surreal::new::<RocksDb>(format!("{workspace}/vizier.db")).await?;
         db.use_ns("vizier").use_db("v1").await?;
 
+        db.query("DEFINE TABLE memory SCHEMALESS;").await?;
+        db.query("DEFINE TABLE task SCHEMALESS;").await?;
+
         let res = Self { conn: Arc::new(db) };
 
         Ok(res)
     }
 }
 
+#[allow(unused)]
 pub enum DistanceFunction {
     Knn,
     Hamming,

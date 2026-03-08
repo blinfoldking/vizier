@@ -105,6 +105,10 @@ impl<T: CompletionModel> VizierAgentImpl<T> {
     }
 
     pub async fn chat(&self, req: VizierRequest, memory: &SessionMemories) -> Result<String> {
+        if req.is_task {
+            return self.prompt(req).await;
+        }
+
         let agent_workspace = agent_workspace(&self.workspace, &self.id);
 
         let agent_md = read_md_file(agent_workspace.clone(), "AGENT.md".into());

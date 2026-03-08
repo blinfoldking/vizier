@@ -94,8 +94,7 @@ impl SessionMemories {
             .prompt(VizierRequest {
                 user: "system".into(),
                 content: summary_prompt,
-                is_silent_read: false,
-                metadata: serde_json::json!({}),
+                ..Default::default()
             })
             .await?;
 

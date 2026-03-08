@@ -39,38 +39,6 @@ impl DiscordChannelReader {
     }
 }
 
-async fn send_message(http: Arc<Http>, channel_id: &ChannelId, content: String) -> Result<()> {
-    if content.len() < 2000 {
-        let channel_id = channel_id.clone();
-        let content = content.clone();
-        if let Err(err) = channel_id.say(&http, content.clone()).await {
-            log::error!("{:?}", err);
-        }
-
-        return Ok(());
-    }
-
-    let splitter = MarkdownSplitter::new(2000);
-    let content = content.clone();
-    let chunks = splitter
-        .chunks(&content)
-        .into_iter()
-        .map(|s| s.to_string())
-        .collect::<Vec<String>>();
-
-    let channel_id = channel_id.clone();
-    tokio::spawn(async move {
-        for msg in chunks.clone() {
-            if let Err(err) = channel_id.say(&http, msg).await {
-                log::error!("{:?}", err);
-            }
-        }
-    })
-    .await?;
-
-    Ok(())
-}
-
 impl VizierChannel for DiscordChannelReader {
     async fn run(&mut self) -> Result<()> {
         if let Err(err) = self.client.start().await {
@@ -121,7 +89,12 @@ impl VizierChannel for DiscordChannelWriter {
                         }
                         VizierResponse::Message(content) => {
                             let content = remove_think_tags(&content.clone());
-                            let _ = send_message(http.clone(), &channel_id, content).await;
+                            let _ = crate::utils::discord::send_message(
+                                http.clone(),
+                                &channel_id,
+                                content,
+                            )
+                            .await;
                         }
                     }
                 }
@@ -207,7 +180,7 @@ impl EventHandler for Handler {
                         serenity::all::CreateInteractionResponse::Message(
                             CreateInteractionResponseMessage::new().content(
                                 r#"
-Just mention `@vizier` when you need to summon me.
+Just mention me when you need to summon me.
 I will only read the chat otherwise.
 If I am halucinating, feel free to `/lobotomy` me
                             "#,
@@ -231,8 +204,15 @@ If I am halucinating, feel free to `/lobotomy` me
                 return;
             }
 
+            let replied_to = match msg.referenced_message {
+                None => None,
+                Some(message) => Some(message.id.to_string()),
+            };
+
             let metadata = json!({
                 "sent_at": Utc::now().to_string(),
+                "is_reply_message": replied_to.is_some(),
+                "replied_message_id": replied_to,
                 "message_id": msg.id.to_string(),
                 "discord_channel_id": msg.channel_id.to_string(),
             });

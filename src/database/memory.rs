@@ -31,7 +31,11 @@ impl VizierDatabases {
         let embedding = embedder.embed_text(&content.clone()).await?;
         memory.embedding = embedding.vec;
 
-        let _: Option<Memory> = self.conn.upsert(("memory", &slug)).content(memory).await?;
+        let _: Option<Memory> = self
+            .conn
+            .upsert(("memory", slug.to_string()))
+            .content(memory)
+            .await?;
 
         Ok(())
     }

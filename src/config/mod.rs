@@ -101,7 +101,7 @@ impl VizierConfig {
             .build()?;
 
         log::info!("config loaded: {:?}", path.to_str().unwrap());
-        let mut config = settings.try_deserialize::<AllConfig>()?;
+        let config = settings.try_deserialize::<AllConfig>()?;
 
         Ok(config.vizier)
     }

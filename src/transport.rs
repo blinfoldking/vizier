@@ -10,6 +10,7 @@ use crate::agent::session::{SessionId, VizierSession};
 pub enum VizierTransportChannel {
     Discord,
     HTTP,
+    Task,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -17,6 +18,7 @@ pub struct VizierRequest {
     pub user: String,
     pub content: String,
     pub is_silent_read: bool,
+    pub is_task: bool,
     pub metadata: serde_json::Value,
 }
 
@@ -151,6 +153,7 @@ impl VizierTransport {
                     let channel = match session.1 {
                         SessionId::DiscordChanel(_) => VizierTransportChannel::Discord,
                         SessionId::HTTP(_) => VizierTransportChannel::HTTP,
+                        SessionId::Task(_) => VizierTransportChannel::Task,
                     };
 
                     let _ = channel_transport

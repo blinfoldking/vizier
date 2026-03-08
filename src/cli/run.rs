@@ -5,7 +5,7 @@ use clap::Args;
 
 use crate::{
     agent::VizierAgents, channels::VizierChannels, config::VizierConfig,
-    dependencies::VizierDependencies,
+    dependencies::VizierDependencies, scheduler::VizierScheduler,
 };
 
 #[derive(Debug, Args, Clone)]
@@ -23,6 +23,13 @@ pub struct RunArgs {
 pub async fn run_server(config: VizierConfig) -> Result<()> {
     let deps = VizierDependencies::new(config.clone()).await?;
 
+    let mut scheduler = VizierScheduler::new(deps.clone()).await?;
+    tokio::spawn(async move {
+        if let Err(err) = scheduler.run().await {
+            log::error!("{}", err);
+        }
+    });
+
     let mut agents = VizierAgents::new(deps.clone()).await?;
     tokio::spawn(async move {
         if let Err(err) = agents.run().await {
@@ -37,6 +44,7 @@ pub async fn run_server(config: VizierConfig) -> Result<()> {
         }
     });
 
+    log::info!("vizier is running!");
     deps.run().await?;
     Ok(())
 }

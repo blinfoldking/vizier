@@ -7,4 +7,5 @@ pub struct VizierSession(pub AgentId, pub SessionId);
 pub enum SessionId {
     DiscordChanel(u64),
     HTTP(String),
+    Task(String),
 }

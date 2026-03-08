@@ -17,6 +17,7 @@ pub struct AgentConfig {
     pub memory: MemoryConfig,
     pub turn_depth: usize,
     pub tools: AgentToolsConfig,
+    pub silent_read_initiative_chance: f32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
