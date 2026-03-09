@@ -46,7 +46,9 @@ where
 
         ToolDefinition {
             name: Self::NAME.to_string(),
-            description: format!("send a discord message to a channel"),
+            description: format!(
+                "send a discord message to a channel, avoid using this when user interact with you directly from discord"
+            ),
             parameters,
         }
     }
