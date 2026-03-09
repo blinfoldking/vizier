@@ -69,7 +69,7 @@ impl Tool for ScheduleOneTimeTask
 where
     Self: Sync + Send,
 {
-    const NAME: &'static str = "schedule_task";
+    const NAME: &'static str = "schedule_one_time_task";
     type Error = VizierError;
     type Args = ScheduleOneTimeTaskArgs;
     type Output = ();
@@ -79,7 +79,7 @@ where
 
         ToolDefinition {
             name: Self::NAME.to_string(),
-            description: format!("Schedule a new task"),
+            description: format!("Schedule a new one-time task at a specific date and time"),
             parameters,
         }
     }
@@ -143,7 +143,7 @@ impl Tool for ScheduleCronTask
 where
     Self: Sync + Send,
 {
-    const NAME: &'static str = "schedule_task";
+    const NAME: &'static str = "schedule_cron_task";
     type Error = VizierError;
     type Args = ScheduleCronTaskArgs;
     type Output = ();
@@ -153,7 +153,7 @@ where
 
         ToolDefinition {
             name: Self::NAME.to_string(),
-            description: format!("Schedule a new task"),
+            description: format!("Schedule a new recurring task using a cron expression"),
             parameters,
         }
     }
