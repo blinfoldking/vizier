@@ -177,9 +177,10 @@ impl SessionProcess {
                 let main_handler = tokio::spawn(async move {
                     let send_response = send_response.clone();
                     while let Ok(request) = session_transport.1.recv_async().await {
+                        let mut main_session = main_session.lock().await;
                         let send_lobotomy = send_response.clone();
                         if request.content == "/lobotomy" {
-                            let _ = main_session.lock().await.lobotomy().await;
+                            let _ = main_session.lobotomy().await;
                             tokio::spawn(async move {
                                 if let Err(err) =
                                     send_lobotomy(VizierResponse::Message("YIPEEEE".into())).await
@@ -192,9 +193,7 @@ impl SessionProcess {
                         }
 
                         if request.is_silent_read {
-                            let _ = agent
-                                .handle_silent_read(main_session.lock().await, &request)
-                                .await;
+                            let _ = agent.handle_silent_read(main_session, &request).await;
                             continue;
                         }
 
@@ -207,7 +206,7 @@ impl SessionProcess {
                             }
                         });
 
-                        let content = agent.handle_chat(&request, main_session.lock().await).await;
+                        let content = agent.handle_chat(&request, main_session).await;
                         let send_response = send_response.clone();
                         match content {
                             Err(err) => {
@@ -231,16 +230,16 @@ impl SessionProcess {
                 });
 
                 let session = session.clone();
+                let session_ttl = agent_config.session_ttl;
                 let stale_handler = tokio::spawn(async move {
                     loop {
+                        let _ = tokio::time::sleep(*session_ttl).await;
                         let session = session.lock().await;
                         if session.is_stale().await {
                             log::debug!("{} session stale", agent_config.name);
                             main_handler.abort();
                             return;
                         }
-
-                        let _ = tokio::time::sleep(session.session_ttl).await;
                     }
                 });
 
