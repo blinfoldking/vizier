@@ -29,26 +29,21 @@ pub enum VizierAgent {
 }
 
 impl VizierAgent {
-    pub fn new(deps: &VizierDependencies, id: String) -> Result<VizierAgent> {
+    pub async fn new(deps: &VizierDependencies, id: String) -> Result<VizierAgent> {
         let agent_config = deps.config.agents.get(&id).unwrap();
         let agent = match &agent_config.provider {
-            ProviderVariant::openrouter => VizierAgent::OpenRouter(VizierAgentImpl::<
-                openrouter::CompletionModel,
-            >::new(
-                id.clone(), deps.clone()
-            )?),
+            ProviderVariant::openrouter => VizierAgent::OpenRouter(
+                VizierAgentImpl::<openrouter::CompletionModel>::new(id.clone(), deps.clone())
+                    .await?,
+            ),
 
-            ProviderVariant::deepseek => VizierAgent::Deepseek(VizierAgentImpl::<
-                deepseek::CompletionModel,
-            >::new(
-                id.clone(), deps.clone()
-            )?),
+            ProviderVariant::deepseek => VizierAgent::Deepseek(
+                VizierAgentImpl::<deepseek::CompletionModel>::new(id.clone(), deps.clone()).await?,
+            ),
 
-            ProviderVariant::ollama => VizierAgent::Ollama(VizierAgentImpl::<
-                ollama::CompletionModel,
-            >::new(
-                id.clone(), deps.clone()
-            )?),
+            ProviderVariant::ollama => VizierAgent::Ollama(
+                VizierAgentImpl::<ollama::CompletionModel>::new(id.clone(), deps.clone()).await?,
+            ),
         };
 
         Ok(agent)

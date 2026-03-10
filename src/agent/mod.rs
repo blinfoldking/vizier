@@ -72,7 +72,7 @@ impl VizierAgents {
         for (agent_id, _) in config.agents.iter() {
             agents.insert(
                 agent_id.clone(),
-                Arc::new(VizierAgent::new(&mut deps.clone(), agent_id.clone())?),
+                Arc::new(VizierAgent::new(&mut deps.clone(), agent_id.clone()).await?),
             );
         }
 

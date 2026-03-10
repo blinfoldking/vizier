@@ -1,4 +1,5 @@
 use anyhow::Result;
+use log::info;
 use rig::{
     client::{CompletionClient, Nothing},
     providers::{deepseek, ollama, openrouter},
@@ -16,15 +17,46 @@ use crate::{
     utils::agent_workspace,
 };
 
+async fn ollama_pull_model(base_url: &str, model: &str) -> Result<()> {
+    let pull_url = format!("{}/api/pull", base_url);
+    let http_client = reqwest::Client::new();
+
+    info!("Pulling Ollama model '{}'...", model);
+
+    let resp = http_client
+        .post(&pull_url)
+        .json(&serde_json::json!({
+            "name": model,
+            "stream": false
+        }))
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        anyhow::bail!(
+            "Failed to pull Ollama model '{}': {}",
+            model,
+            resp.text().await.unwrap_or_default()
+        );
+    }
+
+    info!("Ollama model '{}' is ready", model);
+    Ok(())
+}
+
 impl VizierAgentImpl<ollama::CompletionModel> {
-    pub fn new(id: String, deps: VizierDependencies) -> Result<Self> {
+    pub async fn new(id: String, deps: VizierDependencies) -> Result<Self> {
         let agent_workspace = agent_workspace(&deps.config.workspace, &id);
         init_workspace(agent_workspace.clone());
 
         let agent_config = deps.config.agents.get(&id).unwrap();
 
+        let base_url = deps.config.providers.ollama.clone().unwrap().base_url;
+
+        ollama_pull_model(&base_url, &agent_config.model).await?;
+
         let client: ollama::Client = ollama::Client::builder()
-            .base_url(deps.config.providers.ollama.clone().unwrap().base_url)
+            .base_url(base_url)
             .api_key(Nothing)
             .build()?;
 
@@ -51,7 +83,7 @@ impl VizierAgentImpl<ollama::CompletionModel> {
 }
 
 impl VizierAgentImpl<openrouter::CompletionModel> {
-    pub fn new(id: String, deps: VizierDependencies) -> Result<Self> {
+    pub async fn new(id: String, deps: VizierDependencies) -> Result<Self> {
         let agent_workspace = agent_workspace(&deps.config.workspace, &id);
         init_workspace(agent_workspace.clone());
 
@@ -83,7 +115,7 @@ impl VizierAgentImpl<openrouter::CompletionModel> {
 }
 
 impl VizierAgentImpl<deepseek::CompletionModel> {
-    pub fn new(id: String, deps: VizierDependencies) -> Result<Self> {
+    pub async fn new(id: String, deps: VizierDependencies) -> Result<Self> {
         let agent_workspace = agent_workspace(&deps.config.workspace, &id);
         init_workspace(agent_workspace.clone());
 
