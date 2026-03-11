@@ -1,5 +1,4 @@
 use anyhow::Result;
-use log::info;
 use rig::{
     client::{CompletionClient, Nothing},
     providers::{deepseek, ollama, openrouter},
@@ -14,35 +13,8 @@ use crate::{
         tools::VizierTools,
     },
     dependencies::VizierDependencies,
-    utils::agent_workspace,
+    utils::{self, agent_workspace},
 };
-
-async fn ollama_pull_model(base_url: &str, model: &str) -> Result<()> {
-    let pull_url = format!("{}/api/pull", base_url);
-    let http_client = reqwest::Client::new();
-
-    info!("Pulling Ollama model '{}'...", model);
-
-    let resp = http_client
-        .post(&pull_url)
-        .json(&serde_json::json!({
-            "name": model,
-            "stream": false
-        }))
-        .send()
-        .await?;
-
-    if !resp.status().is_success() {
-        anyhow::bail!(
-            "Failed to pull Ollama model '{}': {}",
-            model,
-            resp.text().await.unwrap_or_default()
-        );
-    }
-
-    info!("Ollama model '{}' is ready", model);
-    Ok(())
-}
 
 impl VizierAgentImpl<ollama::CompletionModel> {
     pub async fn new(id: String, deps: VizierDependencies) -> Result<Self> {
@@ -53,7 +25,7 @@ impl VizierAgentImpl<ollama::CompletionModel> {
 
         let base_url = deps.config.providers.ollama.clone().unwrap().base_url;
 
-        ollama_pull_model(&base_url, &agent_config.model).await?;
+        utils::ollama::ollama_pull_model(&base_url, &agent_config.model).await?;
 
         let client: ollama::Client = ollama::Client::builder()
             .base_url(base_url)

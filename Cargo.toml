@@ -51,4 +51,5 @@ surrealdb = { version = "3.0.1", features = ["kv-rocksdb"] }
 surrealdb-types = "3.0.1"
 fastembed = "4.9.1"
 croner = { version = "3.0.1", features = ["serde"] }
+indicatif = "0.17.11"
 rand = "0.10.0"
