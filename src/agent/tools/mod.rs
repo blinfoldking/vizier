@@ -54,8 +54,19 @@ impl VizierTools {
             });
 
         if agent_config.tools.enable_python_interpreter {
-            tool_server_builder = tool_server_builder
-                .tool(PythonInterpreter::new(format!("{agent_workspace}/workdir")));
+            let mut python_interpreter =
+                PythonInterpreter::new(format!("{agent_workspace}/workdir"));
+
+            if agent_config.tools.enable_brave_search {
+                if let Some(brave_search) = tool_config.brave_search {
+                    println!("called!");
+                    python_interpreter = python_interpreter
+                        .with(BraveSearch::<WebOnlySearch>::new(&brave_search))
+                        .with(BraveSearch::<NewsOnlySearch>::new(&brave_search));
+                }
+            }
+
+            tool_server_builder = tool_server_builder.tool(python_interpreter);
         }
 
         if let Some(discord) = &deps.config.channels.discord {
@@ -69,13 +80,13 @@ impl VizierTools {
             }
         }
 
-        if agent_config.tools.enable_brave_search {
-            if let Some(brave_search) = tool_config.brave_search {
-                tool_server_builder = tool_server_builder
-                    .tool(BraveSearch::<WebOnlySearch>::new(&brave_search))
-                    .tool(BraveSearch::<NewsOnlySearch>::new(&brave_search));
-            }
-        }
+        // if agent_config.tools.enable_brave_search {
+        //     if let Some(brave_search) = tool_config.brave_search {
+        //         tool_server_builder = tool_server_builder
+        //             .tool(BraveSearch::<WebOnlySearch>::new(&brave_search))
+        //             .tool(BraveSearch::<NewsOnlySearch>::new(&brave_search));
+        //     }
+        // }
 
         if agent_config.tools.enable_vector_memory {
             if let Some(vector_memory) = tool_config.vector_memory {

@@ -7,15 +7,110 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{VizierError, throw_vizier_error};
 
+mod ptc;
+
+pub use ptc::{ProgrammaticToolCall, ToolCallable};
+
 pub struct PythonInterpreter {
     workdir: String,
+    builtins_whitelist: Vec<String>,
+    import_whitelist: Vec<String>,
+    programmatic_tools: Vec<Box<dyn ProgrammaticToolCall>>,
 }
 
 impl PythonInterpreter {
     pub fn new(workdir: String) -> Self {
         fs::create_dir_all(PathBuf::from(workdir.clone())).unwrap();
 
-        Self { workdir }
+        let builtins_whitelist = vec![
+            // Existing
+            "print".to_string(),
+            "len".to_string(),
+            "int".to_string(),
+            "str".to_string(),
+            "float".to_string(),
+            "list".to_string(),
+            "dict".to_string(),
+            "range".to_string(),
+            "sum".to_string(),
+            "min".to_string(),
+            "max".to_string(),
+            "tuple".to_string(),
+            // Highly Recommended
+            "bool".to_string(),
+            "set".to_string(),
+            "bytes".to_string(),
+            "enumerate".to_string(),
+            "zip".to_string(),
+            "sorted".to_string(),
+            "reversed".to_string(),
+            "any".to_string(),
+            "all".to_string(),
+            "isinstance".to_string(),
+            "issubclass".to_string(),
+            "type".to_string(),
+            "abs".to_string(),
+            "round".to_string(),
+            "pow".to_string(),
+            "map".to_string(),
+            "filter".to_string(),
+            "getattr".to_string(),
+            "hasattr".to_string(),
+            "setattr".to_string(),
+            "repr".to_string(),
+            "dir".to_string(),
+            "staticmethod".to_string(),
+            "classmethod".to_string(),
+            "property".to_string(),
+            // --- Add these for error handling ---
+            "Exception".to_string(),
+            "ValueError".to_string(),
+            "TypeError".to_string(),
+            "KeyError".to_string(),
+            "IndexError".to_string(),
+            "StopIteration".to_string(),
+            "RuntimeError".to_string(),
+            "open".to_string(),
+        ];
+
+        let import_whitelist = vec![
+            "math".to_string(),
+            "json".to_string(),
+            "cmath".to_string(),
+            "datetime".to_string(),
+            "time".to_string(),
+            "re".to_string(),
+            "collections".to_string(),
+            "itertools".to_string(),
+            "functools".to_string(),
+            "statistic".to_string(),
+            "string".to_string(),
+        ];
+
+        Self {
+            workdir,
+            builtins_whitelist,
+            import_whitelist,
+            programmatic_tools: Vec::new(),
+        }
+    }
+
+    /// Register a tool to be callable from Python scripts (builder pattern)
+    pub fn with_tool(mut self, tool: Box<dyn ProgrammaticToolCall>) -> Self {
+        self.programmatic_tools.push(tool);
+        self
+    }
+
+    /// Register a tool using the ToolCallable wrapper (builder pattern)
+    pub fn with<T>(mut self, tool: T) -> Self
+    where
+        T: Tool<Error = VizierError> + Send + Sync + 'static,
+        T::Args: for<'de> Deserialize<'de> + schemars::JsonSchema + Send,
+        T::Output: Serialize + schemars::JsonSchema,
+    {
+        self.programmatic_tools
+            .push(Box::new(ToolCallable::new(tool)));
+        self
     }
 }
 
@@ -29,14 +124,17 @@ pub struct PythonInterpreterArgs {
 struct PythonInterpreterContext {
     #[pyo3(get)]
     allowed_modules: Vec<String>,
+    /// The original __import__ function, cached to avoid recursion
+    real_import: Py<PyAny>,
 }
 
 #[pymethods]
 impl PythonInterpreterContext {
     #[new]
-    fn new(allowed: Vec<String>) -> Self {
+    fn new(allowed: Vec<String>, real_import: Py<PyAny>) -> Self {
         Self {
             allowed_modules: allowed,
+            real_import,
         }
     }
 }
@@ -52,26 +150,20 @@ fn dynamic_import(
     level: i32,
     ctx: Py<PythonInterpreterContext>,
 ) -> PyResult<Py<PyAny>> {
-    // 1. Extract the root module (e.g., "os" from "os.path")
     let root_module = name.split('.').next().unwrap_or("");
 
-    // 2. Check whitelist against the root module
-    let is_allowed = ctx
-        .bind(py)
-        .borrow()
-        .allowed_modules
-        .contains(&root_module.to_string());
+    let ctx_ref = ctx.bind(py).borrow();
+    let is_allowed =
+        root_module == "builtins" || ctx_ref.allowed_modules.contains(&root_module.to_string());
 
     if is_allowed {
-        let builtins = py.import("builtins")?;
-        let real_import = builtins.getattr("__import__")?;
-
-        // 3. Call the real internal Python __import__
+        // Use the cached real __import__ to avoid recursion.
+        // Previously we called py.import("builtins") here, which would trigger
+        // our custom import handler, causing infinite recursion -> stack overflow.
+        let real_import = ctx_ref.real_import.bind(py);
         let result = real_import.call1((name, globals, locals, fromlist, level))?;
-
         Ok(result.unbind())
     } else {
-        // Explicitly block unauthorized access
         Err(pyo3::exceptions::PyImportError::new_err(format!(
             "Vizier Security Policy Blocked: '{}' is not in the allowed whitelist.",
             root_module
@@ -91,82 +183,38 @@ where
     async fn definition(&self, _prompt: String) -> ToolDefinition {
         let parameters = serde_json::to_value(schema_for!(Self::Args)).unwrap();
 
+        // Build available tools description
+        let tools_desc = if self.programmatic_tools.is_empty() {
+            String::new()
+        } else {
+            let mut tool_descriptions = Vec::new();
+            for tool in &self.programmatic_tools {
+                tool_descriptions.push(tool.describe());
+            }
+            format!(
+                "\n\nAvailable tools (callable as functions):\n\n{}",
+                tool_descriptions.join("\n\n")
+            )
+        };
+
+        let description = format!(
+            "Run a Python script in a sandboxed environment.\n\n\
+            Allowed builtins: {}\n\n\
+            Allowed imports: {}{}",
+            self.builtins_whitelist.join(", "),
+            self.import_whitelist.join(", "),
+            tools_desc
+        );
+
         ToolDefinition {
             name: Self::NAME.to_string(),
-            description: "run a python script, could be use to interact with your environment"
-                .to_string(),
+            description,
             parameters,
         }
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
         log::info!("python_interpreter {}", args.script.clone());
-
-        let import_whitelist = vec![
-            "math".to_string(),
-            "json".to_string(),
-            "cmath".to_string(),
-            "datetime".to_string(),
-            "time".to_string(),
-            "re".to_string(),
-            "collections".to_string(),
-            "itertools".to_string(),
-            "functools".to_string(),
-            "statistic".to_string(),
-            "string".to_string(),
-        ];
-
-        let builtins_whitelist = [
-            // Existing
-            "print",
-            "len",
-            "int",
-            "str",
-            "float",
-            "list",
-            "dict",
-            "range",
-            "sum",
-            "min",
-            "max",
-            "tuple",
-            // Highly Recommended
-            "bool",
-            "set",
-            "tuple",
-            "bytes",
-            "enumerate",
-            "zip",
-            "sorted",
-            "reversed",
-            "any",
-            "all",
-            "isinstance",
-            "issubclass",
-            "type",
-            "abs",
-            "round",
-            "pow",
-            "map",
-            "filter",
-            "getattr",
-            "hasattr",
-            "setattr",
-            "repr",
-            "dir",
-            "staticmethod",
-            "classmethod",
-            "property",
-            // --- Add these for error handling ---
-            "Exception",
-            "ValueError",
-            "TypeError",
-            "KeyError",
-            "IndexError",
-            "StopIteration",
-            "RuntimeError",
-            "open",
-        ];
 
         let res = Python::attach(|py| -> PyResult<String> {
             let os = py.import("os")?;
@@ -181,13 +229,20 @@ where
 
                 let restricted_builtins = PyDict::new(py);
 
-                for func_name in builtins_whitelist {
-                    if let Ok(func) = builtins.getattr(func_name) {
+                for func_name in &self.builtins_whitelist {
+                    if let Ok(func) = builtins.getattr(func_name.as_str()) {
                         restricted_builtins.set_item(func_name, func)?;
                     }
                 }
 
-                let ctx = Bound::new(py, PythonInterpreterContext::new(import_whitelist))?;
+                // Cache the real __import__ BEFORE we override it.
+                // This prevents infinite recursion in dynamic_import.
+                let real_import = builtins.getattr("__import__")?.unbind();
+
+                let ctx = Bound::new(
+                    py,
+                    PythonInterpreterContext::new(self.import_whitelist.clone(), real_import),
+                )?;
 
                 let import_handler = wrap_pyfunction!(dynamic_import, py)?;
 
@@ -204,6 +259,11 @@ where
                 restricted_builtins.set_item("__import__", guarded_import)?;
 
                 globals.set_item("__builtins__", restricted_builtins)?;
+
+                // Register programmatic tools as callable functions
+                for tool in &self.programmatic_tools {
+                    tool.register_in_globals(py, &globals)?;
+                }
 
                 let capture = Py::new(py, OutputCapture::new())?;
                 sys.setattr("stdout", &capture)?;

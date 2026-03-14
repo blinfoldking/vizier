@@ -4727,6 +4727,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pythonize"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b79f670c9626c8b651c0581011b57b6ba6970bb69faf01a7c4c0cfc81c43f95"
+dependencies = [
+ "pyo3",
+ "serde",
+]
+
+[[package]]
 name = "qoi"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7559,6 +7569,7 @@ dependencies = [
  "pretty_env_logger",
  "pyo3",
  "pyo3-build-config",
+ "pythonize",
  "rand 0.10.0",
  "regex",
  "reqwest 0.13.2",

@@ -8,7 +8,7 @@ install:
   @echo -e "\n\\e[1;32mDone\\e[0m"
 
 run:
-  @cargo run -- run --config .vizier.yaml
+  @cargo run -- run --config .vizier/config.yaml
 
 dev:
   cargo watch -s "just run"

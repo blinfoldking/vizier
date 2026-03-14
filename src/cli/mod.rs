@@ -2,6 +2,7 @@ use anyhow::Result;
 
 use clap::{Parser, Subcommand};
 
+mod init;
 mod onboard;
 mod run;
 
@@ -23,6 +24,8 @@ enum Commands {
     Configure,
     /// Open tui client
     Tui,
+    /// init a vizier directory
+    Init,
 }
 
 pub async fn start() -> Result<()> {
@@ -31,6 +34,7 @@ pub async fn start() -> Result<()> {
     match &cli.command {
         Commands::Onboard(args) => onboard::onboard(args.clone()).await?,
         Commands::Run(args) => run::run(args.clone()).await?,
+        Commands::Init => init::init().await?,
         _ => {
             unimplemented!("TODO: unimplemented");
         }

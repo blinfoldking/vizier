@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, time::Duration};
 
 use reqwest::StatusCode;
 use rig::{completion::ToolDefinition, tool::Tool};
@@ -43,7 +43,7 @@ impl SearchType for NewsOnlySearch {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BraveSearch<T: SearchType> {
     _phantom: PhantomData<T>,
     api_key: String,
@@ -85,7 +85,10 @@ where
 
         ToolDefinition {
             name: T::NAME.to_string(),
-            description: T::description(),
+            description: format!(
+                "{}, use intervals between the usage of these tools",
+                T::description()
+            ),
             parameters,
         }
     }
@@ -122,7 +125,9 @@ where
         }
 
         let text = text.unwrap();
-        println!("{}", text.clone());
+
+        // throttle before return
+        tokio::time::sleep(Duration::from_secs(1)).await;
         match serde_json::from_str(&text) {
             Ok(value) => Ok(value),
             Err(err) => throw_vizier_error("brave_search: parse error:", err),
