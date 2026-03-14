@@ -53,42 +53,85 @@ impl VizierTools {
                 db: deps.database.clone(),
             });
 
-        if agent_config.tools.enable_python_interpreter {
+        if agent_config.tools.cli_access {
+            if tool_config.dangerously_enable_cli_access {
+                let exec_cli_from_workspace = ExecCliFromWorkspace(agent_workspace.clone());
+                tool_server_builder = tool_server_builder.tool(exec_cli_from_workspace);
+            }
+        }
+
+        if agent_config.tools.python_interpreter {
             let mut python_interpreter =
                 PythonInterpreter::new(format!("{agent_workspace}/workdir"));
 
-            if agent_config.tools.enable_brave_search {
-                if let Some(brave_search) = tool_config.brave_search {
-                    println!("called!");
+            if agent_config.tools.discord.is_programatically_enabled() {
+                if let Some(discord) = &deps.config.channels.discord {
+                    if let Some(discord) =
+                        discord.iter().find(|discord| discord.agent_id == agent_id)
+                    {
+                        let (send_message, react_message, get_message) =
+                            new_discord_tools(discord.token.clone());
+                        python_interpreter = python_interpreter
+                            .tool(send_message)
+                            .tool(react_message)
+                            .tool(get_message);
+                    }
+                }
+            }
+
+            if agent_config.tools.brave_search.is_programatically_enabled() {
+                if let Some(brave_search) = tool_config.brave_search.clone() {
                     python_interpreter = python_interpreter
-                        .with(BraveSearch::<WebOnlySearch>::new(&brave_search))
-                        .with(BraveSearch::<NewsOnlySearch>::new(&brave_search));
+                        .tool(BraveSearch::<WebOnlySearch>::new(&brave_search))
+                        .tool(BraveSearch::<NewsOnlySearch>::new(&brave_search));
+                }
+            }
+
+            if agent_config.tools.vector_memory.enabled
+                && !agent_config.tools.vector_memory.programmatic_tool_call
+            {
+                if let Some(vector_memory) = tool_config.vector_memory.clone() {
+                    let (read_memory, write_memory) = init_vector_memory(
+                        agent_id.clone(),
+                        workspace.clone(),
+                        vector_memory,
+                        deps.clone(),
+                    )?;
+
+                    tool_server_builder = tool_server_builder.tool(read_memory).tool(write_memory);
                 }
             }
 
             tool_server_builder = tool_server_builder.tool(python_interpreter);
         }
 
-        if let Some(discord) = &deps.config.channels.discord {
-            if let Some(discord) = discord.iter().find(|discord| discord.agent_id == agent_id) {
-                let (send_message, react_message, get_message) =
-                    new_discord_tools(discord.token.clone());
-                tool_server_builder = tool_server_builder
-                    .tool(send_message)
-                    .tool(react_message)
-                    .tool(get_message);
+        if agent_config.tools.discord.enabled && !agent_config.tools.discord.programmatic_tool_call
+        {
+            if let Some(discord) = &deps.config.channels.discord {
+                if let Some(discord) = discord.iter().find(|discord| discord.agent_id == agent_id) {
+                    let (send_message, react_message, get_message) =
+                        new_discord_tools(discord.token.clone());
+                    tool_server_builder = tool_server_builder
+                        .tool(send_message)
+                        .tool(react_message)
+                        .tool(get_message);
+                }
             }
         }
 
-        // if agent_config.tools.enable_brave_search {
-        //     if let Some(brave_search) = tool_config.brave_search {
-        //         tool_server_builder = tool_server_builder
-        //             .tool(BraveSearch::<WebOnlySearch>::new(&brave_search))
-        //             .tool(BraveSearch::<NewsOnlySearch>::new(&brave_search));
-        //     }
-        // }
+        if agent_config.tools.brave_search.enabled
+            && !agent_config.tools.brave_search.programmatic_tool_call
+        {
+            if let Some(brave_search) = tool_config.brave_search {
+                tool_server_builder = tool_server_builder
+                    .tool(BraveSearch::<WebOnlySearch>::new(&brave_search))
+                    .tool(BraveSearch::<NewsOnlySearch>::new(&brave_search));
+            }
+        }
 
-        if agent_config.tools.enable_vector_memory {
+        if agent_config.tools.vector_memory.enabled
+            && !agent_config.tools.vector_memory.programmatic_tool_call
+        {
             if let Some(vector_memory) = tool_config.vector_memory {
                 let (read_memory, write_memory) = init_vector_memory(
                     agent_id.clone(),
@@ -101,13 +144,6 @@ impl VizierTools {
             }
         }
 
-        if agent_config.tools.enable_cli_access {
-            if tool_config.dangerously_enable_cli_access {
-                let exec_cli_from_workspace = ExecCliFromWorkspace(agent_workspace.clone());
-                tool_server_builder = tool_server_builder.tool(exec_cli_from_workspace);
-            }
-        }
-
         let tool_server = tool_server_builder.run();
 
         Ok(Self {
@@ -115,3 +151,4 @@ impl VizierTools {
         })
     }
 }
+

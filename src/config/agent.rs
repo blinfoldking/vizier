@@ -27,8 +27,21 @@ pub struct MemoryConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct AgentToolsConfig {
-    pub enable_python_interpreter: bool,
-    pub enable_brave_search: bool,
-    pub enable_cli_access: bool,
-    pub enable_vector_memory: bool,
+    pub python_interpreter: bool,
+    pub cli_access: bool,
+    pub brave_search: ToolConfig,
+    pub vector_memory: ToolConfig,
+    pub discord: ToolConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct ToolConfig {
+    pub enabled: bool,
+    pub programmatic_tool_call: bool,
+}
+
+impl ToolConfig {
+    pub fn is_programatically_enabled(&self) -> bool {
+        self.enabled && self.programmatic_tool_call
+    }
 }

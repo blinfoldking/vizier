@@ -102,7 +102,7 @@ impl PythonInterpreter {
     }
 
     /// Register a tool using Arc wrapper (builder pattern)
-    pub fn with<T>(mut self, tool: T) -> Self
+    pub fn tool<T>(mut self, tool: T) -> Self
     where
         T: Tool<Error = VizierError> + Send + Sync + 'static,
         T::Args: for<'de> Deserialize<'de> + schemars::JsonSchema + Send,
