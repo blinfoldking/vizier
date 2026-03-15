@@ -93,17 +93,23 @@ pub struct VizierAgentImpl<T: CompletionModel> {
 }
 
 impl<T: CompletionModel> VizierAgentImpl<T> {
-    pub async fn prompt(&self, req: VizierRequest) -> Result<String> {
+    pub async fn prepare_system_prompts(&self) -> Vec<Message> {
         let agent_workspace = agent_workspace(&self.workspace, &self.id);
 
         let agent_md = read_md_file(agent_workspace.clone(), "AGENT.md".into());
         let ident_md = read_md_file(agent_workspace.clone(), "IDENT.md".into());
 
-        let history = vec![
+        let res = vec![
             Message::user(agent_md),
             Message::user(primary_user_md(&self.primary_user)),
             Message::user(ident_md),
         ];
+
+        res
+    }
+
+    pub async fn prompt(&self, req: VizierRequest) -> Result<String> {
+        let history = self.prepare_system_prompts().await;
 
         let response = self
             .agent
@@ -125,17 +131,7 @@ impl<T: CompletionModel> VizierAgentImpl<T> {
             return self.prompt(req).await;
         }
 
-        let agent_workspace = agent_workspace(&self.workspace, &self.id);
-
-        let agent_md = read_md_file(agent_workspace.clone(), "AGENT.md".into());
-        let ident_md = read_md_file(agent_workspace.clone(), "IDENT.md".into());
-
-        let mut history = vec![
-            Message::user(agent_md),
-            Message::user(primary_user_md(&self.primary_user)),
-            Message::user(ident_md),
-        ];
-
+        let mut history = self.prepare_system_prompts().await;
         history.extend(memory.recall_as_messages());
 
         let response = self

@@ -45,7 +45,7 @@ pub struct NewsResult {
     pub title: String,
     pub url: String,
     pub description: String,
-    pub source: String,
+    pub source: Option<String>, // TODO: sometimes this field doesnt exists
     pub age: Option<String>,
 }
 

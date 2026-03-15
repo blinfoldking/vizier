@@ -1,5 +1,8 @@
 use anyhow::Result;
-use rig::tool::server::{ToolServer, ToolServerHandle};
+use rig::{
+    tool::server::{ToolServer, ToolServerHandle},
+    tools::ThinkTool,
+};
 
 use crate::{
     agent::{
@@ -38,6 +41,7 @@ impl VizierTools {
         let agent_workspace = agent_workspace(&workspace, &agent_id);
 
         let mut tool_server_builder = ToolServer::new()
+            .tool(ThinkTool)
             .tool(WritePrimaryDocument::<AgentDocument>::new(
                 agent_workspace.clone(),
             ))
