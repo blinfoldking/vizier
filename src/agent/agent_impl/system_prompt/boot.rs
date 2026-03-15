@@ -18,7 +18,7 @@ pub fn boot_md(config: &AgentConfig) -> String {
 "#,
         config.name,
         config
-            .description
+            .preamble
             .clone()
             .unwrap_or("You are a digital steward of the 21st century.".to_string())
     )

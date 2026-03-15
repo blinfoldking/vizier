@@ -23,14 +23,6 @@ export default function Home() {
 
           <Editor
             onSubmit={(value) => {
-              createSession().then((res) =>
-                naviagate(
-                  `/chats/${res.data.data.session_id}`,
-                  {
-                    state: { prompt: value },
-                  }
-                )
-              )
             }}
           />
         </div>

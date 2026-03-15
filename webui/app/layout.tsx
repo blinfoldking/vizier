@@ -1,12 +1,14 @@
 'use client'
 
 import { FaCog } from 'react-icons/fa'
+import Avatar from "boring-avatars";
 import { TbPlus } from 'react-icons/tb'
 import { Link, Outlet, useLocation } from 'react-router'
 import {
   ping,
   base_url,
   listSession as listSessions,
+  listAgents,
   createSession,
 } from './services/vizier'
 import { useEffect, useState } from 'react'
@@ -45,6 +47,8 @@ const OnboardModal = () => {
 const Layout = () => {
   const [connected, setConnected] = useState(false)
   const [sessions, setSessions] = useState([])
+  const [agents, setAgents] = useState([])
+  const [activeAgent, setActiveAgent] = useState<any>(null)
   const location = useLocation()
 
   const username = useSessionStore((state: any) => state.username)
@@ -53,8 +57,16 @@ const Layout = () => {
     listSessions().then((res) => setSessions(res.data.data))
   }
 
+  const init = () => {
+    listAgents().then(({ data }) => {
+      setAgents(data.data.sort((a: any, b: any) => a.name.localeCompare(b.name)))
+      setActiveAgent(data.data[0])
+    })
+  }
+
   useEffect(() => {
-    updateSessions()
+    init()
+    // updateSessions()
   }, [connected, location])
 
   const checkStatus = () => {
@@ -68,6 +80,29 @@ const Layout = () => {
     setInterval(() => checkStatus(), 5000)
   }, [])
 
+  const AgentCard = ({ agent, active }: { agent: any, active: boolean }) => {
+    console.log({ agent })
+    return <div
+      className="p-5 w-full flex border-b-gray-500"
+      id="profile"
+    >
+      <div className="w-10 h-10 mr-2.5 rounded-4xl">
+        <Avatar className='rounded-xl' name={agent.agent_id} variant='beam' colors={["#cccccc", "#00bc7d", "#1e3a8a", "#101828"]} square />
+      </div>
+      <div>
+        <div className="flex items-center">
+          <div>{agent.name ?? 'placeholder'}</div>
+          <div
+            className={`ml-2.5 w-2.5 h-2.5 ${connected ? 'bg-emerald-500' : 'bg-red-500'} rounded-full`}
+          ></div>
+        </div>
+        <div className="text-xs text-black overflow-hidden truncate w-40 opacity-80">
+          {agent.description}
+        </div>
+      </div>
+    </div>
+  }
+
   return (
     <>
       {!username && <OnboardModal />}
@@ -77,52 +112,14 @@ const Layout = () => {
           className="w-75 pt-12 pb-12 flex flex-col justify-between"
         >
           <div>
-            <div
-              className="p-5 w-full flex  border-b-2 border-dashed border-b-gray-500"
-              id="profile"
-            >
-              <div className="w-10 h-10 bg-black mr-2.5 rounded-xl"></div>
-              <div>
-                <div className="flex items-center">
-                  <div>{username ?? 'placeholder'}</div>
-                  <div
-                    className={`ml-2.5 w-2.5 h-2.5 ${connected ? 'bg-emerald-500' : 'bg-red-500'} rounded-full`}
-                  ></div>
-                </div>
-                <div className="text-xs text-gray-400">
-                  http://{base_url}
-                </div>
-              </div>
-            </div>
-            <div className="p-5 pb-0">
-              <div className="flex items-center justify-between font-bold">
-                <Link to={'/'}>/index</Link>
-              </div>
-            </div>
+            <div className='max-h-70 overflow-scroll'>
+              {
+                agents.map((agent: any) => <div key={agent.agent_id} className='hover:bg-gray-200' >
+                  <AgentCard agent={agent} active={activeAgent && activeAgent.agent_id} />
 
-            <div className="p-5 pb-0">
-              <div className="flex items-center justify-between">
-                <strong>/chats</strong>
-                <div
-                  className="flex"
-                  onClick={() => {
-                    createSession().then(() =>
-                      updateSessions()
-                    )
-                  }}
-                >
-                  <TbPlus />
-                </div>
-              </div>
-              {sessions.map((session) => (
-                <div className="pl-4">
-                  <Link to={`/chats/${session}`}>
-                    /{session}
-                  </Link>
-                </div>
-              ))}
+                </div>)
+              }
             </div>
-
             <div className="p-5 pb-0">
               <div>
                 <strong>/tools</strong>
@@ -131,7 +128,15 @@ const Layout = () => {
                 <div>/memory</div>
               </div>
               <div className="pl-4">
-                <div>/document</div>
+                <div>/task</div>
+              </div>
+            </div>
+            <div className="p-5 pb-0">
+              <div>
+                <strong>/utils</strong>
+              </div>
+              <div className="pl-4">
+                <div>/logs</div>
               </div>
             </div>
           </div>

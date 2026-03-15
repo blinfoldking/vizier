@@ -1,5 +1,6 @@
 use axum::{Router, extract::State, routing::get};
 use reqwest::StatusCode;
+use serde_json::json;
 
 use crate::{
     channels::http::{
@@ -28,12 +29,20 @@ pub fn agents() -> Router<HTTPState> {
         .nest("/{agent_id}/session", session())
 }
 
-async fn list_agents(State(state): State<HTTPState>) -> models::response::Response<Vec<String>> {
+async fn list_agents(
+    State(state): State<HTTPState>,
+) -> models::response::Response<Vec<serde_json::Value>> {
     let res = state
         .config
         .agents
         .iter()
-        .map(|(key, _)| key.clone())
+        .map(|(key, config)| {
+            json!({
+                "agent_id": key.clone(),
+                "name": config.name.clone(),
+                "description": config.description.clone(),
+            })
+        })
         .collect();
 
     api_response(StatusCode::OK, res)

@@ -10,6 +10,7 @@ pub type AgentConfigs = HashMap<String, AgentConfig>;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AgentConfig {
     pub name: String,
+    pub preamble: Option<String>,
     pub description: Option<String>,
     pub provider: ProviderVariant,
     pub model: String,

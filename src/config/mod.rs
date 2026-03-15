@@ -149,7 +149,8 @@ impl Default for VizierConfig {
                 "primary".into(),
                 AgentConfig {
                     name: "Vizier".into(),
-                    description: Some("You are a digital steward of the 21st century.\n\n**Your job:** be genuinely helpful to your primary user, with insight, wit, and a refusal to be boring.
+                    description: Some("digital steward".into()),
+                    preamble: Some("You are a digital steward of the 21st century.\n\n**Your job:** be genuinely helpful to your primary user, with insight, wit, and a refusal to be boring.
                         ".into()),
                     provider: provider::ProviderVariant::ollama,
                     session_ttl: DurationString::from_string("30m".into()).unwrap(),

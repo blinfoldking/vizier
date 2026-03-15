@@ -17,10 +17,10 @@ export const ping = async () => {
   return res
 }
 
-export const createSession = async (sessionId?: string) => {
+export const createSession = async (agent_id: string, sessionId?: string) => {
   const session = sessionId ?? `${new Date().getTime()}`
   const res = await apiClient.post(
-    session ? `session/${session}` : '/session'
+    session ? `/agents/${agent_id}/session/${session}` : `/agents/${agent_id}/session/${agent_id}`
   )
 
   return res
@@ -34,6 +34,12 @@ export const deleteSession = async (sessionId: string) => {
 
 export const listSession = async () => {
   const res = await apiClient.get(`/session`)
+
+  return res
+}
+
+export const listAgents = async () => {
+  const res = await apiClient.get(`/agents`)
 
   return res
 }
