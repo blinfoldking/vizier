@@ -89,7 +89,7 @@ impl ChatTransport {
                                 })
                                 .await;
                         }
-                        VizierResponse::Message(content) => {
+                        VizierResponse::Message { content, stats: _ } => {
                             let _ = writer
                                 .send_async(ChatResponse {
                                     content,

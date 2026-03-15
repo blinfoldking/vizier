@@ -6,12 +6,15 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, MutexGuard};
 use tokio::task::JoinHandle;
+use tokio::time::Instant;
 
 use crate::agent::agent_impl::VizierAgent;
 use crate::agent::memory::SessionMemories;
 use crate::config::agent::AgentConfig;
 use crate::dependencies::VizierDependencies;
-use crate::schema::{VizierRequest, VizierResponse, VizierSession};
+use crate::schema::{
+    SessionHistoryContent, VizierRequest, VizierResponse, VizierResponseStats, VizierSession,
+};
 use crate::transport::VizierTransport;
 use crate::utils::remove_think_tags;
 
@@ -110,7 +113,7 @@ impl VizierAgents {
                 session.clone(),
                 agent_config.clone(),
                 agent.clone(),
-                transport.clone(),
+                self.deps.clone(),
             );
 
             let _ = process.session_transport.0.send_async(request).await;
@@ -152,12 +155,41 @@ impl SessionProcess {
         session: VizierSession,
         agent_config: AgentConfig,
         agent: Arc<VizierAgent>,
-        vizier_transport: VizierTransport,
+        deps: VizierDependencies,
     ) -> Self {
         let session_transport = Arc::new(flume::unbounded());
+
+        let response_session = session.clone();
         let send_response = async move |response| {
-            let res = vizier_transport
-                .send_response(session.clone(), response)
+            let res = deps
+                .transport
+                .send_response(response_session, response)
+                .await;
+
+            res
+        };
+
+        let request_session = session.clone();
+        let request_database = deps.database.clone();
+        let save_request = async move |request: VizierRequest| {
+            let res = request_database
+                .save_session_history(
+                    request_session.clone(),
+                    SessionHistoryContent::Request(request.clone()),
+                )
+                .await;
+
+            res
+        };
+
+        let response_session = session.clone();
+        let response_database = deps.database.clone();
+        let save_response = async move |response: String| {
+            let res = response_database
+                .save_session_history(
+                    response_session.clone(),
+                    SessionHistoryContent::Response(response, None),
+                )
                 .await;
 
             res
@@ -176,13 +208,22 @@ impl SessionProcess {
                 let main_handler = tokio::spawn(async move {
                     let send_response = send_response.clone();
                     while let Ok(request) = session_transport.1.recv_async().await {
+                        let _ = save_request(request.clone()).await;
+
+                        let start = Instant::now();
+
                         let mut main_session = main_session.lock().await;
                         let send_lobotomy = send_response.clone();
                         if request.content == "/lobotomy" {
                             let _ = main_session.lobotomy().await;
+                            let _ = save_response("YIPEEEE".into()).await;
+
                             tokio::spawn(async move {
-                                if let Err(err) =
-                                    send_lobotomy(VizierResponse::Message("YIPEEEE".into())).await
+                                if let Err(err) = send_lobotomy(VizierResponse::Message {
+                                    content: "YIPEEEE".into(),
+                                    stats: None,
+                                })
+                                .await
                                 {
                                     log::error!("{}", err);
                                 }
@@ -199,7 +240,7 @@ impl SessionProcess {
                         let send_thinking = send_response.clone();
                         let thinking = tokio::spawn(async move {
                             loop {
-                                let _ = send_thinking(VizierResponse::Thinking).await;
+                                let _ = send_thinking.clone()(VizierResponse::Thinking).await;
 
                                 tokio::time::sleep(Duration::from_secs(5)).await;
                             }
@@ -209,15 +250,25 @@ impl SessionProcess {
                         let send_response = send_response.clone();
                         match content {
                             Err(err) => {
-                                if let Err(err) =
-                                    send_response(VizierResponse::Message(err.to_string())).await
+                                let _ = save_response(err.to_string()).await;
+                                if let Err(err) = send_response(VizierResponse::Message {
+                                    content: err.to_string(),
+                                    stats: None,
+                                })
+                                .await
                                 {
                                     log::error!("{}", err);
                                 }
                             }
                             Ok(content) => {
-                                if let Err(err) =
-                                    send_response(VizierResponse::Message(content)).await
+                                let _ = save_response(content.clone()).await;
+                                if let Err(err) = send_response(VizierResponse::Message {
+                                    content,
+                                    stats: Some(VizierResponseStats {
+                                        duration: start.elapsed(),
+                                    }),
+                                })
+                                .await
                                 {
                                     log::error!("{}", err);
                                 }

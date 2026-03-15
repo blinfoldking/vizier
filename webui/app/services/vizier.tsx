@@ -1,5 +1,4 @@
 import axios from 'axios'
-import type { AgentDetail } from '~/interfaces/chat'
 
 export const base_url = import.meta.env.DEV
   ? 'localhost:9999'
@@ -47,6 +46,15 @@ export const listAgents = async () => {
 
 export const getAgentDetail = async (agent_id: string) => {
   const res = await apiClient.get(`/agents/${agent_id}`)
+
+  return res
+}
+
+export const getSessionHistory = async (agent_id: string, sessionId?: string) => {
+  const session = sessionId
+  const res = await apiClient.get(
+    session ? `/agents/${agent_id}/session/${session}/history` : `/agents/${agent_id}/session/${agent_id}/history`
+  )
 
   return res
 }

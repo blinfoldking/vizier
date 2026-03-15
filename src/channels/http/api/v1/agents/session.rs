@@ -9,13 +9,16 @@ use axum::{
 use futures::{SinkExt, StreamExt};
 use reqwest::StatusCode;
 
-use crate::channels::http::{
-    models::{
-        self,
-        response::{api_response, err_response},
-        session::{ChatRequest, SessionResponse},
+use crate::{
+    channels::http::{
+        models::{
+            self,
+            response::{api_response, err_response},
+            session::{ChatHistory, ChatRequest, ChatResponse, SessionResponse},
+        },
+        state::{ChatReponseTransport, ChatRequestTransport, HTTPState},
     },
-    state::{ChatReponseTransport, ChatRequestTransport, HTTPState},
+    schema::{SessionHistoryContent, SessionId, VizierSession},
 };
 
 pub fn session() -> Router<HTTPState> {
@@ -25,6 +28,7 @@ pub fn session() -> Router<HTTPState> {
         .route("/{session_id}", post(create_custom_session))
         .route("/{session_id}", delete(delete_sessions))
         .route("/{session_id}/chat", any(chat))
+        .route("/{session_id}/history", get(get_session_history))
 }
 
 pub async fn create_custom_session(
@@ -78,6 +82,43 @@ pub async fn delete_sessions(
         .remove(&(agent_id, session_id));
 
     api_response(StatusCode::OK, ())
+}
+
+pub async fn get_session_history(
+    Path((agent_id, session_id)): Path<(String, String)>,
+    State(state): State<HTTPState>,
+) -> models::response::Response<Vec<ChatHistory>> {
+    if !state.config.is_agent_exists(&agent_id) {
+        return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
+    }
+
+    let response = state
+        .db
+        .list_session_history(VizierSession(agent_id, SessionId::HTTP(session_id)))
+        .await;
+
+    if response.is_err() {
+        return err_response(StatusCode::NOT_FOUND, "Not found".into());
+    }
+
+    let list = response
+        .unwrap()
+        .iter()
+        .map(|history| match history.content.clone() {
+            SessionHistoryContent::Request(req) => ChatHistory::request(ChatRequest {
+                content: req.content,
+                user: req.user,
+                timestamp: Some(history.timestamp),
+            }),
+            SessionHistoryContent::Response(content, _) => ChatHistory::response(ChatResponse {
+                content,
+                thinking: false,
+                timestamp: Some(history.timestamp),
+            }),
+        })
+        .collect();
+
+    api_response(StatusCode::OK, list)
 }
 
 pub async fn list_sessions(

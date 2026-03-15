@@ -53,7 +53,6 @@ impl VizierScheduler {
             }
 
             for task in to_be_run {
-                println!(">> {:?}", task);
                 if let &TaskSchedule::OneTimeTask(_) = &task.schedule {
                     let _ = self.deps.database.delete_task(task.slug.clone()).await;
                 }

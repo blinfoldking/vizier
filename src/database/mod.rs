@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use surrealdb::Surreal;
 use surrealdb::engine::local::{Db, RocksDb};
 
+pub mod history;
 pub mod memory;
 pub mod query;
 pub mod task;
@@ -22,6 +23,7 @@ impl VizierDatabases {
 
         db.query("DEFINE TABLE memory SCHEMALESS;").await?;
         db.query("DEFINE TABLE task SCHEMALESS;").await?;
+        db.query("DEFINE TABLE session_history SCHEMALESS;").await?;
 
         let res = Self { conn: Arc::new(db) };
 

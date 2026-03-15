@@ -9,6 +9,12 @@ pub type AgentId = String;
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, SurrealValue)]
 pub struct VizierSession(pub AgentId, pub SessionId);
 
+impl VizierSession {
+    pub fn to_simple(&self) -> String {
+        format!("{}__{}", self.0, self.1.to_simple())
+    }
+}
+
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, SurrealValue)]
 pub enum SessionId {
     DiscordChanel(u64),
@@ -16,10 +22,28 @@ pub enum SessionId {
     Task(String),
 }
 
+impl SessionId {
+    pub fn to_simple(&self) -> String {
+        match self {
+            Self::DiscordChanel(id) => format!("DISCORD__{id}"),
+            Self::HTTP(id) => format!("HTTP__{id}"),
+            Self::Task(id) => format!("TASK__{id}"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+pub struct VizierResponseStats {
+    pub duration: tokio::time::Duration,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub enum VizierResponse {
     Thinking,
-    Message(String),
+    Message {
+        content: String,
+        stats: Option<VizierResponseStats>,
+    },
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, SurrealValue)]
@@ -96,4 +120,18 @@ pub struct Task {
 pub enum TaskSchedule {
     CronTask(String),
     OneTimeTask(chrono::DateTime<Utc>),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
+pub struct SessionHistory {
+    pub uuid: uuid::Uuid,
+    pub vizier_session: VizierSession,
+    pub content: SessionHistoryContent,
+    pub timestamp: chrono::DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
+pub enum SessionHistoryContent {
+    Request(VizierRequest),
+    Response(String, Option<VizierResponseStats>),
 }

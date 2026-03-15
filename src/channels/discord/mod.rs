@@ -10,7 +10,6 @@ use serenity::all::{
 use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::prelude::*;
-use text_splitter::MarkdownSplitter;
 
 use crate::channels::VizierChannel;
 use crate::config::DiscordChannelConfig;
@@ -87,7 +86,7 @@ impl VizierChannel for DiscordChannelWriter {
                                 let _ = channel_id.broadcast_typing(&http).await;
                             });
                         }
-                        VizierResponse::Message(content) => {
+                        VizierResponse::Message { content, stats: _ } => {
                             let content = remove_think_tags(&content.clone());
                             let _ = crate::utils::discord::send_message(
                                 http.clone(),

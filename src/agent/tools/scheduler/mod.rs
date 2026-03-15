@@ -100,7 +100,6 @@ where
             .await;
 
         if let Err(err) = response {
-            println!("{:?}", err);
             return Err(VizierError(err.to_string()));
         }
 
@@ -179,7 +178,6 @@ where
             .await;
 
         if let Err(err) = response {
-            println!("{:?}", err);
             return Err(VizierError(err.to_string()));
         }
 

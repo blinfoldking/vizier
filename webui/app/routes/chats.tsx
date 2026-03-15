@@ -3,8 +3,8 @@ import { useLocation, useParams } from 'react-router'
 import ChatBubble from '~/components/chat_bubble'
 import Editor from '~/components/editor'
 import type { AgentDetail, Chat, WSChatResponse } from '~/interfaces/chat'
-import { base_url, getAgentDetail } from '~/services/vizier'
-import useWebSocket from 'react-use-websocket'
+import { base_url, getAgentDetail, getSessionHistory } from '~/services/vizier'
+import useWebSocket, { ReadyState } from 'react-use-websocket'
 import { FaChevronDown } from 'react-icons/fa'
 import { useSessionStore } from '~/hooks/sessionStore'
 
@@ -16,7 +16,11 @@ const Chat = () => {
   const username = useSessionStore((state: any) => state.username)
 
   const sessionUrl = `ws://${base_url}/api/v1/agents/${agentId}/session/${agentId}/chat`
-  const { sendJsonMessage, lastJsonMessage, getWebSocket } = useWebSocket(sessionUrl)
+  const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(sessionUrl, {
+    shouldReconnect: () => true, // Reconnect on all close events
+    reconnectAttempts: 10,
+    reconnectInterval: 3000, // 3 seconds
+  })
 
   useEffect(() => {
     if (!agentId) return
@@ -24,8 +28,35 @@ const Chat = () => {
     setChats([])
     setIsThinking(false)
 
-    getAgentDetail(agentId).then((res: any) => setAgentDetail(res.data.data))
-  }, [agentId])
+    if (readyState !== ReadyState.OPEN) return
+
+
+    getAgentDetail(agentId).then((res: any) => {
+      setAgentDetail(res.data.data)
+      const agentDetail = res.data.data
+
+      getSessionHistory(agentId).then(res => setChats(res.data.data.map((item: any) => {
+        if (item.request) {
+          return {
+            user_id: item.request.user,
+            username: item.request.user,
+            user_type: 'user',
+            content: item.request.content,
+            timestamp: item.request.timestamp
+          }
+        }
+
+        return {
+          user_id: agentId,
+          username: agentDetail.name,
+          user_type: 'agent',
+          content: item.response.content,
+          timestamp: item.response.timestamp
+        }
+      })))
+    })
+
+  }, [agentId, readyState])
 
   let bottomRef: any = useRef(null)
   const toBottom = () => {
