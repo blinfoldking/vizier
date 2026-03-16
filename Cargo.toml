@@ -7,6 +7,12 @@ description = "21st Century Digital Steward; Right hand agent for you majesty"
 license = "MIT"
 readme = "Readme.md"
 repository = "https://github.com/blinfoldking/vizier"
+include = [
+    "src/**/*",
+    "Cargo.toml",
+    "webui/build/*",  # Your embedded file
+    "README.md"
+]
 
 [dependencies]
 chrono = { version = "0.4.43", features = ["serde"] }
