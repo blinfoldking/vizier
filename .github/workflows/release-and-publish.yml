@@ -1,0 +1,71 @@
+name: Release, Build & Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.2.0, 0.3.0-rc.1)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run (skip git push, GitHub release, and crates.io publish)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  # ====================
+  # Step 1: Release & Build
+  # ====================
+  release:
+    name: Release & Build
+    uses: ./.github/workflows/release.yml
+    with:
+      version: ${{ inputs.version }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
+
+  # ====================
+  # Step 2: Publish to crates.io
+  # ====================
+  publish:
+    name: Publish
+    needs: release
+    uses: ./.github/workflows/publish.yml
+    with:
+      version: ${{ inputs.version }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
+
+  # ====================
+  # Summary
+  # ====================
+  summary:
+    name: Summary
+    needs: [release, publish]
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.dry_run }}
+    steps:
+      - name: Create summary
+        run: |
+          echo "## Release Complete! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What was done:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Version bumped in Cargo.toml" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Changelog generated" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Git tag created and pushed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Binaries built for all platforms" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ GitHub Release created with assets" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Published to crates.io" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Install:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "cargo binstall vizier  # Fast (prebuilt binary)" >> $GITHUB_STEP_SUMMARY
+          echo "cargo install vizier   # Build from source" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Links:" >> $GITHUB_STEP_SUMMARY
+          echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [crates.io](https://crates.io/crates/vizier/${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY

@@ -1,6 +1,6 @@
 [package]
 name = "vizier"
-version = "0.2.0-rc"
+version = "0.2.0-rc.1"
 edition = "2024"
 authors = ["Ganesha Danu <hi@blinfoldking.dev>"]
 description = "21st Century Digital Steward; Right hand agent for you majesty"
@@ -69,3 +69,8 @@ async-trait = "0.1.89"
 
 [build-dependencies]
 pyo3-build-config = "0.28.2"
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/vizier-v{ version }-{ target }.tar.gz"
+pkg-fmt = "tgz"
+bin-dir = "vizier-v{ version }-{ target }/vizier"

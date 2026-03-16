@@ -1,70 +1,288 @@
-name: Release and Publish
+name: Release & Build
 
 on:
   workflow_dispatch:
     inputs:
-      bump:
-        description: 'Version bump type'
+      version:
+        description: 'Version to release (e.g., 0.2.0, 0.3.0-rc.1)'
         required: true
-        default: 'patch'
-        type: choice
-        options: [patch, minor, major]
+        type: string
+      dry_run:
+        description: 'Dry run (skip git push and GitHub release)'
+        required: false
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run mode'
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      version:
+        description: 'Released version'
+        value: ${{ jobs.prepare-release.outputs.version }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
-  release:
+  # ====================
+  # Bump version and generate changelog
+  # ====================
+  prepare-release:
+    name: Prepare Release
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # Required to push commits and create releases
-    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch all history for changelog generation
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo binaries
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin
-          key: ${{ runner.os }}-cargo-bin-${{ hashFiles('Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-bin-
-
-      - name: Install Tools
+      - name: Setup Git
         run: |
-          cargo install cargo-edit git-cliff
-          
-      - name: Configure Git
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Bump version
+      - name: Validate version format
+        id: version
         run: |
-          cargo set-version --bump ${{ github.event.inputs.bump }}
-          VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
-          echo "NEW_VERSION=$VERSION" >> $GITHUB_ENV
+          VERSION="${{ inputs.version }}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Invalid version format: $VERSION"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update Cargo.toml version
+        run: |
+          sed -i 's/^version = ".*"/version = "${{ steps.version.outputs.version }}"/' Cargo.toml
+          cat Cargo.toml | grep "^version"
 
       - name: Generate Changelog
+        id: changelog
         run: |
-          git-cliff --tag v${{ env.NEW_VERSION }} --output CHANGELOG.md
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          echo "## What's Changed in v${{ steps.version.outputs.version }}" > CHANGELOG_ENTRY.md
+          echo "" >> CHANGELOG_ENTRY.md
+          
+          if [ -z "$PREV_TAG" ]; then
+            git log --pretty=format:"* %s (%h)" >> CHANGELOG_ENTRY.md
+          else
+            git log ${PREV_TAG}..HEAD --pretty=format:"* %s (%h)" >> CHANGELOG_ENTRY.md
+          fi
+          
+          echo "" >> CHANGELOG_ENTRY.md
+          echo "" >> CHANGELOG_ENTRY.md
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG:-initial}...v${{ steps.version.outputs.version }}" >> CHANGELOG_ENTRY.md
+          
+          {
+            echo 'changelog<<EOF'
+            cat CHANGELOG_ENTRY.md
+            echo EOF
+          } >> $GITHUB_OUTPUT
+          
+          cat CHANGELOG_ENTRY.md
 
-      - name: Commit and Push
+      - name: Update CHANGELOG.md
         run: |
-          git add Cargo.toml Cargo.lock CHANGELOG.md
-          git commit -m "chore: release v${{ env.NEW_VERSION }}"
-          git tag -a v${{ env.NEW_VERSION }} -m "Release v${{ env.NEW_VERSION }}"
-          git push origin master --tags
+          if [ -f CHANGELOG.md ]; then
+            echo "# Changelog" > CHANGELOG_NEW.md
+            echo "" >> CHANGELOG_NEW.md
+            cat CHANGELOG_ENTRY.md >> CHANGELOG_NEW.md
+            tail -n +2 CHANGELOG.md >> CHANGELOG_NEW.md
+            mv CHANGELOG_NEW.md CHANGELOG.md
+          else
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            cat CHANGELOG_ENTRY.md >> CHANGELOG.md
+          fi
+
+      - name: Commit version bump
+        run: |
+          git add Cargo.toml CHANGELOG.md
+          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
+
+      - name: Push changes
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin "v${{ steps.version.outputs.version }}"
+
+  # ====================
+  # Build binaries for multiple platforms
+  # ====================
+  build:
+    name: Build - ${{ matrix.target }}
+    needs: prepare-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: false
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            cross: true
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-apple-darwin
+            os: macos-13
+            cross: false
+          - target: aarch64-apple-darwin
+            os: macos-14
+            cross: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.dry_run && github.ref || format('v{0}', needs.prepare-release.outputs.version) }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: webui/package-lock.json
+
+      - name: Build WebUI
+        run: |
+          cd webui
+          npm ci
+          npm run build
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libssl-dev \
+            pkg-config \
+            python3-dev \
+            libclang-dev \
+            clang
+
+      - name: Install cross
+        if: matrix.cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build binary
+        run: |
+          if [ "${{ matrix.cross }}" = "true" ]; then
+            cross build --release --target ${{ matrix.target }}
+          else
+            cargo build --release --target ${{ matrix.target }}
+          fi
+
+      - name: Package binary (cargo-binstall compatible)
+        shell: bash
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          TARGET="${{ matrix.target }}"
+          BINARY_NAME="vizier"
+          
+          ARCHIVE_DIR="vizier-v${VERSION}-${TARGET}"
+          ARCHIVE_NAME="${ARCHIVE_DIR}.tar.gz"
+          
+          mkdir -p "dist/${ARCHIVE_DIR}"
+          cp "target/${TARGET}/release/${BINARY_NAME}" "dist/${ARCHIVE_DIR}/"
+          cp Readme.md "dist/${ARCHIVE_DIR}/" 2>/dev/null || true
+          cp LICENSE* "dist/${ARCHIVE_DIR}/" 2>/dev/null || true
+          
+          cd dist
+          tar -czvf "${ARCHIVE_NAME}" "${ARCHIVE_DIR}"
+          shasum -a 256 "${ARCHIVE_NAME}" > "${ARCHIVE_NAME}.sha256"
+          
+          echo "ASSET=${ARCHIVE_NAME}" >> $GITHUB_ENV
+          echo "CHECKSUM=${ARCHIVE_NAME}.sha256" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vizier-${{ matrix.target }}
+          path: |
+            dist/${{ env.ASSET }}
+            dist/${{ env.CHECKSUM }}
+          retention-days: 7
+
+  # ====================
+  # Create GitHub Release
+  # ====================
+  create-release:
+    name: Create GitHub Release
+    needs: [prepare-release, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p release-assets
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.sha256" \) -exec cp {} release-assets/ \;
+          ls -la release-assets/
 
       - name: Create GitHub Release
+        if: ${{ !inputs.dry_run }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ env.NEW_VERSION }}
-          body_path: CHANGELOG.md # Uses the generated file as release notes
+          tag_name: v${{ needs.prepare-release.outputs.version }}
+          name: v${{ needs.prepare-release.outputs.version }}
+          body: |
+            ${{ needs.prepare-release.outputs.changelog }}
+
+            ## Installation
+
+            ### Using cargo-binstall (recommended)
+            ```bash
+            cargo binstall vizier
+            ```
+
+            ### Using cargo install
+            ```bash
+            cargo install vizier
+            ```
+
+            ### Manual download
+            Download the appropriate binary for your platform from the assets below.
+          draft: false
+          prerelease: ${{ contains(needs.prepare-release.outputs.version, '-') }}
+          files: release-assets/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish to Crates.io
-        run: cargo publish --token ${{ secrets.CRATES_TOKEN }}
+      - name: Dry run summary
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "## Dry Run Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Version: v${{ needs.prepare-release.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Assets that would be released:" >> $GITHUB_STEP_SUMMARY
+          ls -la release-assets/ >> $GITHUB_STEP_SUMMARY
