@@ -32,6 +32,9 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
 
+permissions:
+  contents: write
+
 jobs:
   # ====================
   # Bump version and generate changelog
@@ -69,24 +72,16 @@ jobs:
           sed -i 's/^version = ".*"/version = "${{ steps.version.outputs.version }}"/' Cargo.toml
           cat Cargo.toml | grep "^version"
 
+      - name: Install git-cliff
+        uses: taiki-e/install-action@git-cliff
+
       - name: Generate Changelog
         id: changelog
         run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          # Generate changelog for this release only (for GitHub Release body)
+          git-cliff --unreleased --tag "v${{ steps.version.outputs.version }}" --strip header -o CHANGELOG_ENTRY.md
           
-          echo "## What's Changed in v${{ steps.version.outputs.version }}" > CHANGELOG_ENTRY.md
-          echo "" >> CHANGELOG_ENTRY.md
-          
-          if [ -z "$PREV_TAG" ]; then
-            git log --pretty=format:"* %s (%h)" >> CHANGELOG_ENTRY.md
-          else
-            git log ${PREV_TAG}..HEAD --pretty=format:"* %s (%h)" >> CHANGELOG_ENTRY.md
-          fi
-          
-          echo "" >> CHANGELOG_ENTRY.md
-          echo "" >> CHANGELOG_ENTRY.md
-          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG:-initial}...v${{ steps.version.outputs.version }}" >> CHANGELOG_ENTRY.md
-          
+          # Output for GitHub Release
           {
             echo 'changelog<<EOF'
             cat CHANGELOG_ENTRY.md
@@ -97,17 +92,8 @@ jobs:
 
       - name: Update CHANGELOG.md
         run: |
-          if [ -f CHANGELOG.md ]; then
-            echo "# Changelog" > CHANGELOG_NEW.md
-            echo "" >> CHANGELOG_NEW.md
-            cat CHANGELOG_ENTRY.md >> CHANGELOG_NEW.md
-            tail -n +2 CHANGELOG.md >> CHANGELOG_NEW.md
-            mv CHANGELOG_NEW.md CHANGELOG.md
-          else
-            echo "# Changelog" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            cat CHANGELOG_ENTRY.md >> CHANGELOG.md
-          fi
+          # Generate full changelog
+          git-cliff --tag "v${{ steps.version.outputs.version }}" -o CHANGELOG.md
 
       - name: Commit version bump
         run: |
@@ -155,7 +141,7 @@ jobs:
           ref: ${{ inputs.dry_run && github.ref || format('v{0}', needs.prepare-release.outputs.version) }}
 
       - name: Setup Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 

@@ -62,7 +62,7 @@ jobs:
           echo "Version verified: $CARGO_VERSION"
 
       - name: Setup Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
