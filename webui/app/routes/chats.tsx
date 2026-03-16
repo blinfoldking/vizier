@@ -35,25 +35,29 @@ const Chat = () => {
       setAgentDetail(res.data.data)
       const agentDetail = res.data.data
 
-      getSessionHistory(agentId).then(res => setChats(res.data.data.map((item: any) => {
-        if (item.request) {
-          return {
-            user_id: item.request.user,
-            username: item.request.user,
-            user_type: 'user',
-            content: item.request.content,
-            timestamp: item.request.timestamp
+      getSessionHistory(agentId).then(res => {
+        setChats(res.data.data.map((item: any) => {
+          if (item.request) {
+            return {
+              user_id: item.request.user,
+              username: item.request.user,
+              user_type: 'user',
+              content: item.request.content,
+              timestamp: item.request.timestamp
+            }
           }
-        }
 
-        return {
-          user_id: agentId,
-          username: agentDetail.name,
-          user_type: 'agent',
-          content: item.response.content,
-          timestamp: item.response.timestamp
-        }
-      })))
+          return {
+            user_id: agentId,
+            username: agentDetail.name,
+            user_type: 'agent',
+            content: item.response.content,
+            timestamp: item.response.timestamp
+          }
+        }))
+
+        toBottom()
+      })
     })
 
   }, [agentId, readyState])
