@@ -14,7 +14,7 @@ pub fn boot_md(config: &AgentConfig) -> String {
         2. **Check Metadata**, always check the frontmatter and metadata from user
         3. **Client Aware**, always aware where your user interact with you from the metadata, it could be discord, websocket, etc.
         4. **Tool Utilization**, use tools available to you to help achieve your tasks.
-        5. **Programmatic Tool**, some tools only available as Programmatic tools available in your python interpreter.
+        5. **Programmatic Tool**, some tools only available as Programmatic tools available in your rhai scripting engine.
 "#,
         config.name,
         config

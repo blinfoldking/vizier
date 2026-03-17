@@ -10,7 +10,7 @@ use crate::{
         tools::{
             brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
             discord::new_discord_tools,
-            python::PythonInterpreter,
+            rhai::RhaiInterpreter,
             scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
             vector_memory::init_vector_memory,
             workspace::{AgentDocument, IdentDocument, WritePrimaryDocument},
@@ -23,7 +23,7 @@ use crate::{
 
 mod brave_search;
 mod discord;
-mod python;
+mod rhai;
 mod scheduler;
 mod vector_memory;
 mod workspace;
@@ -64,9 +64,8 @@ impl VizierTools {
             }
         }
 
-        if agent_config.tools.python_interpreter {
-            let mut python_interpreter =
-                PythonInterpreter::new(format!("{agent_workspace}/workdir"));
+        if agent_config.tools.scripting_engine {
+            let mut rhai_interpreter = RhaiInterpreter::new(format!("{agent_workspace}/workdir"));
 
             if agent_config.tools.discord.is_programatically_enabled() {
                 if let Some(discord) = &deps.config.channels.discord {
@@ -75,7 +74,7 @@ impl VizierTools {
                     {
                         let (send_message, react_message, get_message) =
                             new_discord_tools(discord.token.clone());
-                        python_interpreter = python_interpreter
+                        rhai_interpreter = rhai_interpreter
                             .tool(send_message)
                             .tool(react_message)
                             .tool(get_message);
@@ -85,14 +84,16 @@ impl VizierTools {
 
             if agent_config.tools.brave_search.is_programatically_enabled() {
                 if let Some(brave_search) = tool_config.brave_search.clone() {
-                    python_interpreter = python_interpreter
+                    rhai_interpreter = rhai_interpreter
                         .tool(BraveSearch::<WebOnlySearch>::new(&brave_search))
                         .tool(BraveSearch::<NewsOnlySearch>::new(&brave_search));
                 }
             }
 
-            if agent_config.tools.vector_memory.enabled
-                && !agent_config.tools.vector_memory.programmatic_tool_call
+            if agent_config
+                .tools
+                .vector_memory
+                .is_programatically_enabled()
             {
                 if let Some(_) = tool_config.vector_memory.clone() {
                     let (read_memory, write_memory) =
@@ -102,9 +103,9 @@ impl VizierTools {
                 }
             }
 
-            let python_tool_docs = python_interpreter.generate_docs_tool().await;
-            tool_server_builder = tool_server_builder.tool(python_interpreter);
-            tool_server_builder = tool_server_builder.tool(python_tool_docs);
+            let rhai_tool_docs = rhai_interpreter.generate_docs_tool().await;
+            tool_server_builder = tool_server_builder.tool(rhai_interpreter);
+            tool_server_builder = tool_server_builder.tool(rhai_tool_docs);
         }
 
         if agent_config.tools.discord.enabled && !agent_config.tools.discord.programmatic_tool_call

@@ -28,7 +28,7 @@ pub struct MemoryConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct AgentToolsConfig {
-    pub python_interpreter: bool,
+    pub scripting_engine: bool,
     pub cli_access: bool,
     pub brave_search: ToolConfig,
     pub vector_memory: ToolConfig,

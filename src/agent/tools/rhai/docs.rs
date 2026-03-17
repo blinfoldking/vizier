@@ -4,7 +4,7 @@ use rig::{completion::ToolDefinition, tool::Tool};
 use schemars::schema_for;
 use serde::{Deserialize, Serialize};
 
-use crate::{agent::tools::python::PythonInterpreter, error::VizierError};
+use crate::{agent::tools::rhai::RhaiInterpreter, error::VizierError};
 
 pub struct ToolDoc {
     name: String,
@@ -32,12 +32,12 @@ impl Display for ToolDoc {
     }
 }
 
-pub struct PythonToolsDocs {
+pub struct RhaiToolsDocs {
     docs: HashMap<String, ToolDoc>,
 }
 
-impl PythonInterpreter {
-    pub async fn generate_docs_tool(&self) -> PythonToolsDocs {
+impl RhaiInterpreter {
+    pub async fn generate_docs_tool(&self) -> RhaiToolsDocs {
         let mut docs = HashMap::new();
 
         for tool in self.programmatic_tools.iter() {
@@ -53,36 +53,41 @@ impl PythonInterpreter {
             docs.insert(definition.name, doc);
         }
 
-        PythonToolsDocs { docs }
+        RhaiToolsDocs { docs }
     }
 }
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
-pub struct PythonToolsDocsArgs {
+pub struct RhaiToolsDocsArgs {
     #[schemars(description = "Optional, if filled will only show documentation for the tool")]
     tool_name: Option<String>,
 }
 
-impl PythonToolsDocs {
+impl RhaiToolsDocs {
     fn description(&self) -> String {
+        let tool_list = self
+            .docs
+            .iter()
+            .map(|t| t.0.clone())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let example = String::from("some_tool(#{arg: some_val})");
+
         format!(
-            r#"use this tools to get documentation detail of available programmatic tool.
-            Calls the underlying programmatic tool with given kwargs in python_interpreter (ie. `some_tool(arg=some_val)`).
-            list of available tools: {}"#,
-            self.docs
-                .iter()
-                .map(|t| t.0.clone())
-                .collect::<Vec<_>>()
-                .join(", ")
+            "Use this tool to get documentation detail of available programmatic tool.\n\
+            Calls the underlying programmatic tool with given map/object parameter in rhai_interpreter (e.g., '{}').\n\
+            List of available tools: {}",
+            example, tool_list
         )
     }
 }
 
-impl Tool for PythonToolsDocs {
-    const NAME: &'static str = "python_tools_docs";
+impl Tool for RhaiToolsDocs {
+    const NAME: &'static str = "rhai_tools_docs";
 
     type Error = VizierError;
-    type Args = PythonToolsDocsArgs;
+    type Args = RhaiToolsDocsArgs;
     type Output = String;
 
     async fn definition(&self, _prompt: String) -> ToolDefinition {
