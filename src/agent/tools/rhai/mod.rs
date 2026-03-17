@@ -82,17 +82,29 @@ impl Tool for RhaiInterpreter {
         } else {
             let mut tool_descriptions = Vec::new();
             for tool in &self.programmatic_tools {
-                tool_descriptions.push(tool.name());
+                tool_descriptions.push(format!("\n### {}\n{}", tool.name(), tool.describe()));
             }
             format!(
-                "\n\nAvailable tools (Calls the underlying programmatic tool with given map/object parameter in rhai_interpreter, ie: some_tool(#{{arg: some_val}})): {}",
-                tool_descriptions.join(", ")
+                "\n\n## Available PTC (Programmatic Tool Calls)\n\n\
+                These tools can be called from within Rhai scripts using the function name with a map/object parameter.\n\
+                Example: `web_search(#{{query: \"some query\", page: 1}})`\n\n{}",
+                tool_descriptions.join("\n")
             )
         };
 
+        let std_lib_desc = r#"Available std library functions:
+- String: trim(s), trim_start(s), trim_end(s), to_lowercase(s), to_uppercase(s), replace(s, from, to), contains(s, pattern), starts_with(s, pattern), ends_with(s, pattern), split(s, delimiter), join(arr, separator), substring(s, start, end)
+- Array: len(arr), push(arr, val), pop(arr), get(arr, idx), contains(arr, val), sort(arr), reverse(arr), first(arr), last(arr), is_empty(arr), clear(arr)
+- Map: len(map), get(map, key), set(map, key, val), contains(map, key), keys(map), values(map), remove(map, key), is_empty(map), clear(map)
+- Math: abs(n), floor(n), ceil(n), round(n), sqrt(n), pow(base, exp), max(a, b), min(a, b), sin(n), cos(n), tan(n), asin(n), acos(n), atan(n), atan2(y, x), exp(n), ln(n), log(n, base), log10(n), log2(n), signum(n), trunc(n), fract(n), cbrt(n), hypot(x, y)
+- Type conversions: to_int(s), to_float(s), to_string(n), to_hex(n), to_oct(n), to_bin(n), parse_int(s, radix), type_of(val), is_number(val)
+- DateTime: now(), sleep(seconds)
+- Utility: print(msg), println(msg), is_empty(s), range(end), range(start, end), range(start, end, step)"#;
+
         let description = format!(
             "Run a Rhai script in a sandboxed environment.\n\n\
-            **Use this tool for calculations and accessing tools**\n\
+            **Use this tool for calculations and accessing tools**\n\n\
+            {std_lib_desc}\n\
             {tools_desc}"
         );
 

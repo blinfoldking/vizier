@@ -159,11 +159,6 @@ jobs:
           npm ci
           npm run build
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
@@ -171,7 +166,6 @@ jobs:
           sudo apt-get install -y \
             pkg-config \
             libssl-dev \
-            python3-dev \
             libclang-dev \
             clang \
             perl \
@@ -179,8 +173,6 @@ jobs:
 
       - name: Build binary
         run: cargo build --release --target ${{ matrix.target }}
-        env:
-          PYO3_PYTHON: python3.9
 
       - name: Package binary (cargo-binstall compatible)
         shell: bash
