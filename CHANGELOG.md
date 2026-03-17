@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0-rc.2] - 2026-03-17
+
+### 🐛 Bug Fixes
+
+- Webui missing asset error on SPA route
+- Formatting
+- Binstall release
+
+### 🚜 Refactor
+
+- Spawn agent by session
+- Simplify transport with broadcast
+
+### 📚 Documentation
+
+- Update readme
 ## [0.2.0-rc.1] - 2026-03-16
 
 ### 🚀 Features
@@ -77,6 +93,7 @@ All notable changes to this project will be documented in this file.
 - Bump version to 0.2.0-rc.1
 - Fix build error
 - Fix build error
+- Bump version to 0.2.0-rc.1
 ## [0.1.4] - 2026-02-22
 
 ### ⚙️ Miscellaneous Tasks
