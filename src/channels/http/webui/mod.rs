@@ -27,6 +27,6 @@ pub async fn assets(Path(path): Path<String>) -> impl IntoResponse {
 
             (StatusCode::OK, headers, content.data).into_response()
         }
-        None => (StatusCode::NOT_FOUND, "Asset not found").into_response(),
+        None => index().await.into_response(),
     }
 }
