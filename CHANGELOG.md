@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0-rc.3] - 2026-03-17
+
+### 🐛 Bug Fixes
+
+- Bin dir
+- Macos build run error
 ## [0.2.0-rc.2] - 2026-03-17
 
 ### 🐛 Bug Fixes
@@ -18,6 +24,10 @@ All notable changes to this project will be documented in this file.
 ### 📚 Documentation
 
 - Update readme
+
+### ⚙️ Miscellaneous Tasks
+
+- Bump version to 0.2.0-rc.2
 ## [0.2.0-rc.1] - 2026-03-16
 
 ### 🚀 Features
