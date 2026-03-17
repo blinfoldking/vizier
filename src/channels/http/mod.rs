@@ -7,10 +7,7 @@ use reqwest::{
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
-    channels::{
-        VizierChannel,
-        http::state::{ChatTransport, HTTPState},
-    },
+    channels::{VizierChannel, http::state::HTTPState},
     config::HTTPChannelConfig,
     dependencies::VizierDependencies,
 };
@@ -34,8 +31,6 @@ impl HTTPChannel {
 
 impl VizierChannel for HTTPChannel {
     async fn run(&mut self) -> Result<()> {
-        let chat_transport = ChatTransport::new();
-
         let cors = CorsLayer::new()
             .allow_origin(Any)
             .allow_methods([
@@ -57,22 +52,16 @@ impl VizierChannel for HTTPChannel {
             .with_state(HTTPState {
                 config: self.deps.config.clone(),
                 db: self.deps.database.clone(),
-                transport: chat_transport.clone(),
+                transport: self.deps.transport.clone(),
             });
 
         let listener =
             tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.config.port)).await?;
 
-        let transport = self.deps.transport.clone();
-        let transport_handle = tokio::spawn(async move {
-            let _ = chat_transport.run(transport).await;
-        });
-
         let server = axum::serve(listener, app);
         log::info!("http listening on port {}", self.config.port);
 
         server.await?;
-        transport_handle.abort();
 
         Ok(())
     }

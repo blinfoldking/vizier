@@ -66,6 +66,7 @@ pyo3 = { version = "0.28.2", features = ["auto-initialize", "abi3-py39"] }
 pythonize = "0.28"
 dotenvy = "0.15.7"
 async-trait = "0.1.89"
+async-broadcast = "0.7.2"
 
 [build-dependencies]
 pyo3-build-config = "0.28.2"

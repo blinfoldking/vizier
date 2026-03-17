@@ -1,11 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct SessionResponse {
-    pub agent_id: String,
-    pub session_id: String,
-}
+use crate::schema::VizierResponse;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ChatRequest {
@@ -19,6 +15,26 @@ pub struct ChatResponse {
     pub content: String,
     pub thinking: bool,
     pub timestamp: Option<DateTime<Utc>>,
+}
+
+impl From<VizierResponse> for ChatResponse {
+    fn from(value: VizierResponse) -> Self {
+        match value {
+            VizierResponse::Thinking => Self {
+                content: "".into(),
+                thinking: true,
+                timestamp: Some(Utc::now()),
+            },
+            VizierResponse::Message {
+                content: content,
+                stats: _,
+            } => Self {
+                content: content,
+                thinking: false,
+                timestamp: Some(Utc::now()),
+            },
+        }
+    }
 }
 
 #[allow(non_camel_case_types)]

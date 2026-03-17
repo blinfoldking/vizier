@@ -8,12 +8,15 @@ use rig::{
 
 use crate::{
     agent::{
-        agent_impl::{VizierAgentImpl, system_prompt::boot::boot_md},
+        agent_impl::{
+            VizierAgentImpl,
+            system_prompt::{boot::boot_md, init_workspace},
+        },
         tools::VizierTools,
     },
     dependencies::VizierDependencies,
     schema::VizierSession,
-    utils,
+    utils::{self, agent_workspace},
 };
 
 #[async_trait::async_trait]
@@ -31,7 +34,10 @@ where
         let client = Self::init_client(session.clone(), deps.clone()).await?;
 
         let agent_config = deps.config.agents.get(&session.0).unwrap();
+
         let boot = boot_md(agent_config);
+        let path = agent_workspace(&deps.config.workspace.clone(), &session.0);
+        init_workspace(path);
 
         let tool = VizierTools::new(session.0.clone(), deps.clone()).await?;
 

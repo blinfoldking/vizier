@@ -55,12 +55,12 @@ const Chat = () => {
             timestamp: item.response.timestamp
           }
         }))
-
-        toBottom()
       })
     })
 
   }, [agentId, readyState])
+
+
 
   let bottomRef: any = useRef(null)
   const toBottom = () => {
@@ -114,6 +114,10 @@ const Chat = () => {
     const initialPrompt = location.state?.prompt
     if (initialPrompt) send(initialPrompt)
   }, [])
+
+  useEffect(() => {
+    toBottom()
+  }, [chats])
 
   return (
     <div

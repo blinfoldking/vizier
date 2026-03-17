@@ -74,8 +74,9 @@ impl VizierAgents {
         let mut sessions: HashMap<VizierSession, SessionProcess> = HashMap::new();
 
         let transport = self.deps.transport.clone();
+        let mut recv = transport.subscribe_request().await?;
 
-        while let Ok((session, request)) = transport.read_request().await {
+        while let Ok((session, request)) = recv.recv().await {
             if let Some(process) = sessions.get(&session) {
                 if !process.handle.is_finished() {
                     let _ = process.session_transport.0.send_async(request).await;

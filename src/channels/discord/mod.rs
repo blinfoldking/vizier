@@ -14,12 +14,10 @@ use serenity::prelude::*;
 use crate::channels::VizierChannel;
 use crate::config::DiscordChannelConfig;
 use crate::schema::{SessionId, VizierRequest, VizierResponse, VizierSession};
-use crate::transport::{VizierTransport, VizierTransportChannel};
+use crate::transport::VizierTransport;
 use crate::utils::remove_think_tags;
 
 pub struct DiscordChannelReader {
-    transport: VizierTransport,
-    config: DiscordChannelConfig,
     client: Client,
 }
 
@@ -30,11 +28,7 @@ impl DiscordChannelReader {
             .event_handler(Handler(config.agent_id.clone(), transport.clone()))
             .await?;
 
-        Ok(Self {
-            config,
-            client,
-            transport,
-        })
+        Ok(Self { client })
     }
 }
 
@@ -60,8 +54,6 @@ impl DiscordChannelWriter {
 
 impl VizierChannel for DiscordChannelWriter {
     async fn run(&mut self) -> Result<()> {
-        let transport = self.transport.clone();
-
         let mut token_map = HashMap::new();
         for config in self.config.iter() {
             token_map.insert(
@@ -70,12 +62,11 @@ impl VizierChannel for DiscordChannelWriter {
             );
         }
 
+        let mut recv = self.transport.subscribe_response().await?;
         let _ = tokio::spawn(async move {
             loop {
                 if let Ok((VizierSession(agent_id, SessionId::DiscordChanel(channel_id)), res)) =
-                    transport
-                        .read_response(VizierTransportChannel::Discord)
-                        .await
+                    recv.recv().await
                 {
                     let http = token_map.get(&agent_id).unwrap().clone();
                     let channel_id = ChannelId::new(channel_id);
