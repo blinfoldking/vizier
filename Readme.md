@@ -11,7 +11,7 @@ Vizier is a Rust-based AI agent framework that provides a unified interface for 
 - **Multi-Channel Support**: Connect to Discord, HTTP (REST API & WebSocket), and WebUI
 - **AI Model Integration**: Support for multiple AI providers (DeepSeek, OpenRouter, Ollama, etc.)
 - **Memory System**: Session-based short-term memory, configurable recall depth, and vector-based long-term memory
-- **Tool System**: Extensible tool framework including CLI access, web search (Brave Search), Python interpreter, scheduler (cron & one-time tasks), vector memory, and workspace document management
+- **Tool System**: Extensible tool framework including CLI access, web search (Brave Search), Lua interpreter, scheduler (cron & one-time tasks), vector memory, and workspace document management
 - **Scheduler**: Built-in task scheduler for automated agent execution
 - **WebUI**: Modern React-based web interface for interaction and management
 - **TUI Interface**: Built-in terminal user interface for local interaction (WIP)
@@ -22,24 +22,6 @@ Vizier is a Rust-based AI agent framework that provides a unified interface for 
 ### Prerequisites
 
 - [Rust and Cargo](https://rust-lang.org/) installed
-- **Python 3.9 or higher** - Required for the Python interpreter tool
-
-#### Installing Python
-
-If you don't have Python 3.9+, install it:
-
-**macOS:**
-```sh
-brew install python@3.9
-```
-
-**Ubuntu/Debian:**
-```sh
-sudo apt-get install python3.9 python3.9-dev
-```
-
-**Windows:**
-Download from [python.org](https://www.python.org/downloads/)
 
 ### Quick Start
 
@@ -96,35 +78,18 @@ The web interface is built with React and served automatically when the HTTP cha
 
 ## Troubleshooting
 
-### Python Library Not Loaded Error
+If you encounter build issues, make sure you have the following dependencies installed:
 
-If you see an error like:
-```
-dyld[...]: Library not loaded: /Library/Frameworks/Python.framework/Versions/3.14/Python
-```
-
-This means the binary was built against a different Python version than what's on your system.
-
-**Solution:** Build from source against your Python version:
+**Ubuntu/Debian:**
 ```sh
-# Clone the repository
-git clone https://github.com/blinfoldking/vizier
-cd vizier
-
-# Build with your Python version
-PYO3_PYTHON=$(which python3.9) cargo build --release
-
-# The binary will be at: target/release/vizier
+sudo apt-get install -y libssl-dev pkg-config libclang-dev clang perl make
 ```
 
-### Wrong Python Version
-
-If you see:
+**macOS:**
+```sh
+# Xcode Command Line Tools are required
+xcode-select --install
 ```
-Python version X.X detected, but Python 3.9 or higher is required
-```
-
-Install Python 3.9 or higher following the installation instructions above.
 
 
 ## Planned Features (V1.0.0)
@@ -132,7 +97,7 @@ Install Python 3.9 or higher following the installation instructions above.
 - [x] Web UI (React-based interface)
 - [x] Scheduler and task system (cron & one-time tasks)
 - [x] Vector memory for long-term retention
-- [x] Python interpreter tool
+- [x] Lua interpreter tool
     - [x] Programmatic Tool Calling
 - [x] Brave Search integration
 - [x] Local embedding model support

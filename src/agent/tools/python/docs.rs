@@ -4,7 +4,7 @@ use rig::{completion::ToolDefinition, tool::Tool};
 use schemars::schema_for;
 use serde::{Deserialize, Serialize};
 
-use crate::{agent::tools::python::PythonInterpreter, error::VizierError};
+use crate::{agent::tools::python::LuaInterpreter, error::VizierError};
 
 pub struct ToolDoc {
     name: String,
@@ -32,12 +32,12 @@ impl Display for ToolDoc {
     }
 }
 
-pub struct PythonToolsDocs {
+pub struct LuaToolsDocs {
     docs: HashMap<String, ToolDoc>,
 }
 
-impl PythonInterpreter {
-    pub async fn generate_docs_tool(&self) -> PythonToolsDocs {
+impl LuaInterpreter {
+    pub async fn generate_docs_tool(&self) -> LuaToolsDocs {
         let mut docs = HashMap::new();
 
         for tool in self.programmatic_tools.iter() {
@@ -53,21 +53,21 @@ impl PythonInterpreter {
             docs.insert(definition.name, doc);
         }
 
-        PythonToolsDocs { docs }
+        LuaToolsDocs { docs }
     }
 }
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
-pub struct PythonToolsDocsArgs {
+pub struct LuaToolsDocsArgs {
     #[schemars(description = "Optional, if filled will only show documentation for the tool")]
     tool_name: Option<String>,
 }
 
-impl PythonToolsDocs {
+impl LuaToolsDocs {
     fn description(&self) -> String {
         format!(
-            r#"use this tools to get documentation detail of available programmatic tool.
-            Calls the underlying programmatic tool with given kwargs in python_interpreter (ie. `some_tool(arg=some_val)`).
+            r#"use this tool to get documentation detail of available programmatic tools.
+            Calls the underlying programmatic tool with given kwargs in lua_interpreter (ie. `some_tool({{arg=some_val}})`)
             list of available tools: {}"#,
             self.docs
                 .iter()
@@ -78,11 +78,11 @@ impl PythonToolsDocs {
     }
 }
 
-impl Tool for PythonToolsDocs {
-    const NAME: &'static str = "python_tools_docs";
+impl Tool for LuaToolsDocs {
+    const NAME: &'static str = "lua_tools_docs";
 
     type Error = VizierError;
-    type Args = PythonToolsDocsArgs;
+    type Args = LuaToolsDocsArgs;
     type Output = String;
 
     async fn definition(&self, _prompt: String) -> ToolDefinition {
