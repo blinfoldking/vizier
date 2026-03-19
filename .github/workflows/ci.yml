@@ -43,7 +43,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
 
   # ====================
   # Build & Test
@@ -90,6 +90,9 @@ jobs:
 
       - name: Build
         run: cargo build --release
+
+      - name: Build with Python feature
+        run: cargo build --release --features python
 
       - name: Run tests
         run: cargo test --release

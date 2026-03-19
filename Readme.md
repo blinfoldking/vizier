@@ -11,7 +11,7 @@ Vizier is a Rust-based AI agent framework that provides a unified interface for 
 - **Multi-Channel Support**: Connect to Discord, HTTP (REST API & WebSocket), and WebUI
 - **AI Model Integration**: Support for multiple AI providers (DeepSeek, OpenRouter, Ollama, etc.)
 - **Memory System**: Session-based short-term memory, configurable recall depth, and vector-based long-term memory
-- **Tool System**: Extensible tool framework including CLI access, web search (Brave Search), Python interpreter (optional), scheduler (cron & one-time tasks), vector memory, and workspace document management
+- **Tool System**: Extensible tool framework including CLI access, web search (Brave Search), Python interpreter (opt-in), scheduler (cron & one-time tasks), vector memory, and workspace document management
 - **Scheduler**: Built-in task scheduler for automated agent execution
 - **WebUI**: Modern React-based web interface for interaction and management
 - **TUI Interface**: Built-in terminal user interface for local interaction (WIP)
@@ -22,16 +22,19 @@ Vizier is a Rust-based AI agent framework that provides a unified interface for 
 ### Prerequisites
 
 - [Rust and Cargo](https://rust-lang.org/) installed
-- **Python 3.9 or higher** (Optional) - Only required if you want to use the Python interpreter tool
 
-#### Python Support (Optional)
+#### Optional: Python Support
 
-Vizier supports Python as an optional feature. By default, Vizier includes Python interpreter support. You can:
+**Python is NOT included by default.** Vizier can be built with or without Python interpreter support:
 
-- **Use Python interpreter tool**: Install Python 3.9+ (see below)
-- **Build without Python**: Use `--no-default-features` flag (see [Building without Python](#building-without-python))
+- **Default build**: No Python dependency required
+- **With Python**: Add `--features python` flag to enable Python interpreter tool
 
-If you want to use the Python interpreter tool, install Python 3.9+:
+If you want to use the Python interpreter tool, you need:
+1. Python 3.9+ installed on your system
+2. Build Vizier with Python feature enabled
+
+**Installing Python 3.9+ (only if you need Python support):**
 
 **macOS:**
 ```sh
@@ -48,23 +51,35 @@ Download from [python.org](https://www.python.org/downloads/)
 
 ### Quick Start
 
-1. Install the `vizier` binary:
+1. **Install Vizier** (without Python - default):
    ```sh
    cargo install vizier
    # Or using cargo-binstall (faster)
    cargo binstall vizier
    ```
 
-2. Generate your initial configuration and workspace:
+2. **Generate configuration and workspace:**
    ```sh
    vizier init
    ```
    This will create a `.vizier` directory with a default `config.yaml`.
 
-3. Run the agent:
+3. **Run the agent:**
    ```sh
    vizier run --config .vizier/config.yaml
    ```
+
+#### Quick Start with Python
+
+If you need the Python interpreter tool:
+
+```sh
+# Install with Python feature
+cargo install vizier --features python
+
+# Or from source
+cargo build --release --features python
+```
 
 ### Development Setup
 
@@ -83,30 +98,32 @@ just build
 
 See the [Justfile](Justfile) for all available commands.
 
-### Building without Python
+### Building with Python Support
 
-To build Vizier without Python support (smaller binary, no Python dependency):
+To enable the Python interpreter tool, build Vizier with the `python` feature:
 
 ```sh
 # Using cargo install
-cargo install vizier --no-default-features
+cargo install vizier --features python
 
 # Building from source
-cargo build --release --no-default-features
+cargo build --release --features python
+
+# Development mode
+just dev-python  # Run with Python feature
+just release-python  # Build release with Python
 ```
 
-**Benefits of building without Python:**
-- No Python runtime required on user systems
-- Smaller binary size
-- Simplified distribution
-- Python interpreter tool won't be available
+**Requirements for Python support:**
+- Python 3.9+ installed on your system
+- Build with `--features python` flag
 
-**What remains available:**
-- All other tools (CLI access, web search, scheduler, etc.)
-- All channels (Discord, HTTP, WebUI)
-- Full agent functionality
+**What Python support adds:**
+- Python interpreter tool for agents
+- Programmatic tool calling within Python scripts
+- Ability to execute Python code for data processing, automation, etc.
 
-**Configuration Note:** If you build without Python, any agents with `python_interpreter` enabled will simply skip that tool without error.
+**Note:** Without Python support, any agents with `python_interpreter` enabled will simply skip that tool without error.
 
 ### WebUI
 
@@ -128,6 +145,21 @@ The web interface is built with React and served automatically when the HTTP cha
 
 ### Python-Related Issues
 
+#### Python Interpreter Not Available
+
+If your agent configuration includes `python_interpreter: true` but the tool is not working:
+
+**This is expected behavior!** By default, Vizier is built without Python support to minimize dependencies.
+
+**Solution: Rebuild with Python feature**
+```sh
+# Reinstall with Python support
+cargo install vizier --features python
+
+# Or from source
+cargo build --release --features python
+```
+
 #### Python Library Not Loaded Error
 
 If you see an error like:
@@ -135,24 +167,17 @@ If you see an error like:
 dyld[...]: Library not loaded: /Library/Frameworks/Python.framework/Versions/3.14/Python
 ```
 
-This means the binary was built against a different Python version than what's on your system.
+This means you built Vizier with Python support, but the binary was linked against a different Python version than what's on your system.
 
-**Solutions:**
+**Solution: Build from source against your Python version**
+```sh
+# Clone the repository
+git clone https://github.com/blinfoldking/vizier
+cd vizier
 
-1. **Option 1: Build from source against your Python version**
-   ```sh
-   # Clone the repository
-   git clone https://github.com/blinfoldking/vizier
-   cd vizier
-
-   # Build with your Python version
-   PYO3_PYTHON=$(which python3.9) cargo install vizier
-   ```
-
-2. **Option 2: Build without Python support** (if you don't need Python interpreter)
-   ```sh
-   cargo install vizier --no-default-features
-   ```
+# Build with your Python version
+PYO3_PYTHON=$(which python3.9) cargo build --release --features python
+```
 
 #### Wrong Python Version
 
@@ -161,24 +186,7 @@ If you see:
 Python version X.X detected, but Python 3.9 or higher is required
 ```
 
-Either:
-- Install Python 3.9 or higher following the installation instructions above, OR
-- Build without Python: `cargo install vizier --no-default-features`
-
-#### Python Not Found
-
-If you see:
-```
-Error: Could not find Python installation
-```
-
-This could mean:
-- You built Vizier with Python support but Python isn't installed
-- Python is installed but not in your PATH
-
-**Solutions:**
-- Install Python 3.9+, OR
-- Build without Python: `cargo install vizier --no-default-features`
+Install Python 3.9 or higher following the installation instructions above, then rebuild with Python feature.
 
 
 ## Planned Features (V1.0.0)
@@ -215,7 +223,11 @@ See the [`Justfile`](Justfile) for available commands:
 |---------|-------------|
 | `just install` | Install all dependencies (Rust crates + webui npm packages) |
 | `just dev` | Run in development mode with hot-reload |
+| `just dev-python` | Run in development mode with Python support |
 | `just run` | Run in release mode |
+| `just run-python` | Run in release mode with Python support |
+| `just release` | Build release binary |
+| `just release-python` | Build release binary with Python support |
 | `just tui` | Start the terminal user interface (WIP) |
 | `just docker` | Start Docker services (database, etc.) |
 | `just build` | Build the webui frontend |

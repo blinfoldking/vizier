@@ -10,14 +10,14 @@ install:
 run:
   @cargo run -- run --config .vizier/config.yaml
 
-run-no-python:
-  @cargo run --no-default-features -- run --config .vizier/config.yaml
+run-python:
+  @cargo run --features python -- run --config .vizier/config.yaml
 
 dev:
   cargo watch -s "just run"
 
-dev-no-python:
-  cargo watch -s "just run-no-python"
+dev-python:
+  cargo watch -s "just run-python"
 
 docker:
   @docker-compose down && docker-compose up -d
@@ -28,5 +28,5 @@ build:
 release:
   @cargo build --release
 
-release-no-python:
-  @cargo build --release --no-default-features
+release-python:
+  @cargo build --release --features python

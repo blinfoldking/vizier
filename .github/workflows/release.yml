@@ -159,11 +159,6 @@ jobs:
           npm ci
           npm run build
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
@@ -179,8 +174,6 @@ jobs:
 
       - name: Build binary
         run: cargo build --release --target ${{ matrix.target }}
-        env:
-          PYO3_PYTHON: python3.9
 
       - name: Package binary (cargo-binstall compatible)
         shell: bash
@@ -258,6 +251,12 @@ jobs:
 
             ### Manual download
             Download the appropriate binary for your platform from the assets below.
+
+            ### Need Python Support?
+            Pre-built binaries do not include Python. To use the Python interpreter tool, build from source with the `python` feature:
+            ```bash
+            cargo install vizier --features python
+            ```
           draft: false
           prerelease: ${{ contains(needs.prepare-release.outputs.version, '-') }}
           files: release-assets/*

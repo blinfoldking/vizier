@@ -72,7 +72,7 @@ async-broadcast = "0.7.2"
 pyo3-build-config = { version = "0.28.2", optional = true }
 
 [features]
-default = ["python"]
+default = []
 python = ["pyo3", "pythonize", "pyo3-build-config"]
 
 [package.metadata.binstall]
