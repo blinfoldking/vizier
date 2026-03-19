@@ -2,7 +2,11 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
-    pyo3_build_config::use_pyo3_cfgs();
+    // Only configure PyO3 if the python feature is enabled
+    #[cfg(feature = "python")]
+    {
+        pyo3_build_config::use_pyo3_cfgs();
+    }
 
     let webui_build_dir = Path::new("webui/build/client");
     let webui_node_modules = Path::new("webui/node_modules");

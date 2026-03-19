@@ -5,24 +5,23 @@ use rig::{
 };
 
 use crate::{
-    agent::{
-        exec::ExecCliFromWorkspace,
-        tools::{
-            brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
-            discord::new_discord_tools,
-            python::PythonInterpreter,
-            scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
-            vector_memory::init_vector_memory,
-            workspace::{AgentDocument, IdentDocument, WritePrimaryDocument},
-        },
-    },
+    agent::exec::ExecCliFromWorkspace,
+    agent::tools::brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
+    agent::tools::discord::new_discord_tools,
+    agent::tools::scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
+    agent::tools::vector_memory::init_vector_memory,
+    agent::tools::workspace::{AgentDocument, IdentDocument, WritePrimaryDocument},
     dependencies::VizierDependencies,
     schema::AgentId,
     utils::agent_workspace,
 };
 
+#[cfg(feature = "python")]
+use crate::agent::tools::python::PythonInterpreter;
+
 mod brave_search;
 mod discord;
+#[cfg(feature = "python")]
 mod python;
 mod scheduler;
 mod vector_memory;
@@ -64,6 +63,7 @@ impl VizierTools {
             }
         }
 
+        #[cfg(feature = "python")]
         if agent_config.tools.python_interpreter {
             let mut python_interpreter =
                 PythonInterpreter::new(format!("{agent_workspace}/workdir"));

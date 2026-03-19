@@ -1,7 +1,10 @@
-use anyhow::{Result, bail};
+#[cfg(feature = "python")]
+use anyhow::{bail, Result};
+#[cfg(feature = "python")]
 use pyo3::Python;
 
 /// Check if Python is available and meets minimum version requirement (3.9+)
+#[cfg(feature = "python")]
 pub fn check_python_version() -> Result<()> {
     Python::attach(|py| {
         let version = py.version_info();
@@ -24,4 +27,10 @@ pub fn check_python_version() -> Result<()> {
         info!("Python version {}.{} detected", major, minor);
         Ok(())
     })
+}
+
+/// No-op when python feature is disabled
+#[cfg(not(feature = "python"))]
+pub fn check_python_version() -> anyhow::Result<()> {
+    Ok(())
 }
