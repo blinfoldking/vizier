@@ -1,30 +1,87 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs, path::PathBuf};
 
 use duration_string::DurationString;
 use serde::{Deserialize, Serialize};
 
-use crate::config::provider::ProviderVariant;
+use crate::{config::provider::ProviderVariant, error::VizierError};
 
 pub type AgentConfigs = HashMap<String, AgentConfig>;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AgentConfig {
     pub name: String,
-    pub preamble: Option<String>,
+    #[serde(skip)]
+    pub system_prompt: Option<String>,
     pub description: Option<String>,
     pub provider: ProviderVariant,
     pub model: String,
     pub session_ttl: DurationString,
-    pub memory: MemoryConfig,
+    pub session_memory: MemoryConfig,
     pub turn_depth: usize,
     pub tools: AgentToolsConfig,
     pub silent_read_initiative_chance: f32,
     pub show_thinking: Option<bool>,
 }
 
+impl AgentConfig {
+    pub fn find_agent_configs(path: PathBuf) -> crate::Result<AgentConfigs> {
+        let mut res = AgentConfigs::new();
+        // find all .agent.md
+        for entry in fs::read_dir(path).map_err(|err| VizierError(err.to_string()).into())? {
+            let entry = entry.map_err(|err| VizierError(err.to_string()).into())?;
+
+            let path = entry.path();
+            if path.is_file() {
+                if path.to_string_lossy().ends_with(".agent.md") {
+                    let agent = Self::load_from_md(path.clone())?;
+
+                    let agent_id = path
+                        .to_path_buf()
+                        .file_name()
+                        .and_then(|s| s.to_str())
+                        .unwrap()
+                        .replace(".agent.md", "");
+
+                    res.insert(agent_id, agent);
+                }
+            }
+        }
+
+        Ok(res)
+    }
+
+    fn load_from_md(s: PathBuf) -> crate::Result<Self> {
+        let raw_content = fs::read_to_string(&s).map_err(|err| VizierError(err.to_string()))?;
+        let mut content = raw_content.split('\n').into_iter().collect::<Vec<_>>();
+
+        // naively get frontmatter
+        let mut curr = content.remove(0);
+        if curr != "---" {
+            return VizierError("failed to find frontmatter_raw".into()).into();
+        }
+        let mut frontmatter_raw = vec![];
+        loop {
+            curr = content.remove(0);
+            if curr == "---" {
+                break;
+            }
+
+            frontmatter_raw.push(curr);
+        }
+
+        let frontmatter = frontmatter_raw.join("\n");
+        let content = content.join("\n");
+        let mut res: Self = serde_yaml::from_str(&frontmatter)
+            .map_err(|_| VizierError("failed to deserialize frontmatter".into()))?;
+        res.system_prompt = Some(content);
+
+        Ok(res)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MemoryConfig {
-    pub session_memory_recall_depth: usize,
+    pub max_capacity: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -43,6 +100,7 @@ pub struct ToolConfig {
 }
 
 impl ToolConfig {
+    #[allow(unused)]
     pub fn is_programatically_enabled(&self) -> bool {
         self.enabled && self.programmatic_tool_call
     }

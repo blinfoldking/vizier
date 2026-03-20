@@ -50,7 +50,7 @@ impl SessionMemories {
     pub fn new(config: MemoryConfig) -> Self {
         Self {
             messages: vec![],
-            session_memory_recall_depth: config.session_memory_recall_depth,
+            session_memory_recall_depth: config.max_capacity,
             summary: None,
         }
     }

@@ -5,7 +5,9 @@ extern crate log;
 
 use std::process;
 
-use anyhow::Result;
+use crate::error::VizierError;
+
+pub type Result<T> = std::result::Result<T, VizierError>;
 
 mod agent;
 mod channels;

@@ -13,3 +13,9 @@ impl std::fmt::Display for VizierError {
 }
 
 impl std::error::Error for VizierError {}
+
+impl<T> From<VizierError> for crate::Result<T> {
+    fn from(value: VizierError) -> Self {
+        crate::Result::Err(value)
+    }
+}

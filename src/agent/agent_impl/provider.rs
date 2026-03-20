@@ -17,7 +17,7 @@ use crate::{
     },
     dependencies::VizierDependencies,
     schema::VizierSession,
-    utils::{self, agent_workspace},
+    utils::agent_workspace,
 };
 
 #[async_trait::async_trait]
@@ -36,7 +36,7 @@ where
 
         let agent_config = deps.config.agents.get(&session.0).unwrap();
 
-        let boot = boot_md(agent_config);
+        let boot = boot_md();
         let path = agent_workspace(&deps.config.workspace.clone(), &session.0);
         init_workspace(path);
 
@@ -63,6 +63,10 @@ where
             id: session.0.clone(),
             agent,
             hooks,
+            system_prompt: agent_config
+                .system_prompt
+                .clone()
+                .unwrap_or("You are a helpful assistant".to_string()),
             workspace: deps.config.workspace.clone(),
             primary_user: deps.config.primary_user.clone(),
             silent_read_initiative_chance: agent_config.silent_read_initiative_chance,
@@ -73,13 +77,10 @@ where
 #[async_trait::async_trait]
 impl VizierAgentTrait<ollama::Client> for VizierAgentImpl<ollama::Client> {
     async fn init_client(
-        session: VizierSession,
+        _session: VizierSession,
         deps: VizierDependencies,
     ) -> Result<ollama::Client> {
-        let agent_config = deps.config.agents.get(&session.0).unwrap();
         let base_url = deps.config.providers.ollama.clone().unwrap().base_url;
-
-        utils::ollama::ollama_pull_model(&base_url, &agent_config.model).await?;
 
         let client: ollama::Client = ollama::Client::builder()
             .base_url(base_url)

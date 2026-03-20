@@ -1,8 +1,7 @@
-use std::{collections::HashMap, env::current_dir, fs, str::FromStr};
+use std::{collections::HashMap, env::current_dir, fs, path::PathBuf, str::FromStr};
 
 use anyhow::Result;
 use config::Config;
-use duration_string::DurationString;
 use serde::{Deserialize, Serialize};
 
 pub mod agent;
@@ -12,7 +11,7 @@ pub mod user;
 
 use crate::{
     config::{
-        agent::{AgentConfig, AgentConfigs, AgentToolsConfig, MemoryConfig},
+        agent::{AgentConfig, AgentConfigs},
         embedding::VizierEmbeddingModel,
         provider::{
             DeepseekProviderConfig, OllamaProviderConfig, OpenRouterProviderConfig, ProviderConfig,
@@ -63,6 +62,7 @@ pub struct VizierConfig {
     pub workspace: String,
     pub primary_user: UserConfig,
     pub providers: ProviderConfig,
+    #[serde(skip)]
     pub agents: AgentConfigs,
     pub channels: ChannelsConfig,
     pub tools: ToolsConfig,
@@ -93,11 +93,21 @@ impl VizierConfig {
 
         log::info!("config loaded: {:?}", path.to_str().unwrap());
         let mut config = settings.try_deserialize::<AllConfig>()?;
-        let mut workspace = path.parent().unwrap().to_path_buf();
-        workspace.push(".vizier");
 
+        let parent_path = if path.parent().unwrap().to_string_lossy() == "" {
+            PathBuf::from_str("./").unwrap()
+        } else {
+            path.parent().unwrap().to_path_buf()
+        };
+
+        let mut workspace = parent_path.clone();
+        workspace.push(".vizier");
         let _ = fs::create_dir_all(&workspace)?;
         config.vizier.workspace = workspace.to_str().unwrap().to_string();
+
+        let agent_path = parent_path;
+        let agents = AgentConfig::find_agent_configs(agent_path)?;
+        config.vizier.agents = agents;
 
         Ok(config.vizier)
     }
@@ -125,35 +135,29 @@ impl Default for VizierConfig {
     fn default() -> Self {
         VizierConfig {
             workspace: "~/.vizier".into(),
-            primary_user: UserConfig { name: "admin".into(), discord_id: "".into(), discord_username: "".into(), alias: vec![] },
+            primary_user: UserConfig {
+                name: "admin".into(),
+                discord_id: "".into(),
+                discord_username: "".into(),
+                alias: vec![],
+            },
             providers: ProviderConfig {
                 ollama: Some(OllamaProviderConfig::default()),
                 deepseek: Some(DeepseekProviderConfig::default()),
                 openrouter: Some(OpenRouterProviderConfig::default()),
             },
-            agents: HashMap::from([(
-                "vizier".into(),
-                AgentConfig {
-                    name: "Vizier".into(),
-                    description: Some("digital steward".into()),
-                    preamble: Some("You are a digital steward of the 21st century.\n\n**Your job:** be genuinely helpful to your primary user, with insight, wit, and a refusal to be boring.
-                        ".into()),
-                    provider: provider::ProviderVariant::ollama,
-                    session_ttl: DurationString::from_string("30m".into()).unwrap(),
-                    model: "deepseek/deepseek-v3.2".into(),
-                    memory: MemoryConfig {
-                        session_memory_recall_depth: 30,
-                    },
-                    turn_depth: 100,
-                    tools: AgentToolsConfig::default(),
-                    silent_read_initiative_chance: 0.01,
-                    show_thinking: None
-                },
-            )]),
+            agents: HashMap::from([]),
             channels: ChannelsConfig {
-                discord: Some([("vizier".to_string(),DiscordChannelConfig {
-                    token: Some("".into()),
-                })].into_iter().collect::<HashMap<String,DiscordChannelConfig>>()),
+                discord: Some(
+                    [(
+                        "vizier".to_string(),
+                        DiscordChannelConfig {
+                            token: Some("".into()),
+                        },
+                    )]
+                    .into_iter()
+                    .collect::<HashMap<String, DiscordChannelConfig>>(),
+                ),
                 http: Some(HTTPChannelConfig { port: 9999 }),
             },
             tools: ToolsConfig {

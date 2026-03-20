@@ -1,5 +1,6 @@
 # Vizier
 
+> [!WARNING]
 > **Disclaimer:** this project currently on high-speed development mode; Readmes and Documentations may not properly updated yet
 
 > 21st Century Digital Steward; Right-hand agent for you majesty
@@ -62,11 +63,11 @@ Download from [python.org](https://www.python.org/downloads/)
    ```sh
    vizier init
    ```
-   This will create a `.vizier` directory with a default `config.yaml`.
+   This will create a minimal config and sample agent to run in your directory.
 
 3. **Run the agent:**
    ```sh
-   vizier run --config .vizier/config.yaml
+   vizier run
    ```
 
 #### Quick Start with Python

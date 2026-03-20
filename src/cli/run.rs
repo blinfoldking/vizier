@@ -2,8 +2,11 @@ use anyhow::Result;
 use clap::Args;
 
 use crate::{
-    agent::VizierAgents, channels::VizierChannels, config::VizierConfig,
-    dependencies::VizierDependencies, scheduler::VizierScheduler,
+    agent::VizierAgents,
+    channels::VizierChannels,
+    config::{VizierConfig, provider::ProviderVariant},
+    dependencies::VizierDependencies,
+    scheduler::VizierScheduler,
 };
 
 #[derive(Debug, Args, Clone)]
@@ -13,13 +16,22 @@ pub struct RunArgs {
         long,
         value_name = "PATH",
         value_hint = clap::ValueHint::DirPath,
-        help = "path to .vizier.toml config file",
+        help = "path to .vizier.yaml config file",
     )]
     config: Option<std::path::PathBuf>,
 }
 
 pub async fn run_server(config: VizierConfig) -> Result<()> {
     let deps = VizierDependencies::new(config.clone()).await?;
+
+    log::info!("preload all local models");
+    for (_, config) in &deps.config.agents {
+        if config.provider == ProviderVariant::ollama {
+            let base_url = deps.config.providers.ollama.clone().unwrap().base_url;
+            crate::utils::ollama::ollama_pull_model(&base_url, &config.model).await?;
+        }
+    }
+    log::info!("preload done");
 
     let mut scheduler = VizierScheduler::new(deps.clone()).await?;
     tokio::spawn(async move {

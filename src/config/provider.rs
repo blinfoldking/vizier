@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum ProviderVariant {
     deepseek,
@@ -15,9 +15,17 @@ pub struct ProviderConfig {
     pub openrouter: Option<OpenRouterProviderConfig>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OllamaProviderConfig {
     pub base_url: String,
+}
+
+impl Default for OllamaProviderConfig {
+    fn default() -> Self {
+        Self {
+            base_url: "http://localhost:11434".into(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]

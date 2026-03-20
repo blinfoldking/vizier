@@ -5,7 +5,7 @@ use chrono::Utc;
 use rand::{RngExt, SeedableRng, rngs::StdRng};
 use rig::{
     OneOrMany,
-    agent::{Agent, HookAction, PromptHook},
+    agent::Agent,
     client::CompletionClient,
     completion::{Chat, Completion},
     message::{AssistantContent, Message, ToolResultContent, UserContent},
@@ -15,7 +15,7 @@ use rig::{
 use crate::{
     agent::{
         agent_impl::{provider::VizierAgentTrait, system_prompt::user::primary_user_md},
-        hook::{VizierAgentHook, thinking::ThinkingHook},
+        hook::VizierAgentHook,
         memory::SessionMemories,
     },
     config::{provider::ProviderVariant, user::UserConfig},
@@ -90,12 +90,10 @@ pub struct VizierAgentImpl<Client: CompletionClient> {
     #[allow(unused)]
     id: String,
     agent: Agent<Client::CompletionModel>,
-
+    system_prompt: String,
     hooks: Vec<Arc<Box<dyn VizierAgentHook>>>,
-
     workspace: String,
     primary_user: UserConfig,
-
     silent_read_initiative_chance: f32,
 }
 
@@ -107,9 +105,10 @@ impl<Client: CompletionClient> VizierAgentImpl<Client> {
         let ident_md = read_md_file(agent_workspace.clone(), "IDENT.md".into());
 
         let res = vec![
-            Message::user(agent_md),
-            Message::user(primary_user_md(&self.primary_user)),
-            Message::user(ident_md),
+            Message::system(self.system_prompt.clone()),
+            Message::system(primary_user_md(&self.primary_user)),
+            Message::system(agent_md),
+            Message::system(ident_md),
         ];
 
         res

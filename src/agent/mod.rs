@@ -181,7 +181,7 @@ impl SessionProcess {
             handle: tokio::spawn(async move {
                 let agent_config = agent_config.clone();
                 let session = Arc::new(Mutex::new(AgentSession {
-                    session_memory: SessionMemories::new(agent_config.memory.clone()),
+                    session_memory: SessionMemories::new(agent_config.session_memory.clone()),
                     session_ttl: *agent_config.session_ttl,
                     last_interact_at: Utc::now(),
                 }));
