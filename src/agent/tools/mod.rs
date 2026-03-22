@@ -56,7 +56,7 @@ impl VizierTools {
                 db: deps.storage.clone(),
             });
 
-        if agent_config.tools.cli_access {
+        if agent_config.tools.shell_access {
             if tool_config.dangerously_enable_cli_access {
                 let exec_cli_from_workspace = ExecCliFromWorkspace(agent_workspace.clone());
                 tool_server_builder = tool_server_builder.tool(exec_cli_from_workspace);
@@ -71,11 +71,7 @@ impl VizierTools {
             if agent_config.tools.discord.is_programatically_enabled() {
                 if let Some(discord) = &deps.config.channels.discord {
                     if let Some((_, discord)) = discord.iter().find(|(id, _)| **id == agent_id) {
-                        let token = std::env::var(format!(
-                            "DISCORD_TOKEN_{}",
-                            agent_id.to_ascii_uppercase()
-                        ))
-                        .unwrap_or(discord.token.clone().unwrap());
+                        let token = discord.token.clone();
 
                         let (send_message, react_message, get_message) =
                             new_discord_tools(token.clone());
@@ -102,7 +98,7 @@ impl VizierTools {
                     let (read_memory, write_memory) =
                         init_vector_memory(agent_id.clone(), deps.clone())?;
 
-                    tool_server_builder = tool_server_builder.tool(read_memory).tool(write_memory);
+                    python_interpreter = python_interpreter.tool(read_memory).tool(write_memory);
                 }
             }
 
@@ -115,9 +111,7 @@ impl VizierTools {
         {
             if let Some(discord) = &deps.config.channels.discord {
                 if let Some((_, discord)) = discord.iter().find(|(id, _)| **id == agent_id) {
-                    let token =
-                        std::env::var(format!("DISCORD_TOKEN_{}", agent_id.to_ascii_uppercase()))
-                            .unwrap_or(discord.token.clone().unwrap());
+                    let token = discord.token.clone();
 
                     let (send_message, react_message, get_message) = new_discord_tools(token);
                     tool_server_builder = tool_server_builder

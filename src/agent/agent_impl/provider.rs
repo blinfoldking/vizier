@@ -79,10 +79,8 @@ impl VizierAgentTrait<openrouter::Client> for VizierAgentImpl<openrouter::Client
         _agent_id: String,
         deps: VizierDependencies,
     ) -> Result<openrouter::Client> {
-        let client: openrouter::Client = openrouter::Client::new(
-            env::var("OPENROUTER_API_KEY")
-                .unwrap_or_else(|_| deps.config.providers.openrouter.clone().unwrap().api_key),
-        )?;
+        let client: openrouter::Client =
+            openrouter::Client::new(deps.config.providers.openrouter.clone().unwrap().api_key)?;
 
         Ok(client)
     }
@@ -91,10 +89,8 @@ impl VizierAgentTrait<openrouter::Client> for VizierAgentImpl<openrouter::Client
 #[async_trait::async_trait]
 impl VizierAgentTrait<deepseek::Client> for VizierAgentImpl<deepseek::Client> {
     async fn init_client(_agent_id: String, deps: VizierDependencies) -> Result<deepseek::Client> {
-        let client: deepseek::Client = deepseek::Client::new(
-            env::var("DEEPSEEK_API_KEY")
-                .unwrap_or_else(|_| deps.config.providers.deepseek.clone().unwrap().api_key),
-        )?;
+        let client: deepseek::Client =
+            deepseek::Client::new(deps.config.providers.deepseek.clone().unwrap().api_key)?;
 
         Ok(client)
     }

@@ -8,7 +8,7 @@ pub enum ProviderVariant {
     ollama,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ProviderConfig {
     pub ollama: Option<OllamaProviderConfig>,
     pub deepseek: Option<DeepseekProviderConfig>,
@@ -28,12 +28,28 @@ impl Default for OllamaProviderConfig {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DeepseekProviderConfig {
     pub api_key: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+impl Default for DeepseekProviderConfig {
+    fn default() -> Self {
+        Self {
+            api_key: "${DEEPSEEK_API_KEY}".into(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OpenRouterProviderConfig {
     pub api_key: String,
+}
+
+impl Default for OpenRouterProviderConfig {
+    fn default() -> Self {
+        Self {
+            api_key: "${OPENROUTER_API_KEY}".into(),
+        }
+    }
 }

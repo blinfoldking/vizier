@@ -31,7 +31,15 @@ pub struct ChannelsConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiscordChannelConfig {
-    pub token: Option<String>,
+    pub token: String,
+}
+
+impl Default for DiscordChannelConfig {
+    fn default() -> Self {
+        Self {
+            token: "${DISCORD_BOT_TOKEN}".into(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -47,9 +55,17 @@ pub struct ToolsConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BraveSearchConfig {
-    pub api_key: Option<String>,
-    #[serde(default)]
+    pub api_key: String,
     pub safesearch: bool,
+}
+
+impl Default for BraveSearchConfig {
+    fn default() -> Self {
+        Self {
+            api_key: "${BRAVE_API_KEY}".into(),
+            safesearch: true,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -85,12 +101,11 @@ impl VizierConfig {
             default_path
         });
 
-        let settings = Config::builder()
-            .add_source(config::File::from(path.clone()))
-            .build()?;
-
         log::info!("config loaded: {:?}", path.to_str().unwrap());
-        let mut config = settings.try_deserialize::<AllConfig>()?;
+
+        let raw_string = std::fs::read_to_string(&path)?;
+        let config_string = shellexpand::env(&raw_string)?;
+        let mut config = serde_yaml::from_str::<AllConfig>(&config_string)?;
 
         let parent_path = if path.parent().unwrap().to_string_lossy() == "" {
             PathBuf::from_str("./").unwrap()
@@ -151,23 +166,15 @@ impl Default for VizierConfig {
             agents: HashMap::from([]),
             channels: ChannelsConfig {
                 discord: Some(
-                    [(
-                        "vizier".to_string(),
-                        DiscordChannelConfig {
-                            token: Some("".into()),
-                        },
-                    )]
-                    .into_iter()
-                    .collect::<HashMap<String, DiscordChannelConfig>>(),
+                    [("vizier".to_string(), DiscordChannelConfig::default())]
+                        .into_iter()
+                        .collect::<HashMap<String, DiscordChannelConfig>>(),
                 ),
                 http: Some(HTTPChannelConfig { port: 9999 }),
             },
             tools: ToolsConfig {
                 dangerously_enable_cli_access: false,
-                brave_search: Some(BraveSearchConfig {
-                    api_key: Some("".into()),
-                    safesearch: true,
-                }),
+                brave_search: Some(BraveSearchConfig::default()),
             },
         }
     }

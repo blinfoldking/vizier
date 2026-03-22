@@ -43,7 +43,7 @@ impl Tool for MemoryRead {
     const NAME: &'static str = "memory_read";
     type Error = VizierError;
     type Args = MemoryReadArgs;
-    type Output = Vec<Memory>;
+    type Output = Vec<String>;
 
     async fn definition(&self, _prompt: String) -> ToolDefinition {
         let parameters = serde_json::to_value(schema_for!(Self::Args)).unwrap();
@@ -64,7 +64,7 @@ impl Tool for MemoryRead {
             .await
             .unwrap();
 
-        Ok(res)
+        Ok(res.iter().map(|memory| memory.content.clone()).collect())
     }
 }
 

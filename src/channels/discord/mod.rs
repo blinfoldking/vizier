@@ -28,8 +28,7 @@ impl DiscordChannelReader {
         transport: VizierTransport,
     ) -> Result<Self> {
         let intents = GatewayIntents::all();
-        let token = std::env::var(format!("DISCORD_TOKEN_{}", agent_id.to_ascii_uppercase()))
-            .unwrap_or(config.token.clone().unwrap());
+        let token = config.token.clone();
         let client = Client::builder(token.clone(), intents)
             .event_handler(Handler(agent_id, transport.clone()))
             .await?;
@@ -62,8 +61,7 @@ impl VizierChannel for DiscordChannelWriter {
     async fn run(&mut self) -> Result<()> {
         let mut token_map = HashMap::new();
         for (agent_id, config) in self.config.iter() {
-            let token = std::env::var(format!("DISCORD_TOKEN_{}", agent_id.to_ascii_uppercase()))
-                .unwrap_or(config.token.clone().unwrap());
+            let token = config.token.clone();
             token_map.insert(agent_id.clone(), Arc::new(Http::new(&token)));
         }
 

@@ -15,7 +15,7 @@ use crate::agent::memory::SessionMemories;
 use crate::config::agent::AgentConfig;
 use crate::dependencies::VizierDependencies;
 use crate::error::VizierError;
-use crate::schema::{SessionHistoryContent, VizierRequest, VizierResponse, VizierSession};
+use crate::schema::{VizierRequest, VizierResponse, VizierSession};
 
 pub mod agent_impl;
 pub mod exec;

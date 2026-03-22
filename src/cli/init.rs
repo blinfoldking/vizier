@@ -1,11 +1,11 @@
-use std::{env, fs, path::PathBuf};
+use std::{env, path::PathBuf};
 
 use anyhow::Result;
 use duration_string::DurationString;
 
 use crate::config::{
     VizierConfig,
-    agent::{AgentConfig, AgentToolsConfig, MemoryConfig},
+    agent::{AgentConfig, AgentToolsConfig, MemoryConfig, ToolConfig},
 };
 
 pub async fn init() -> Result<()> {
@@ -35,7 +35,22 @@ pub fn init_default_agent(path: PathBuf) {
         session_ttl: DurationString::from_string("30m".into()).unwrap(),
         session_memory: MemoryConfig { max_capacity: 10 },
         turn_depth: 10,
-        tools: AgentToolsConfig::default(),
+        tools: AgentToolsConfig {
+            python_interpreter: false,
+            shell_access: false,
+            brave_search: ToolConfig {
+                enabled: false,
+                programmatic_tool_call: false,
+            },
+            vector_memory: ToolConfig {
+                enabled: true,
+                programmatic_tool_call: false,
+            },
+            discord: ToolConfig {
+                enabled: false,
+                programmatic_tool_call: false,
+            },
+        },
         silent_read_initiative_chance: 0.,
         show_thinking: Some(false),
         documents: vec![],
