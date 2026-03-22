@@ -6,6 +6,8 @@ pub enum EmbeddingConfig {
     Local { model: LocalEmbeddingModelVariant },
     Openrouter { model: String },
     Ollama { model: String },
+    Openai { model: String },
+    Gemini { model: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

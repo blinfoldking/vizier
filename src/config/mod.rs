@@ -15,7 +15,8 @@ use crate::{
         agent::{AgentConfig, AgentConfigs},
         embedding::{EmbeddingConfig, LocalEmbeddingModelVariant},
         provider::{
-            DeepseekProviderConfig, OllamaProviderConfig, OpenRouterProviderConfig, ProviderConfig,
+            AnthropicProviderConfig, DeepseekProviderConfig, GeminiProviderConfig,
+            OllamaProviderConfig, OpenAIProviderConfig, OpenRouterProviderConfig, ProviderConfig,
         },
         storage::StorageConfig,
         user::UserConfig,
@@ -159,6 +160,9 @@ impl Default for VizierConfig {
                 ollama: Some(OllamaProviderConfig::default()),
                 deepseek: Some(DeepseekProviderConfig::default()),
                 openrouter: Some(OpenRouterProviderConfig::default()),
+                anthropic: Some(AnthropicProviderConfig::default()),
+                openai: Some(OpenAIProviderConfig::default()),
+                gemini: Some(GeminiProviderConfig::default()),
             },
             embedding: Some(EmbeddingConfig::Local {
                 model: LocalEmbeddingModelVariant::AllMiniLml6V2,

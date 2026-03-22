@@ -9,7 +9,7 @@ use rig::{
     client::CompletionClient,
     completion::Completion,
     message::{AssistantContent, Message, ToolResultContent, UserContent},
-    providers::{deepseek, ollama, openrouter},
+    providers::{anthropic, deepseek, gemini, ollama, openai, openrouter},
 };
 use tokio::time::Instant;
 
@@ -33,6 +33,9 @@ pub enum VizierAgent {
     Ollama(VizierAgentImpl<ollama::Client>),
     OpenRouter(VizierAgentImpl<openrouter::Client>),
     Deepseek(VizierAgentImpl<deepseek::Client>),
+    Anthropic(VizierAgentImpl<anthropic::Client>),
+    OpenAI(VizierAgentImpl<openai::Client>),
+    Gemini(VizierAgentImpl<gemini::Client>),
 }
 
 impl VizierAgent {
@@ -42,13 +45,20 @@ impl VizierAgent {
             ProviderVariant::openrouter => VizierAgent::OpenRouter(
                 VizierAgentImpl::<openrouter::Client>::new(agent_id.clone(), deps.clone()).await?,
             ),
-
             ProviderVariant::deepseek => VizierAgent::Deepseek(
                 VizierAgentImpl::<deepseek::Client>::new(agent_id.clone(), deps.clone()).await?,
             ),
-
             ProviderVariant::ollama => VizierAgent::Ollama(
                 VizierAgentImpl::<ollama::Client>::new(agent_id.clone(), deps.clone()).await?,
+            ),
+            ProviderVariant::anthropic => VizierAgent::Anthropic(
+                VizierAgentImpl::<anthropic::Client>::new(agent_id.clone(), deps.clone()).await?,
+            ),
+            ProviderVariant::openai => VizierAgent::OpenAI(
+                VizierAgentImpl::<openai::Client>::new(agent_id.clone(), deps.clone()).await?,
+            ),
+            ProviderVariant::gemini => VizierAgent::Gemini(
+                VizierAgentImpl::<gemini::Client>::new(agent_id.clone(), deps.clone()).await?,
             ),
         };
 
@@ -64,6 +74,9 @@ impl VizierAgent {
             Self::Ollama(agent) => agent.prompt(req, hooks).await,
             Self::OpenRouter(agent) => agent.prompt(req, hooks).await,
             Self::Deepseek(agent) => agent.prompt(req, hooks).await,
+            Self::Anthropic(agent) => agent.prompt(req, hooks).await,
+            Self::OpenAI(agent) => agent.prompt(req, hooks).await,
+            Self::Gemini(agent) => agent.prompt(req, hooks).await,
         }?;
 
         Ok(response)
@@ -79,6 +92,9 @@ impl VizierAgent {
             Self::Ollama(agent) => agent.chat(req, Some(memory), hooks).await,
             Self::OpenRouter(agent) => agent.chat(req, Some(memory), hooks).await,
             Self::Deepseek(agent) => agent.chat(req, Some(memory), hooks).await,
+            Self::Anthropic(agent) => agent.chat(req, Some(memory), hooks).await,
+            Self::OpenAI(agent) => agent.chat(req, Some(memory), hooks).await,
+            Self::Gemini(agent) => agent.chat(req, Some(memory), hooks).await,
         }?;
 
         Ok(response)
@@ -94,6 +110,9 @@ impl VizierAgent {
             Self::Ollama(agent) => agent.chat(req, Some(memory), hooks).await,
             Self::OpenRouter(agent) => agent.chat(req, Some(memory), hooks).await,
             Self::Deepseek(agent) => agent.chat(req, Some(memory), hooks).await,
+            Self::Anthropic(agent) => agent.chat(req, Some(memory), hooks).await,
+            Self::OpenAI(agent) => agent.chat(req, Some(memory), hooks).await,
+            Self::Gemini(agent) => agent.chat(req, Some(memory), hooks).await,
         }?;
 
         Ok(())

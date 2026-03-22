@@ -6,10 +6,13 @@ use rig::client::{EmbeddingsClient, Nothing};
 use crate::config::{VizierConfig, embedding::EmbeddingConfig};
 
 pub mod fastembed;
+pub mod gemini;
 pub mod ollama;
+pub mod openai;
 pub mod openrouter;
 
 #[async_trait::async_trait]
+#[allow(unused)]
 pub trait VizierEmbeddingModel {
     async fn embed_text(&self, text: &str) -> Result<Vec<f64>>;
     async fn embed_texts(&self, documents: Vec<String>) -> Result<Vec<Vec<f64>>>;
@@ -41,6 +44,22 @@ impl VizierEmbedder {
                     .api_key(Nothing)
                     .build()?
                     .embedding_model(model);
+
+                Self::build(model)
+            }
+            EmbeddingConfig::Openai { model } => {
+                let model = rig::providers::openai::Client::new(
+                    config.providers.openai.clone().unwrap().api_key,
+                )?
+                .embedding_model(model);
+
+                Self::build(model)
+            }
+            EmbeddingConfig::Gemini { model } => {
+                let model = rig::providers::gemini::Client::new(
+                    config.providers.gemini.clone().unwrap().api_key,
+                )?
+                .embedding_model(model);
 
                 Self::build(model)
             }

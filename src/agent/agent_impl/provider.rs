@@ -1,9 +1,7 @@
-use std::env;
-
 use anyhow::Result;
 use rig::{
     client::Nothing,
-    providers::{deepseek, ollama, openrouter},
+    providers::{anthropic, deepseek, gemini, ollama, openai, openrouter},
 };
 
 use crate::{
@@ -91,6 +89,36 @@ impl VizierAgentTrait<deepseek::Client> for VizierAgentImpl<deepseek::Client> {
     async fn init_client(_agent_id: String, deps: VizierDependencies) -> Result<deepseek::Client> {
         let client: deepseek::Client =
             deepseek::Client::new(deps.config.providers.deepseek.clone().unwrap().api_key)?;
+
+        Ok(client)
+    }
+}
+
+#[async_trait::async_trait]
+impl VizierAgentTrait<anthropic::Client> for VizierAgentImpl<anthropic::Client> {
+    async fn init_client(_agent_id: String, deps: VizierDependencies) -> Result<anthropic::Client> {
+        let client: anthropic::Client =
+            anthropic::Client::new(deps.config.providers.anthropic.clone().unwrap().api_key)?;
+
+        Ok(client)
+    }
+}
+
+#[async_trait::async_trait]
+impl VizierAgentTrait<openai::Client> for VizierAgentImpl<openai::Client> {
+    async fn init_client(_agent_id: String, deps: VizierDependencies) -> Result<openai::Client> {
+        let client: openai::Client =
+            openai::Client::new(deps.config.providers.openai.clone().unwrap().api_key)?;
+
+        Ok(client)
+    }
+}
+
+#[async_trait::async_trait]
+impl VizierAgentTrait<gemini::Client> for VizierAgentImpl<gemini::Client> {
+    async fn init_client(_agent_id: String, deps: VizierDependencies) -> Result<gemini::Client> {
+        let client: gemini::Client =
+            gemini::Client::new(deps.config.providers.gemini.clone().unwrap().api_key)?;
 
         Ok(client)
     }

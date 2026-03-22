@@ -1,18 +1,18 @@
 ---
 name: Vizier
 description: Digital steward
-provider: deepseek
-model: deepseek-chat
+provider: ollama
+model: qwen3.5:4b
 session_ttl: 30m
 session_memory:
   max_capacity: 10
 turn_depth: 10
 tools:
-  python_interpreter: true
-  cli_access: false
+  python_interpreter: false
+  shell_access: false
   brave_search:
-    enabled: true
-    programmatic_tool_call: true
+    enabled: false
+    programmatic_tool_call: false
   vector_memory:
     enabled: true
     programmatic_tool_call: false
@@ -20,7 +20,7 @@ tools:
     enabled: false
     programmatic_tool_call: false
 silent_read_initiative_chance: 0.0
-show_thinking: true
+show_thinking: false
 include_documents: null
 ---
 # Vizier
