@@ -48,7 +48,7 @@ pub fn write_markdown<T: Serialize>(
     let frontmatter =
         serde_yaml::to_string(frontmatter).map_err(|err| VizierError(err.to_string()))?;
 
-    let _ = std::fs::write(path, format!("---\n{}\n---\n{}", frontmatter, content))
+    let _ = std::fs::write(path, format!("---\n{}---\n{}", frontmatter, content))
         .map_err(|err| VizierError(err.to_string()))?;
 
     Ok(())

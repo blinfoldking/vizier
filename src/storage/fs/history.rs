@@ -32,7 +32,7 @@ enum ContentMetadata {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct SessionHistoryFrontMatter {
-    pub uuid: uuid::Uuid,
+    pub uid: String,
     pub session: VizierSession,
     pub content_metadata: ContentMetadata,
     pub timestamp: chrono::DateTime<Utc>,
@@ -41,7 +41,7 @@ struct SessionHistoryFrontMatter {
 impl From<SessionHistory> for SessionHistoryFrontMatter {
     fn from(value: SessionHistory) -> Self {
         Self {
-            uuid: value.uuid,
+            uid: value.uid,
             timestamp: value.timestamp,
             session: value.session,
             content_metadata: match value.content {
@@ -66,9 +66,11 @@ impl HistoryStorage for FileSystemStorage {
         session: VizierSession,
         content: SessionHistoryContent,
     ) -> Result<()> {
-        let uuid = Uuid::new_v4();
+        let now = Utc::now().to_rfc3339();
+        let slug = format!("{}__{}", session.1.to_slug(), now);
+
         let history = SessionHistory {
-            uuid: uuid.clone(),
+            uid: slug.clone(),
             session: session.clone(),
             content: content.clone(),
             timestamp: Utc::now(),
@@ -85,7 +87,7 @@ impl HistoryStorage for FileSystemStorage {
             self.workspace,
             session.0.clone(),
             HISTORY_PATH,
-            format!("{}__{}", session.1.to_slug(), uuid.clone())
+            slug
         ));
 
         utils::markdown::write_markdown(&frontmatter, content, path)?;
@@ -115,7 +117,7 @@ impl HistoryStorage for FileSystemStorage {
                 utils::markdown::read_markdown::<SessionHistoryFrontMatter>(entry)?;
 
             res.push(SessionHistory {
-                uuid: frontmatter.uuid,
+                uid: frontmatter.uid,
                 session: frontmatter.session,
                 timestamp: frontmatter.timestamp,
                 content: match frontmatter.content_metadata {

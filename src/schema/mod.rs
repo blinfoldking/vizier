@@ -110,7 +110,7 @@ pub enum TaskSchedule {
 
 #[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
 pub struct SessionHistory {
-    pub uuid: uuid::Uuid,
+    pub uid: String,
     pub session: VizierSession,
     pub content: SessionHistoryContent,
     pub timestamp: chrono::DateTime<Utc>,

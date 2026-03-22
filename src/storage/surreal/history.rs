@@ -19,7 +19,7 @@ impl HistoryStorage for SurrealStorage {
             .conn
             .create(("session_history", uuid.clone().to_string()))
             .content(SessionHistory {
-                uuid,
+                uid: uuid.to_string(),
                 session: session.clone(),
                 content,
                 timestamp: Utc::now(),
