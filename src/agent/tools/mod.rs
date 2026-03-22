@@ -98,7 +98,7 @@ impl VizierTools {
             if agent_config.tools.vector_memory.enabled
                 && !agent_config.tools.vector_memory.programmatic_tool_call
             {
-                if let Some(_) = tool_config.vector_memory.clone() {
+                if let Some(_) = deps.config.embedding {
                     let (read_memory, write_memory) =
                         init_vector_memory(agent_id.clone(), deps.clone())?;
 
@@ -141,7 +141,7 @@ impl VizierTools {
         if agent_config.tools.vector_memory.enabled
             && !agent_config.tools.vector_memory.programmatic_tool_call
         {
-            if let Some(_) = tool_config.vector_memory {
+            if let Some(_) = deps.config.embedding {
                 let (read_memory, write_memory) =
                     init_vector_memory(agent_id.clone(), deps.clone())?;
 

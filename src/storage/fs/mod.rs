@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::Result;
 use tokio::sync::Mutex;
 
-use crate::{schema::DocumentIndex, storage::VizierStorageProvider};
+use crate::{embedding::VizierEmbedder, schema::DocumentIndex, storage::VizierStorageProvider};
 
 mod history;
 mod memory;
@@ -16,14 +16,11 @@ const HISTORY_PATH: &'static str = "history";
 pub struct FileSystemStorage {
     workspace: String,
     memory_indices: Arc<Mutex<HashMap<String, DocumentIndex>>>,
-    embedder: Option<Arc<crate::embedding::EmbeddingModel>>,
+    embedder: Option<Arc<VizierEmbedder>>,
 }
 
 impl FileSystemStorage {
-    pub async fn new(
-        workspace: String,
-        embedder: Option<Arc<crate::embedding::EmbeddingModel>>,
-    ) -> Result<Self> {
+    pub async fn new(workspace: String, embedder: Option<Arc<VizierEmbedder>>) -> Result<Self> {
         let storage = Self {
             workspace,
             memory_indices: Arc::new(Mutex::new(HashMap::new())),

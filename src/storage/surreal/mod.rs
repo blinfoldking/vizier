@@ -5,7 +5,7 @@ use anyhow::Result;
 use surrealdb::Surreal;
 use surrealdb::engine::local::{Db, RocksDb};
 
-use crate::embedding;
+use crate::embedding::VizierEmbedder;
 use crate::storage::VizierStorageProvider;
 
 pub mod history;
@@ -16,14 +16,11 @@ pub mod task;
 #[derive(Clone)]
 pub struct SurrealStorage {
     conn: Arc<Surreal<Db>>,
-    embedder: Option<Arc<embedding::EmbeddingModel>>,
+    embedder: Option<Arc<VizierEmbedder>>,
 }
 
 impl SurrealStorage {
-    pub async fn new(
-        workspace: String,
-        embedder: Option<Arc<embedding::EmbeddingModel>>,
-    ) -> Result<Self> {
+    pub async fn new(workspace: String, embedder: Option<Arc<VizierEmbedder>>) -> Result<Self> {
         let db = Surreal::new::<RocksDb>(format!("{workspace}/vizier.db")).await?;
         db.use_ns("vizier").use_db("v1").await?;
 

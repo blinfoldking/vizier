@@ -1,121 +1,61 @@
-/// originally from yoinked from https://github.com/0xPlaygrounds/rig/blob/main/rig-integrations/rig-fastembed/src/lib.rs
-use std::{path::PathBuf, str::FromStr, sync::Arc};
+use std::sync::Arc;
 
-pub use fastembed::EmbeddingModel as FastembedModel;
-use fastembed::TextEmbedding;
-use rig::embeddings::{self, EmbeddingError};
+use anyhow::Result;
+use rig::client::{EmbeddingsClient, Nothing};
 
-use fastembed::InitOptions;
-use rig::{Embed, embeddings::EmbeddingsBuilder};
+use crate::config::{VizierConfig, embedding::EmbeddingConfig};
 
-#[derive(Clone)]
-pub struct Client;
+pub mod fastembed;
+pub mod ollama;
+pub mod openrouter;
 
-impl Default for Client {
-    fn default() -> Self {
-        Self::new()
+#[async_trait::async_trait]
+pub trait VizierEmbeddingModel {
+    async fn embed_text(&self, text: &str) -> Result<Vec<f64>>;
+    async fn embed_texts(&self, documents: Vec<String>) -> Result<Vec<Vec<f64>>>;
+}
+
+pub struct VizierEmbedder(Arc<Box<dyn VizierEmbeddingModel + Sync + Send + 'static>>);
+
+impl VizierEmbedder {
+    fn build<Model: VizierEmbeddingModel + Sync + Send + 'static>(model: Model) -> Self {
+        Self(Arc::new(Box::new(model)))
+    }
+
+    pub async fn new(config: &VizierConfig) -> Result<Self> {
+        Ok(match &config.embedding.clone().unwrap() {
+            EmbeddingConfig::Local { model } => {
+                let model = fastembed::Client::new()
+                    .embedding_model(&model.to_fastembed(), Some(config.workspace.clone()));
+
+                Self::build(model)
+            }
+            EmbeddingConfig::Ollama { model } => {
+                let base_url = config.providers.ollama.clone().unwrap().base_url;
+
+                // pull model first
+                crate::utils::ollama::ollama_pull_model(&base_url, model).await?;
+
+                let model = rig::providers::ollama::Client::builder()
+                    .base_url(base_url)
+                    .api_key(Nothing)
+                    .build()?
+                    .embedding_model(model);
+
+                Self::build(model)
+            }
+            _ => unimplemented!(),
+        })
     }
 }
 
-impl Client {
-    pub fn new() -> Self {
-        Self
+#[async_trait::async_trait]
+impl VizierEmbeddingModel for VizierEmbedder {
+    async fn embed_text(&self, text: &str) -> anyhow::Result<Vec<f64>> {
+        self.0.embed_text(text).await
     }
 
-    pub fn embedding_model(
-        &self,
-        model: &FastembedModel,
-        workspace: Option<String>,
-    ) -> EmbeddingModel {
-        let model_info = TextEmbedding::get_model_info(model).unwrap();
-        let ndims = model_info.dim;
-
-        EmbeddingModel::new(
-            model,
-            match workspace {
-                None => None,
-                Some(workspace) => {
-                    let path =
-                        PathBuf::from_str(&format!("{workspace}/embeddings/{}", model.to_string()))
-                            .unwrap();
-                    Some(path)
-                }
-            },
-            ndims,
-        )
-    }
-
-    pub fn embeddings<D: Embed>(
-        &self,
-        model: &fastembed::EmbeddingModel,
-    ) -> EmbeddingsBuilder<EmbeddingModel, D> {
-        EmbeddingsBuilder::new(self.embedding_model(model, None))
-    }
-}
-
-#[derive(Clone)]
-pub struct EmbeddingModel {
-    embedder: Arc<TextEmbedding>,
-    pub model: FastembedModel,
-    ndims: usize,
-}
-
-impl EmbeddingModel {
-    pub fn new(
-        model: &fastembed::EmbeddingModel,
-        cache_dir: Option<PathBuf>,
-        ndims: usize,
-    ) -> Self {
-        let mut opts = InitOptions::new(model.to_owned()).with_show_download_progress(true);
-
-        if let Some(cache_dir) = cache_dir {
-            opts = opts.with_cache_dir(cache_dir);
-        }
-
-        let embedder = Arc::new(TextEmbedding::try_new(opts).unwrap());
-
-        Self {
-            embedder,
-            model: model.to_owned(),
-            ndims,
-        }
-    }
-}
-
-impl embeddings::EmbeddingModel for EmbeddingModel {
-    const MAX_DOCUMENTS: usize = 1024;
-
-    type Client = Client;
-
-    /// **PANICS**: FastEmbed models cannot be created via this method, which will panic
-    fn make(_: &Self::Client, _: impl Into<String>, _: Option<usize>) -> Self {
-        panic!("Cannot create a fastembed model via `EmbeddingModel::make`")
-    }
-
-    fn ndims(&self) -> usize {
-        self.ndims
-    }
-
-    async fn embed_texts(
-        &self,
-        documents: impl IntoIterator<Item = String>,
-    ) -> Result<Vec<embeddings::Embedding>, EmbeddingError> {
-        let documents_as_strings: Vec<String> = documents.into_iter().collect();
-
-        let documents_as_vec = self
-            .embedder
-            .embed(documents_as_strings.clone(), None)
-            .map_err(|err| EmbeddingError::ProviderError(err.to_string()))?;
-
-        let docs = documents_as_strings
-            .into_iter()
-            .zip(documents_as_vec)
-            .map(|(document, embedding)| embeddings::Embedding {
-                document,
-                vec: embedding.into_iter().map(|f| f as f64).collect(),
-            })
-            .collect::<Vec<embeddings::Embedding>>();
-
-        Ok(docs)
+    async fn embed_texts(&self, documents: Vec<String>) -> anyhow::Result<Vec<Vec<f64>>> {
+        self.0.embed_texts(documents).await
     }
 }

@@ -2,11 +2,11 @@ use std::path::PathBuf;
 
 use anyhow::{Ok, Result};
 use chrono::Utc;
-use rig::embeddings::EmbeddingModel;
 use serde::{Deserialize, Serialize};
 use slugify::slugify;
 
 use crate::{
+    embedding::VizierEmbeddingModel,
     error::VizierError,
     schema::{DocumentIndex, Memory},
     storage::{
@@ -54,13 +54,7 @@ impl FileSystemStorage {
             let (frontmatter, content) =
                 utils::markdown::read_markdown::<MemoryFrontMatter>(entry)?;
 
-            let embedding = self
-                .embedder
-                .clone()
-                .unwrap()
-                .embed_text(&content)
-                .await?
-                .vec;
+            let embedding = self.embedder.clone().unwrap().embed_text(&content).await?;
             let memory = Memory {
                 slug: frontmatter.slug,
                 agent_id: frontmatter.agent_id,
@@ -135,7 +129,7 @@ impl MemoryStorage for FileSystemStorage {
             path.clone(),
         )?;
 
-        let embedding = embedder.embed_text(&content).await?.vec;
+        let embedding = embedder.embed_text(&content).await?;
         self.memory_indices.lock().await.insert(
             path_str.clone(),
             DocumentIndex {
@@ -159,7 +153,7 @@ impl MemoryStorage for FileSystemStorage {
             .clone()
             .ok_or(VizierError("embedder is not set".into()))?;
 
-        let q_embedding = embedder.embed_text(&query).await?.vec;
+        let q_embedding = embedder.embed_text(&query).await?;
 
         let path = format!(
             "{}/agents/{}/{}",

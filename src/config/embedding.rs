@@ -1,8 +1,16 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum EmbeddingConfig {
+    Local { model: LocalEmbeddingModelVariant },
+    Openrouter { model: String },
+    Ollama { model: String },
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum VizierEmbeddingModel {
+pub enum LocalEmbeddingModelVariant {
     AllMiniLml6V2,
     AllMiniLml6V2Q,
     AllMiniLml12V2,
@@ -35,7 +43,7 @@ pub enum VizierEmbeddingModel {
     JinaEmbeddingsV2BaseCode,
 }
 
-impl VizierEmbeddingModel {
+impl LocalEmbeddingModelVariant {
     pub fn to_fastembed(&self) -> fastembed::EmbeddingModel {
         match self {
             Self::AllMiniLml6V2 => fastembed::EmbeddingModel::AllMiniLML6V2,

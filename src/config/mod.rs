@@ -13,7 +13,7 @@ pub mod user;
 use crate::{
     config::{
         agent::{AgentConfig, AgentConfigs},
-        embedding::VizierEmbeddingModel,
+        embedding::{EmbeddingConfig, LocalEmbeddingModelVariant},
         provider::{
             DeepseekProviderConfig, OllamaProviderConfig, OpenRouterProviderConfig, ProviderConfig,
         },
@@ -43,7 +43,6 @@ pub struct HTTPChannelConfig {
 pub struct ToolsConfig {
     pub dangerously_enable_cli_access: bool,
     pub brave_search: Option<BraveSearchConfig>,
-    pub vector_memory: Option<VectorMemoryConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -54,14 +53,10 @@ pub struct BraveSearchConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct VectorMemoryConfig {
-    pub model: VizierEmbeddingModel,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct VizierConfig {
     #[serde(skip)]
     pub workspace: String,
+    pub embedding: Option<EmbeddingConfig>,
     pub primary_user: UserConfig,
     pub providers: ProviderConfig,
     pub storage: StorageConfig,
@@ -150,6 +145,9 @@ impl Default for VizierConfig {
                 deepseek: Some(DeepseekProviderConfig::default()),
                 openrouter: Some(OpenRouterProviderConfig::default()),
             },
+            embedding: Some(EmbeddingConfig::Local {
+                model: LocalEmbeddingModelVariant::AllMiniLml6V2,
+            }),
             agents: HashMap::from([]),
             channels: ChannelsConfig {
                 discord: Some(
@@ -169,9 +167,6 @@ impl Default for VizierConfig {
                 brave_search: Some(BraveSearchConfig {
                     api_key: Some("".into()),
                     safesearch: true,
-                }),
-                vector_memory: Some(VectorMemoryConfig {
-                    model: VizierEmbeddingModel::AllMiniLml6V2,
                 }),
             },
         }

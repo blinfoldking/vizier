@@ -1,8 +1,8 @@
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use chrono::Utc;
-use rig::embeddings::EmbeddingModel;
 
 use crate::{
+    embedding::VizierEmbeddingModel,
     error::VizierError,
     schema::Memory,
     storage::{
@@ -38,7 +38,7 @@ impl MemoryStorage for SurrealStorage {
         };
 
         let embedding = embedder.embed_text(&content.clone()).await?;
-        memory.embedding = embedding.vec;
+        memory.embedding = embedding;
 
         let _: Option<Memory> = self
             .conn
@@ -61,7 +61,7 @@ impl MemoryStorage for SurrealStorage {
             .clone()
             .ok_or(VizierError("embedder is not set".into()))?;
 
-        let query = embedder.embed_text(&query).await?.vec;
+        let query = embedder.embed_text(&query).await?;
 
         let distance_function = DistanceFunction::Cosine;
 

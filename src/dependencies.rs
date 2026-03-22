@@ -4,6 +4,7 @@ use anyhow::Result;
 
 use crate::{
     config::{VizierConfig, storage::StorageConfig},
+    embedding::VizierEmbedder,
     storage::{VizierStorage, fs::FileSystemStorage, surreal::SurrealStorage},
     transport::VizierTransport,
 };
@@ -11,20 +12,18 @@ use crate::{
 #[derive(Clone)]
 pub struct VizierDependencies {
     pub config: Arc<VizierConfig>,
-    pub embedder: Option<Arc<crate::embedding::EmbeddingModel>>,
+    pub embedder: Option<Arc<VizierEmbedder>>,
     pub transport: VizierTransport,
     pub storage: Arc<VizierStorage>,
 }
 
 impl VizierDependencies {
     pub async fn new(config: VizierConfig) -> Result<Self> {
-        let workspace = config.workspace.clone();
-        let embedder = config.tools.vector_memory.clone().map(|config| {
-            Arc::new(
-                crate::embedding::Client::new()
-                    .embedding_model(&config.model.to_fastembed(), Some(workspace)),
-            )
-        });
+        let embedder = if config.embedding.is_some() {
+            Some(Arc::new(VizierEmbedder::new(&config).await?))
+        } else {
+            None
+        };
 
         let storage = match config.storage {
             StorageConfig::Filesystem => {
