@@ -38,9 +38,10 @@ impl SessionMemory {
 
 #[derive(Clone)]
 pub struct SessionMemories {
+    #[allow(unused)]
     agent_id: String,
     messages: Vec<SessionMemory>,
-    session_memory_recall_depth: usize,
+    session_cap: usize,
     summary: Option<String>,
     hooks: Arc<VizierSessionHooks>,
 }
@@ -50,25 +51,35 @@ impl SessionMemories {
         Self {
             agent_id,
             messages: vec![],
-            session_memory_recall_depth: config.max_capacity,
+            session_cap: config.max_capacity,
             summary: None,
             hooks,
         }
     }
 
+    fn cap_message(&mut self) {
+        while self.messages.len() > self.session_cap {
+            self.messages.remove(0);
+        }
+    }
+
     pub fn push_user_message(&mut self, req: VizierRequest) {
         self.messages.push(SessionMemory::Request(req));
+
+        self.cap_message();
     }
 
     pub fn push_agent(&mut self, response: VizierResponse) {
         self.messages.push(SessionMemory::Response(response));
+
+        self.cap_message();
     }
 
     pub fn recall(&self) -> Vec<SessionMemory> {
         self.messages
             .iter()
             .rev()
-            .take(self.session_memory_recall_depth)
+            .take(self.session_cap)
             .map(|item| item.clone())
             .collect()
     }
@@ -87,16 +98,16 @@ impl SessionMemories {
     }
 
     pub async fn try_summarize(&mut self, agent: &VizierAgent) -> anyhow::Result<()> {
-        if self.messages.len() < self.session_memory_recall_depth {
+        if self.messages.len() < self.session_cap {
             return Ok(());
         }
 
         let summary_prompt = format!(
-            r"
-            Provided below is your recent conversation. 
-            Summarize and remember it on your memory. 
-            make it as concise as possible, yet maintain clarity and avoid information loss as much as possible
-            {}",
+            r#"# Context
+Provided below is your recent conversation. 
+Summarize and remember it on your memory. 
+make it as concise as possible, yet maintain clarity and avoid information loss as much as possible
+{}"#,
             self.format_messages_for_summary()
         );
 
@@ -111,7 +122,6 @@ impl SessionMemories {
             )
             .await?
         {
-            self.messages.clear();
             self.summary = Some(content);
         }
 
