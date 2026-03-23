@@ -199,10 +199,10 @@ impl SessionProcess {
                     let is_thinking = Arc::new(Mutex::new(false));
 
                     let send_thinking = send_response.clone();
-                    let thinking_is_thinking = is_thinking.clone();
+                    let is_thinking_status = is_thinking.clone();
                     tokio::spawn(async move {
                         loop {
-                            if !*thinking_is_thinking.lock().await {
+                            if !*is_thinking_status.lock().await {
                                 continue;
                             }
                             let _ = send_thinking.clone()(VizierResponse::ThinkingProgress).await;
@@ -210,6 +210,7 @@ impl SessionProcess {
                         }
                     });
 
+                    let mut prev_req: Option<VizierRequest> = None;
                     while let Ok(request) = session_transport.1.recv_async().await {
                         let main_session = main_session.clone();
 
@@ -217,11 +218,24 @@ impl SessionProcess {
                         let agent = agent.clone();
                         let hooks = hooks.clone();
 
+                        let is_finished = curr_handle.is_finished();
                         curr_handle.abort();
-                        *is_thinking.lock().await = false;
+                        if !is_finished {
+                            if let Some(req) = &prev_req {
+                                main_session
+                                    .lock()
+                                    .await
+                                    .session_memory
+                                    .push_user_message(req.clone());
+                            }
+                        }
+
                         if request.content == "/abort" {
                             continue;
                         }
+
+                        *is_thinking.lock().await = false;
+                        prev_req = Some(request.clone());
 
                         let handler_thinking = is_thinking.clone();
                         curr_handle = tokio::spawn(async move {
@@ -272,7 +286,6 @@ impl SessionProcess {
                                     }
                                 }
                             }
-
                             *handler_thinking.lock().await = false;
                         });
                     }
