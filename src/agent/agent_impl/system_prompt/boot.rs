@@ -1,3 +1,5 @@
+use chrono::Utc;
+
 pub fn boot_md() -> String {
     let python_note = if cfg!(feature = "python") {
         "5. **Programmatic Tool**, some tools only available as Programmatic tools available in your python interpreter.\n"
@@ -7,6 +9,9 @@ pub fn boot_md() -> String {
 
     format!(
         r#"# BOOT.md - Your Operating Doctrine
+
+        **Current Date**: {}
+
 1. **Check Your Docs First** - Before substantive responses, reference:
     - AGENT.md → your core code of conduct and update framework
     - IDENTITY.md → who you actually are
@@ -15,6 +20,7 @@ pub fn boot_md() -> String {
 4. **Tool Utilization**, use tools available to you to help achieve your tasks.
 {}
 "#,
+        Utc::now().to_rfc3339(),
         python_note
     )
 }

@@ -193,66 +193,88 @@ impl SessionProcess {
                 let main_session = agent_session.clone();
                 let main_handler = tokio::spawn(async move {
                     let send_response = send_response.clone();
+                    let mut curr_handle = tokio::spawn(async move {});
+
+                    // **BEHOLD** the most overkill boolean to ever exits
+                    let is_thinking = Arc::new(Mutex::new(false));
+
+                    let send_thinking = send_response.clone();
+                    let thinking_is_thinking = is_thinking.clone();
+                    tokio::spawn(async move {
+                        loop {
+                            if !*thinking_is_thinking.lock().await {
+                                continue;
+                            }
+                            let _ = send_thinking.clone()(VizierResponse::ThinkingProgress).await;
+                            tokio::time::sleep(Duration::from_secs(5)).await;
+                        }
+                    });
+
                     while let Ok(request) = session_transport.1.recv_async().await {
-                        let mut main_session = main_session.lock().await;
+                        let main_session = main_session.clone();
 
-                        let send_lobotomy = send_response.clone();
-                        if request.content == "/lobotomy" {
-                            let _ = main_session.lobotomy();
-                            tokio::spawn(async move {
-                                if let Err(err) = send_lobotomy(VizierResponse::Message {
-                                    content: "YIPEEEE".into(),
-                                    stats: None,
-                                })
-                                .await
-                                {
-                                    log::error!("{}", err);
-                                }
-                            });
-
-                            continue;
-                        }
-
-                        if request.is_silent_read {
-                            let _ = agent
-                                .handle_silent_read(main_session, &request, hooks.clone())
-                                .await;
-                            continue;
-                        }
-
-                        let send_thinking = send_response.clone();
-                        let thinking = tokio::spawn(async move {
-                            loop {
-                                let _ =
-                                    send_thinking.clone()(VizierResponse::ThinkingProgress).await;
-
-                                tokio::time::sleep(Duration::from_secs(5)).await;
-                            }
-                        });
-
-                        let content = agent
-                            .handle_chat(&request, main_session, hooks.clone())
-                            .await;
                         let send_response = send_response.clone();
-                        match content {
-                            Err(err) => {
-                                if let Err(err) = send_response(VizierResponse::Message {
-                                    content: err.to_string(),
-                                    stats: None,
-                                })
-                                .await
-                                {
-                                    log::error!("{}", err);
-                                }
-                            }
-                            Ok(response) => {
-                                if let Err(err) = send_response(response).await {
-                                    log::error!("{}", err);
-                                }
-                            }
+                        let agent = agent.clone();
+                        let hooks = hooks.clone();
+
+                        curr_handle.abort();
+                        *is_thinking.lock().await = false;
+                        if request.content == "/abort" {
+                            continue;
                         }
 
-                        thinking.abort();
+                        let handler_thinking = is_thinking.clone();
+                        curr_handle = tokio::spawn(async move {
+                            let mut main_session = main_session.lock().await;
+                            let send_lobotomy = send_response.clone();
+                            if request.content == "/lobotomy" {
+                                let _ = main_session.lobotomy();
+                                tokio::spawn(async move {
+                                    if let Err(err) = send_lobotomy(VizierResponse::Message {
+                                        content: "YIPEEEE".into(),
+                                        stats: None,
+                                    })
+                                    .await
+                                    {
+                                        log::error!("{}", err);
+                                    }
+                                });
+
+                                return;
+                            }
+
+                            if request.is_silent_read {
+                                let _ = agent
+                                    .handle_silent_read(main_session, &request, hooks.clone())
+                                    .await;
+                                return;
+                            }
+
+                            *handler_thinking.lock().await = true;
+                            let content = agent
+                                .handle_chat(&request, main_session, hooks.clone())
+                                .await;
+                            let send_response = send_response.clone();
+                            match content {
+                                Err(err) => {
+                                    if let Err(err) = send_response(VizierResponse::Message {
+                                        content: err.to_string(),
+                                        stats: None,
+                                    })
+                                    .await
+                                    {
+                                        log::error!("{}", err);
+                                    }
+                                }
+                                Ok(response) => {
+                                    if let Err(err) = send_response(response).await {
+                                        log::error!("{}", err);
+                                    }
+                                }
+                            }
+
+                            *handler_thinking.lock().await = false;
+                        });
                     }
                 });
 
