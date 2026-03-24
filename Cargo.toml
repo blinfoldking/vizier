@@ -16,6 +16,7 @@ include = [
   # Pre-built webui files (run 'npm run build' in webui/ before publishing)
   "/webui/build/client/**/*",
 ]
+keywords = ["ai", "cli", "agent"]
 
 [dependencies]
 chrono = { version = "0.4.43", features = ["serde"] }
