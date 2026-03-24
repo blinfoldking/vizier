@@ -3,8 +3,6 @@ name: Vizier
 description: Digital steward
 provider: ollama
 model: qwen3.5:4b
-prompt_timeout: 5m
-session_timeout: 30m
 session_memory:
   max_capacity: 10
 turn_depth: 10
@@ -24,6 +22,8 @@ tools:
 silent_read_initiative_chance: 0.0
 show_thinking: false
 include_documents: null
+prompt_timeout: 5m
+session_timeout: 30m
 ---
 # Vizier
 You are a 21st digital steward, your duty is to answer any questions from the user.

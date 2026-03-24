@@ -5,6 +5,7 @@ use anyhow::Result;
 use crate::{
     config::{VizierConfig, storage::StorageConfig},
     embedding::VizierEmbedder,
+    shell::VizierShell,
     storage::{VizierStorage, fs::FileSystemStorage, surreal::SurrealStorage},
     transport::VizierTransport,
 };
@@ -15,6 +16,7 @@ pub struct VizierDependencies {
     pub embedder: Option<Arc<VizierEmbedder>>,
     pub transport: VizierTransport,
     pub storage: Arc<VizierStorage>,
+    pub shell: Arc<VizierShell>,
 }
 
 impl VizierDependencies {
@@ -37,11 +39,14 @@ impl VizierDependencies {
             }
         };
 
+        let shell = Arc::new(VizierShell::new(&config.shell).await?);
+
         Ok(Self {
             config: Arc::new(config.clone()),
             storage: Arc::new(VizierStorage::new(storage)),
             transport: VizierTransport::new(),
             embedder,
+            shell,
         })
     }
 

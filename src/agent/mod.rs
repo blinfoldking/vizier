@@ -9,6 +9,7 @@ use tokio::task::JoinHandle;
 
 use crate::agent::agent_impl::VizierAgent;
 use crate::agent::hook::VizierSessionHooks;
+use crate::agent::hook::debug::DebugHook;
 use crate::agent::hook::history::HistoryHook;
 use crate::agent::hook::thinking::ThinkingHook;
 use crate::agent::memory::SessionMemories;
@@ -18,7 +19,6 @@ use crate::error::VizierError;
 use crate::schema::{VizierRequest, VizierResponse, VizierSession};
 
 pub mod agent_impl;
-pub mod exec;
 pub mod hook;
 pub mod memory;
 pub mod tools;
@@ -167,8 +167,9 @@ impl SessionProcess {
             res
         };
 
-        let mut hooks =
-            VizierSessionHooks::new().hook(HistoryHook::new(deps.storage.clone(), session.clone()));
+        let mut hooks = VizierSessionHooks::new()
+            .hook(DebugHook(session.clone()))
+            .hook(HistoryHook::new(deps.storage.clone(), session.clone()));
 
         if let Some(true) = agent_config.show_thinking {
             hooks = hooks.hook(ThinkingHook::new(transport.clone(), session.clone()));

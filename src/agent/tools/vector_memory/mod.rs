@@ -56,8 +56,6 @@ impl Tool for MemoryRead {
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
-        log::info!("read_memory: {}", args.query.clone());
-
         let res = self
             .1
             .query_memory(self.0.clone(), args.query, 10, 0.)
@@ -104,7 +102,6 @@ impl Tool for MemoryWrite {
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
         let slug = slugify!(&args.title).to_string();
-        log::info!("write_memory: {:?}", slug.clone());
 
         let content = format!(
             "#{}\n\n{}\n\n timestamp: {}",

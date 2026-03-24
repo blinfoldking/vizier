@@ -1,7 +1,7 @@
 /target
 .data/
 .vizier/
-.vizier*
+*.vizier*
 *.dev.agent.md
 .env*
 

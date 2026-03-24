@@ -84,8 +84,6 @@ where
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
-        log::info!("schedule_task {} {:?}", args.title, args.schedule.clone());
-
         let response = self
             .storage
             .save_task(Task {
@@ -157,13 +155,6 @@ where
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
-        log::info!(
-            "schedule_task {} {} {:?}",
-            args.title,
-            args.instruction,
-            args.cron.clone()
-        );
-
         let response = self
             .db
             .save_task(Task {

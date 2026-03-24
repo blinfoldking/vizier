@@ -54,8 +54,6 @@ where
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
-        log::info!("discord_send_message {}", args.channel_id);
-
         let response = crate::utils::discord::send_message(
             self.http.clone(),
             &ChannelId::new(args.channel_id),
@@ -106,8 +104,6 @@ where
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
-        log::info!("discord_react_message {}", args.message_id);
-
         let channel = ChannelId::new(args.channel_id);
         let message_id = MessageId::new(args.message_id);
 
@@ -159,8 +155,6 @@ where
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
-        log::info!("discord_react_message {}", args.message_id);
-
         let channel = ChannelId::new(args.channel_id);
         let message_id = MessageId::new(args.message_id);
 

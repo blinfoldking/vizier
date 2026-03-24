@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub mod agent;
 pub mod embedding;
 pub mod provider;
+pub mod shell;
 pub mod storage;
 pub mod user;
 
@@ -13,10 +14,8 @@ use crate::{
     config::{
         agent::{AgentConfig, AgentConfigs},
         embedding::{EmbeddingConfig, LocalEmbeddingModelVariant},
-        provider::{
-            AnthropicProviderConfig, DeepseekProviderConfig, GeminiProviderConfig,
-            OllamaProviderConfig, OpenAIProviderConfig, OpenRouterProviderConfig, ProviderConfig,
-        },
+        provider::{OllamaProviderConfig, ProviderConfig},
+        shell::{LocalShellConfig, ShellConfig},
         storage::StorageConfig,
         user::UserConfig,
     },
@@ -80,6 +79,7 @@ pub struct VizierConfig {
     pub agents: AgentConfigs,
     pub channels: ChannelsConfig,
     pub tools: ToolsConfig,
+    pub shell: ShellConfig,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -157,11 +157,11 @@ impl Default for VizierConfig {
             storage: StorageConfig::Filesystem,
             providers: ProviderConfig {
                 ollama: Some(OllamaProviderConfig::default()),
-                deepseek: Some(DeepseekProviderConfig::default()),
-                openrouter: Some(OpenRouterProviderConfig::default()),
-                anthropic: Some(AnthropicProviderConfig::default()),
-                openai: Some(OpenAIProviderConfig::default()),
-                gemini: Some(GeminiProviderConfig::default()),
+                deepseek: None,
+                openrouter: None,
+                anthropic: None,
+                openai: None,
+                gemini: None,
             },
             embedding: Some(EmbeddingConfig::Local {
                 model: LocalEmbeddingModelVariant::AllMiniLml6V2,
@@ -179,6 +179,7 @@ impl Default for VizierConfig {
                 dangerously_enable_cli_access: false,
                 brave_search: Some(BraveSearchConfig::default()),
             },
+            shell: ShellConfig::Local(LocalShellConfig { path: ".".into() }),
         }
     }
 }

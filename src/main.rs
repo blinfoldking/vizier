@@ -19,6 +19,7 @@ mod embedding;
 mod error;
 mod scheduler;
 mod schema;
+mod shell;
 mod storage;
 mod transport;
 mod utils;
@@ -43,6 +44,7 @@ async fn main() -> Result<()> {
             .filter_module("surrealdb", log::LevelFilter::Off)
             .filter_module("ort", log::LevelFilter::Off)
             .filter_module("ureq", log::LevelFilter::Off)
+            .filter_module("bollard", log::LevelFilter::Off)
             .init();
     } else {
         pretty_env_logger::init();

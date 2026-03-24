@@ -73,6 +73,7 @@ async-broadcast = "0.7.2"
 termimad = "0.34.1"
 glob = "0.3.3"
 shellexpand = "3.1.2"
+bollard = { version = "0.20.2", features = ["buildkit", "chrono"] }
 
 [build-dependencies]
 pyo3-build-config = { version = "0.28.2", optional = true }

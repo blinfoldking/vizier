@@ -68,8 +68,6 @@ where
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
-        log::info!("write {}", T::NAME);
-
         let path = std::path::PathBuf::from(format!("{}/{}", self.workspace, T::NAME));
 
         match std::fs::write(path, args.content) {

@@ -5,12 +5,14 @@ use rig::{
 };
 
 use crate::{
-    agent::exec::ExecCliFromWorkspace,
-    agent::tools::brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
-    agent::tools::discord::new_discord_tools,
-    agent::tools::scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
-    agent::tools::vector_memory::init_vector_memory,
-    agent::tools::workspace::{AgentDocument, IdentDocument, WritePrimaryDocument},
+    agent::tools::{
+        brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
+        discord::new_discord_tools,
+        scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
+        shell::ShellExec,
+        vector_memory::init_vector_memory,
+        workspace::{AgentDocument, IdentDocument, WritePrimaryDocument},
+    },
     dependencies::VizierDependencies,
     schema::AgentId,
     utils::agent_workspace,
@@ -24,6 +26,7 @@ mod discord;
 #[cfg(feature = "python")]
 mod python;
 mod scheduler;
+mod shell;
 mod vector_memory;
 mod workspace;
 
@@ -57,10 +60,7 @@ impl VizierTools {
             });
 
         if agent_config.tools.shell_access {
-            if tool_config.dangerously_enable_cli_access {
-                let exec_cli_from_workspace = ExecCliFromWorkspace(agent_workspace.clone());
-                tool_server_builder = tool_server_builder.tool(exec_cli_from_workspace);
-            }
+            tool_server_builder = tool_server_builder.tool(ShellExec(deps.shell.clone()));
         }
 
         #[cfg(feature = "python")]

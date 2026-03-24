@@ -13,11 +13,17 @@ pub enum ProviderVariant {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ProviderConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub anthropic: Option<AnthropicProviderConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub openai: Option<OpenAIProviderConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub gemini: Option<GeminiProviderConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub deepseek: Option<DeepseekProviderConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub openrouter: Option<OpenRouterProviderConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ollama: Option<OllamaProviderConfig>,
 }
 

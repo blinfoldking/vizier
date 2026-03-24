@@ -215,8 +215,6 @@ where
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
-        log::info!("python_interpreter {}", args.script.clone());
-
         let res = Python::attach(|py| -> PyResult<String> {
             let os = py.import("os")?;
             let sys = py.import("sys")?;
