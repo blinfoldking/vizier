@@ -21,7 +21,7 @@ ollama serve
 **Windows:**
 Download from [ollama.com](https://ollama.com/download/windows)
 
-> **Note:** If you prefer using OpenRouter or other providers instead, you can skip Ollama and configure those providers. See [1.3 Configuration](./configuration.md).
+> **Note:** If you prefer using OpenRouter or other providers instead, you can skip Ollama and configure those providers. See [2. Configuration](../configuration/index.md).
 
 ## Initialize Your Workspace
 
@@ -78,6 +78,5 @@ just dev-python
 
 ## Next Steps
 
-- Configure your agent: See [1.3 Configuration](./configuration.md)
-- Learn about agents: See [3. Agents](../agents/overview.md)
-- Explore tools: See [5. Tools](../tools/overview.md)
+- Configure your agent: See [2. Configuration](../configuration/index.md)
+<!-- - Learn about development: See [3. Development](../development/overview.md) -->
