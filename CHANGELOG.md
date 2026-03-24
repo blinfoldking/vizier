@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-03-24
+
+### 💼 Other
+
+- Missing document_index table
+
+### 📚 Documentation
+
+- Fix ascii diagram
+
+### ⚙️ Miscellaneous Tasks
+
+- Remove useless ci
 ## [0.2.0] - 2026-03-24
 
 ### 🚀 Features
@@ -39,6 +52,10 @@ All notable changes to this project will be documented in this file.
 ### 📚 Documentation
 
 - Update documentation
+
+### ⚙️ Miscellaneous Tasks
+
+- Bump version to 0.2.0
 ## [0.2.0-rc.5] - 2026-03-20
 
 ### 🚀 Features
