@@ -41,7 +41,6 @@ impl VizierAgent {
             .await?;
 
         session.session_memory.push_user_message(request.clone());
-        session.session_memory.try_summarize(self).await?;
 
         session.last_interact_at = Utc::now();
 
@@ -56,13 +55,14 @@ impl VizierAgent {
     ) -> Result<VizierResponse> {
         let response = self
             .chat(request.clone(), &session.session_memory, hooks)
-            .await?;
+            .await;
 
         session.session_memory.push_user_message(request.clone());
-        session.session_memory.push_agent_message(response.clone());
-        session.session_memory.try_summarize(&self).await?;
-
         session.last_interact_at = Utc::now();
+
+        let response = response?;
+        session.session_memory.push_agent_message(response.clone());
+
         Ok(response)
     }
 }
