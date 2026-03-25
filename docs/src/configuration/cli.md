@@ -1,4 +1,4 @@
-# 1.3.7 CLI Commands
+# 2.8 CLI Commands
 
 ## Generating Configuration
 

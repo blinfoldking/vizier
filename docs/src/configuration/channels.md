@@ -1,4 +1,4 @@
-# 1.3.3 Channels
+# 2.4 Channels
 
 ## `channels`
 

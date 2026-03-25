@@ -1,4 +1,4 @@
-# 1.3.6 Agent Configuration
+# 2.7 Agent Configuration
 
 Agents are defined in Markdown files with YAML frontmatter. Create files like `vizier.agent.md`:
 

@@ -1,4 +1,4 @@
-# 1.3.5 Storage & Shell
+# 2.6 Storage & Shell
 
 ## `storage`
 

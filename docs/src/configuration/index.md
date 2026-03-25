@@ -1,4 +1,4 @@
-# 2. Configuration
+# 2.1. Overview
 
 This chapter covers everything you need to know about configuring Vizier.
 
@@ -63,14 +63,6 @@ Creates:
 - `vizier.agent.md` - Sample agent definition
 - `.vizier/` - Workspace directory for runtime data
 
-### Non-Interactive Configuration
-
-```sh
-vizier configure
-```
-
-Generates a minimal `.vizier.yaml` without interactive prompts.
-
 ## Loading Configuration
 
 Vizier automatically looks for `.vizier.yaml` in the current directory. You can specify a custom path:
@@ -82,4 +74,4 @@ vizier run --config /path/to/.vizier.yaml
 ## Next Steps
 
 - **[CLI Commands](./cli.md)** - `vizier init`, `configure`, and loading options
-- Learn about [Agents](../getting-started/quick-start.md)
+- Learn about [Agents](../configuration/agents.md)

@@ -10,7 +10,13 @@
 # 2. Configuration
 
 - [2.1 Overview](./configuration/index.md)
-- [2.2 Configuration Reference](./configuration/configuration.md)
+- [2.2 Main Configuration](./configuration/main-config.md)
+- [2.3 Providers](./configuration/providers.md)
+- [2.4 Channels](./configuration/channels.md)
+- [2.5 Tools & Embedding](./configuration/tools-embedding.md)
+- [2.6 Storage & Shell](./configuration/storage-shell.md)
+- [2.7 Agents](./configuration/agents.md)
+- [2.8 CLI](./configuration/cli.md)
 
 # 3. Development
 

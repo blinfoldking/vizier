@@ -1,4 +1,4 @@
-# 1.3.1 Main Configuration
+# 2.2 Main Configuration
 
 ## `primary_user`
 
