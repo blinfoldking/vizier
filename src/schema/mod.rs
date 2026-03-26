@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use surrealdb_types::SurrealValue;
@@ -13,7 +13,7 @@ pub struct VizierSession(pub AgentId, pub SessionId);
 pub enum SessionId {
     DiscordChanel(u64),
     HTTP(String),
-    Task(String),
+    Task(String, DateTime<Utc>),
     Socket(String),
 }
 
@@ -22,7 +22,9 @@ impl SessionId {
         match self {
             Self::DiscordChanel(id) => format!("discord__{}", id),
             Self::HTTP(id) => format!("http__{}", id),
-            Self::Task(id) => format!("task__{}", id),
+            Self::Task(id, datetime) => {
+                format!("task__{}__{}", id, datetime.timestamp_subsec_nanos())
+            }
             Self::Socket(id) => format!("socket__{}", id),
         }
     }

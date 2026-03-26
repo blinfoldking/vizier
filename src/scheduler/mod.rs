@@ -72,7 +72,10 @@ impl VizierScheduler {
                     .deps
                     .transport
                     .send_request(
-                        VizierSession(task.agent_id, SessionId::Task(task.slug.clone())),
+                        VizierSession(
+                            task.agent_id,
+                            SessionId::Task(task.slug.clone(), now.clone()),
+                        ),
                         VizierRequest {
                             user: task.user,
                             content: task.instruction,
