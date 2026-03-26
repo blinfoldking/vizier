@@ -7,19 +7,19 @@ use std::time::Duration;
 use tokio::sync::{Mutex, MutexGuard};
 use tokio::task::JoinHandle;
 
-use crate::agent::agent_impl::VizierAgent;
-use crate::agent::hook::VizierSessionHooks;
-use crate::agent::hook::debug::DebugHook;
-use crate::agent::hook::history::HistoryHook;
-use crate::agent::hook::thinking::ThinkingHook;
-use crate::agent::memory::SessionMemories;
+use crate::agents::agent::VizierAgent;
+use crate::agents::hook::VizierSessionHooks;
+use crate::agents::hook::debug::DebugHook;
+use crate::agents::hook::history::HistoryHook;
+use crate::agents::hook::thinking::ThinkingHook;
+use crate::agents::memory::SessionMemories;
 use crate::config::agent::AgentConfig;
 use crate::dependencies::VizierDependencies;
 use crate::error::VizierError;
 use crate::schema::{SessionHistoryContent, VizierRequest, VizierResponse, VizierSession};
 use crate::storage::history::HistoryStorage;
 
-pub mod agent_impl;
+pub mod agent;
 pub mod hook;
 pub mod memory;
 pub mod tools;
@@ -37,7 +37,7 @@ impl VizierAgent {
         request: &VizierRequest,
         hooks: Arc<VizierSessionHooks>,
     ) -> Result<()> {
-        self.silent_read(request.clone(), &session.session_memory, hooks)
+        self.chat(request.clone(), Some(&session.session_memory), hooks)
             .await?;
 
         session.session_memory.push_user_message(request.clone());
@@ -54,7 +54,7 @@ impl VizierAgent {
         hooks: Arc<VizierSessionHooks>,
     ) -> Result<VizierResponse> {
         let response = self
-            .chat(request.clone(), &session.session_memory, hooks)
+            .chat(request.clone(), Some(&session.session_memory), hooks)
             .await;
 
         session.session_memory.push_user_message(request.clone());

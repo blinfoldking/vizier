@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 
 use crate::{
-    agent::hook::VizierSessionHook,
+    agents::hook::VizierSessionHook,
     schema::{SessionHistoryContent, VizierRequest, VizierResponse, VizierSession},
     storage::{VizierStorage, history::HistoryStorage},
 };

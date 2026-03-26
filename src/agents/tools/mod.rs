@@ -5,7 +5,7 @@ use rig::{
 };
 
 use crate::{
-    agent::tools::{
+    agents::tools::{
         brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
         discord::new_discord_tools,
         document::init_document_tools,
@@ -23,7 +23,7 @@ use crate::{
 mod python;
 
 #[cfg(feature = "python")]
-use crate::agent::tools::python::PythonInterpreter;
+use crate::agents::tools::python::PythonInterpreter;
 
 mod brave_search;
 mod discord;

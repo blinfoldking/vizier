@@ -1,25 +1,25 @@
-use std::{fs, path::PathBuf, sync::Arc, time::Duration};
+use std::{fs, path::PathBuf, sync::Arc};
 
 use anyhow::Result;
 use chrono::Utc;
 use rand::{RngExt, SeedableRng, rngs::StdRng};
 use rig::{
     OneOrMany,
-    agent::Agent,
-    client::CompletionClient,
-    completion::Completion,
     message::{AssistantContent, Message, ToolResultContent, UserContent},
-    providers::{anthropic, deepseek, gemini, ollama, openai, openrouter},
 };
 use tokio::time::{Instant, timeout};
 
 use crate::{
-    agent::{
-        agent_impl::{provider::VizierAgentTrait, system_prompt::user::primary_user_md},
+    agents::{
+        agent::{
+            model::{VizierModel, VizierModelTrait},
+            system_prompt::{boot::boot_md, user::primary_user_md},
+        },
         hook::{VizierSessionHook, VizierSessionHooks},
         memory::SessionMemories,
+        tools::VizierTools,
     },
-    config::{provider::ProviderVariant, user::UserConfig},
+    config::{agent::AgentConfig, user::UserConfig},
     dependencies::VizierDependencies,
     error::VizierError,
     schema::{VizierRequest, VizierResponse, VizierResponseStats},
@@ -27,22 +27,22 @@ use crate::{
     utils::agent_workspace,
 };
 
-mod provider;
+mod model;
 mod system_prompt;
 
 #[derive(Clone)]
-pub enum VizierAgent {
-    Ollama(VizierAgentImpl<ollama::Client>),
-    OpenRouter(VizierAgentImpl<openrouter::Client>),
-    Deepseek(VizierAgentImpl<deepseek::Client>),
-    Anthropic(VizierAgentImpl<anthropic::Client>),
-    OpenAI(VizierAgentImpl<openai::Client>),
-    Gemini(VizierAgentImpl<gemini::Client>),
+pub struct VizierAgent {
+    model: VizierModel,
+    tools: VizierTools,
+    config: AgentConfig,
+    primary_user: UserConfig,
+    workspace: String,
 }
 
 impl VizierAgent {
     pub async fn new(agent_id: String, deps: &VizierDependencies) -> Result<VizierAgent> {
         let agent_config = deps.config.agents.get(&agent_id.clone()).unwrap();
+
         log::info!("reindex {} documents", agent_config.name);
         for document in &agent_config.documents {
             log::info!("reindex {}", document);
@@ -51,108 +51,33 @@ impl VizierAgent {
                 .await?;
         }
 
-        let agent = match &agent_config.provider {
-            ProviderVariant::openrouter => VizierAgent::OpenRouter(
-                VizierAgentImpl::<openrouter::Client>::build(agent_id.clone(), deps.clone())
-                    .await?,
-            ),
-            ProviderVariant::deepseek => VizierAgent::Deepseek(
-                VizierAgentImpl::<deepseek::Client>::build(agent_id.clone(), deps.clone()).await?,
-            ),
-            ProviderVariant::ollama => VizierAgent::Ollama(
-                VizierAgentImpl::<ollama::Client>::build(agent_id.clone(), deps.clone()).await?,
-            ),
-            ProviderVariant::anthropic => VizierAgent::Anthropic(
-                VizierAgentImpl::<anthropic::Client>::build(agent_id.clone(), deps.clone()).await?,
-            ),
-            ProviderVariant::openai => VizierAgent::OpenAI(
-                VizierAgentImpl::<openai::Client>::build(agent_id.clone(), deps.clone()).await?,
-            ),
-            ProviderVariant::gemini => VizierAgent::Gemini(
-                VizierAgentImpl::<gemini::Client>::build(agent_id.clone(), deps.clone()).await?,
-            ),
-        };
+        let model = VizierModel::new(agent_id.clone(), deps.clone()).await?;
+        let tools = VizierTools::new(agent_id.clone(), deps.clone()).await?;
 
-        Ok(agent)
+        let workspace = agent_workspace(&deps.config.workspace, &agent_id);
+
+        Ok(Self {
+            model,
+            tools,
+            config: agent_config.clone(),
+            primary_user: deps.config.primary_user.clone(),
+            workspace,
+        })
     }
 
-    pub async fn prompt(
-        &self,
-        req: VizierRequest,
-        hooks: Arc<VizierSessionHooks>,
-    ) -> Result<VizierResponse> {
-        let response = match self {
-            Self::Ollama(agent) => agent.prompt(req, hooks).await,
-            Self::OpenRouter(agent) => agent.prompt(req, hooks).await,
-            Self::Deepseek(agent) => agent.prompt(req, hooks).await,
-            Self::Anthropic(agent) => agent.prompt(req, hooks).await,
-            Self::OpenAI(agent) => agent.prompt(req, hooks).await,
-            Self::Gemini(agent) => agent.prompt(req, hooks).await,
-        }?;
-
-        Ok(response)
-    }
-
-    pub async fn chat(
-        &self,
-        req: VizierRequest,
-        memory: &SessionMemories,
-        hooks: Arc<VizierSessionHooks>,
-    ) -> Result<VizierResponse> {
-        let response = match self {
-            Self::Ollama(agent) => agent.chat(req, Some(memory), hooks).await,
-            Self::OpenRouter(agent) => agent.chat(req, Some(memory), hooks).await,
-            Self::Deepseek(agent) => agent.chat(req, Some(memory), hooks).await,
-            Self::Anthropic(agent) => agent.chat(req, Some(memory), hooks).await,
-            Self::OpenAI(agent) => agent.chat(req, Some(memory), hooks).await,
-            Self::Gemini(agent) => agent.chat(req, Some(memory), hooks).await,
-        }?;
-
-        Ok(response)
-    }
-
-    pub async fn silent_read(
-        &self,
-        req: VizierRequest,
-        memory: &SessionMemories,
-        hooks: Arc<VizierSessionHooks>,
-    ) -> Result<()> {
-        let _ = match self {
-            Self::Ollama(agent) => agent.chat(req, Some(memory), hooks).await,
-            Self::OpenRouter(agent) => agent.chat(req, Some(memory), hooks).await,
-            Self::Deepseek(agent) => agent.chat(req, Some(memory), hooks).await,
-            Self::Anthropic(agent) => agent.chat(req, Some(memory), hooks).await,
-            Self::OpenAI(agent) => agent.chat(req, Some(memory), hooks).await,
-            Self::Gemini(agent) => agent.chat(req, Some(memory), hooks).await,
-        }?;
-
-        Ok(())
-    }
-}
-
-#[derive(Clone)]
-pub struct VizierAgentImpl<Client: CompletionClient> {
-    #[allow(unused)]
-    id: String,
-    agent: Agent<Client::CompletionModel>,
-    system_prompt: String,
-    workspace: String,
-    primary_user: UserConfig,
-    silent_read_initiative_chance: f32,
-
-    prompt_timeout: Duration,
-    tool_call_timeout: Duration,
-}
-
-impl<Client: CompletionClient> VizierAgentImpl<Client> {
     pub async fn prepare_system_prompts(&self) -> Vec<Message> {
-        let agent_workspace = agent_workspace(&self.workspace, &self.id);
-
-        let agent_md = read_md_file(agent_workspace.clone(), "AGENT.md".into());
-        let ident_md = read_md_file(agent_workspace.clone(), "IDENTITY.md".into());
+        let agent_md = read_md_file(self.workspace.clone(), "AGENT.md".into());
+        let ident_md = read_md_file(self.workspace.clone(), "IDENTITY.md".into());
+        let boot = boot_md();
 
         let res = vec![
-            Message::system(self.system_prompt.clone()),
+            Message::system(boot),
+            Message::system(
+                self.config
+                    .system_prompt
+                    .clone()
+                    .unwrap_or("you are a helpful assistant".into()),
+            ),
             Message::system(primary_user_md(&self.primary_user)),
             Message::system(agent_md),
             Message::system(ident_md),
@@ -161,26 +86,18 @@ impl<Client: CompletionClient> VizierAgentImpl<Client> {
         res
     }
 
-    pub async fn prompt(
-        &self,
-        req: VizierRequest,
-        hooks: Arc<VizierSessionHooks>,
-    ) -> Result<VizierResponse> {
-        let response = self.chat(req, None, hooks).await?;
-
-        Ok(response)
-    }
-
     pub async fn chat(
         &self,
         req: VizierRequest,
         memory: Option<&SessionMemories>,
         hooks: Arc<VizierSessionHooks>,
     ) -> Result<VizierResponse> {
-        let max_turn_depth = self.agent.default_max_turns.unwrap_or(0);
+        let max_turn_depth = self.config.thinking_depth;
         let mut turn_depth = 0;
 
-        timeout(self.prompt_timeout, async {
+        let tools = self.tools.handle.get_tool_defs(None).await?;
+
+        timeout(*self.config.prompt_timeout, async {
             turn_depth += 1;
             if max_turn_depth > 0 && turn_depth > max_turn_depth {
                 return Err(anyhow::anyhow!(VizierError(format!(
@@ -200,7 +117,7 @@ impl<Client: CompletionClient> VizierAgentImpl<Client> {
             let mut req = req;
             req = hooks.on_request(req).await?;
 
-            if req.is_silent_read && initiative_factor > self.silent_read_initiative_chance {
+            if req.is_silent_read && initiative_factor > self.config.silent_read_initiative_chance {
                 return Ok(VizierResponse::Empty);
             }
 
@@ -209,23 +126,37 @@ impl<Client: CompletionClient> VizierAgentImpl<Client> {
 
             let start = Instant::now();
 
+            let mut input_tokens: u64 = 0;
+            let mut cached_input_tokens: u64 = 0;
+            let mut total_cached_input_tokens: u64 = 0;
+            let mut total_input_tokens: u64 = 0;
+            let mut total_output_tokens: u64 = 0;
+            let mut total_tokens: u64 = 0;
+
             loop {
-                let response = self
-                    .agent
-                    .completion(message.clone(), history.clone())
-                    .await?
-                    .send()
+                let (message_id, choices, usage) = self
+                    .model
+                    .completion(message.clone(), history.clone(), tools.clone())
                     .await?;
 
                 history.push(message);
 
                 history.push(Message::Assistant {
-                    id: response.message_id.clone(),
-                    content: response.choice.clone(),
+                    id: message_id.clone(),
+                    content: choices.clone(),
                 });
 
-                let (tool_calls, others): (Vec<_>, Vec<_>) = response
-                    .choice
+                if turn_depth == 1 {
+                    input_tokens = usage.input_tokens;
+                    cached_input_tokens = usage.input_tokens;
+                }
+
+                total_input_tokens += usage.input_tokens;
+                total_cached_input_tokens += usage.input_tokens;
+                total_output_tokens += usage.output_tokens;
+                total_tokens += usage.total_tokens;
+
+                let (tool_calls, others): (Vec<_>, Vec<_>) = choices
                     .iter()
                     .partition(|choice| matches!(choice, AssistantContent::ToolCall(_)));
 
@@ -259,9 +190,9 @@ impl<Client: CompletionClient> VizierAgentImpl<Client> {
                     );
                     (function_name, args) = hooks.on_tool_call(function_name, args).await?;
 
-                    let tool_server = self.agent.clone().tool_server_handle;
+                    let tool_server = self.tools.handle.clone();
                     let mut tool_res = match timeout(
-                        self.tool_call_timeout,
+                        *self.config.tools.timeout,
                         tokio::spawn(
                             async move { tool_server.call_tool(&function_name, &args).await },
                         ),
@@ -293,6 +224,12 @@ impl<Client: CompletionClient> VizierAgentImpl<Client> {
             let mut response = VizierResponse::Message {
                 content: output.clone(),
                 stats: Some(VizierResponseStats {
+                    total_tokens,
+                    total_cached_input_tokens,
+                    total_input_tokens,
+                    total_output_tokens,
+                    input_tokens,
+                    cached_input_tokens,
                     duration: start.elapsed(),
                 }),
             };

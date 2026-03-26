@@ -9,7 +9,7 @@ use crate::error::VizierError;
 
 pub type Result<T> = std::result::Result<T, VizierError>;
 
-mod agent;
+mod agents;
 mod channels;
 mod cli;
 mod config;

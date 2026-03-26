@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rig::message::Message;
 
 use crate::{
-    agent::{VizierAgent, hook::VizierSessionHooks},
+    agents::hook::VizierSessionHooks,
     config::agent::MemoryConfig,
     schema::{VizierRequest, VizierResponse},
 };
@@ -15,16 +15,6 @@ pub enum SessionMemory {
 }
 
 impl SessionMemory {
-    fn simple(&self) -> String {
-        match self {
-            Self::Request(req) => format!("{}: {}", req.user, req.content),
-            Self::Response(VizierResponse::Message { content, stats: _ }) => {
-                format!("answer: {}", content)
-            }
-            _ => unimplemented!(),
-        }
-    }
-
     fn to_message(&self) -> Message {
         match self {
             Self::Request(req) => Message::user(req.to_prompt().unwrap()),
@@ -88,14 +78,6 @@ impl SessionMemories {
         res.extend(self.recall().iter().map(|item| item.to_message()));
 
         res
-    }
-
-    fn format_messages_for_summary(&self) -> String {
-        self.messages
-            .iter()
-            .map(|msg| msg.simple())
-            .collect::<Vec<_>>()
-            .join("\n")
     }
 
     pub fn flush(&mut self) {

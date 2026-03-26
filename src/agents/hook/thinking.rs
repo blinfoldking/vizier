@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use crate::{
-    agent::hook::VizierSessionHook,
+    agents::hook::VizierSessionHook,
     schema::{VizierResponse, VizierSession},
     transport::VizierTransport,
 };

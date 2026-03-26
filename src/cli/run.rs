@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Args;
 
 use crate::{
-    agent::VizierAgents,
+    agents::VizierAgents,
     channels::VizierChannels,
     config::{VizierConfig, provider::ProviderVariant},
     dependencies::VizierDependencies,

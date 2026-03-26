@@ -32,6 +32,12 @@ impl SessionId {
 
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct VizierResponseStats {
+    pub input_tokens: u64,
+    pub cached_input_tokens: u64,
+    pub total_cached_input_tokens: u64,
+    pub total_input_tokens: u64,
+    pub total_output_tokens: u64,
+    pub total_tokens: u64,
     pub duration: tokio::time::Duration,
 }
 

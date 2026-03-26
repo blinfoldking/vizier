@@ -4,7 +4,7 @@ use rig::{completion::ToolDefinition, tool::Tool};
 use schemars::schema_for;
 use serde::{Deserialize, Serialize};
 
-use crate::{agent::tools::python::PythonInterpreter, error::VizierError};
+use crate::{agents::tools::python::PythonInterpreter, error::VizierError};
 
 pub struct ToolDoc {
     name: String,

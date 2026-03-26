@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::{agent::hook::VizierSessionHook, schema::VizierSession};
+use crate::{agents::hook::VizierSessionHook, schema::VizierSession};
 
 pub struct DebugHook(pub VizierSession);
 
