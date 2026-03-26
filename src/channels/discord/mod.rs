@@ -14,7 +14,7 @@ use serenity::prelude::*;
 use crate::channels::VizierChannel;
 use crate::config::DiscordChannelConfig;
 use crate::schema::{
-    SessionId, VizierRequest, VizierRequestContent, VizierResponse, VizierSession,
+    VizierChannelId, VizierRequest, VizierRequestContent, VizierResponse, VizierSession,
 };
 use crate::transport::VizierTransport;
 use crate::utils::remove_think_tags;
@@ -70,8 +70,10 @@ impl VizierChannel for DiscordChannelWriter {
         let mut recv = self.transport.subscribe_response().await?;
         let _ = tokio::spawn(async move {
             loop {
-                if let Ok((VizierSession(agent_id, SessionId::DiscordChanel(channel_id)), res)) =
-                    recv.recv().await
+                if let Ok((
+                    VizierSession(agent_id, VizierChannelId::DiscordChanel(channel_id), _),
+                    res,
+                )) = recv.recv().await
                 {
                     let http = token_map.get(&agent_id).unwrap().clone();
                     let channel_id = ChannelId::new(channel_id);
@@ -160,7 +162,11 @@ impl EventHandler for Handler {
                 if let Err(err) = self
                     .1
                     .send_request(
-                        VizierSession(agent_id, SessionId::DiscordChanel(command.channel_id.get())),
+                        VizierSession(
+                            agent_id,
+                            VizierChannelId::DiscordChanel(command.channel_id.get()),
+                            None,
+                        ),
                         VizierRequest {
                             user: format!(
                                 "@{} (DiscordId: {})",
@@ -225,7 +231,11 @@ If I am halucinating, feel free to `/lobotomy` me
                 tokio::spawn(async move {
                     if let Err(err) = transport
                         .send_request(
-                            VizierSession(agent_id, SessionId::DiscordChanel(msg.channel_id.get())),
+                            VizierSession(
+                                agent_id,
+                                VizierChannelId::DiscordChanel(msg.channel_id.get()),
+                                None,
+                            ),
                             VizierRequest {
                                 user: format!(
                                     "@{} (DiscordId: {})",
@@ -248,7 +258,11 @@ If I am halucinating, feel free to `/lobotomy` me
             tokio::spawn(async move {
                 if let Err(err) = transport
                     .send_request(
-                        VizierSession(agent_id, SessionId::DiscordChanel(msg.channel_id.get())),
+                        VizierSession(
+                            agent_id,
+                            VizierChannelId::DiscordChanel(msg.channel_id.get()),
+                            None,
+                        ),
                         VizierRequest {
                             user: format!(
                                 "@{} (DiscordId: {})",

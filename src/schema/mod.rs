@@ -8,11 +8,13 @@ use surrealdb_types::SurrealValue;
 
 pub type AgentId = String;
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, SurrealValue)]
-pub struct VizierSession(pub AgentId, pub SessionId);
+pub type TopicId = String;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, SurrealValue)]
-pub enum SessionId {
+pub struct VizierSession(pub AgentId, pub VizierChannelId, pub Option<TopicId>);
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, SurrealValue)]
+pub enum VizierChannelId {
     DiscordChanel(u64),
     HTTP(String),
     Task(String, DateTime<Utc>),
@@ -20,7 +22,7 @@ pub enum SessionId {
     InterAgent(Vec<String>),
 }
 
-impl SessionId {
+impl VizierChannelId {
     pub fn to_slug(&self) -> String {
         match self {
             Self::DiscordChanel(id) => format!("discord__{}", id),

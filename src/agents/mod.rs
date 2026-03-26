@@ -67,6 +67,17 @@ impl VizierAgent {
 
         Ok(response)
     }
+
+    async fn handle_prompt(
+        &self,
+        request: &VizierRequest,
+        hooks: Arc<VizierSessionHooks>,
+    ) -> Result<VizierResponse> {
+        let response = self.chat(request.clone(), None, hooks).await;
+
+        let response = response?;
+        Ok(response)
+    }
 }
 
 type SessionTransport = (Sender<VizierRequest>, Receiver<VizierRequest>);
@@ -287,6 +298,58 @@ impl SessionProcess {
                                     let content = agent
                                         .handle_chat(&request, main_session, hooks.clone())
                                         .await;
+                                    let send_response = send_response.clone();
+                                    match content {
+                                        Err(err) => {
+                                            if let Err(err) =
+                                                send_response(VizierResponse::Message {
+                                                    content: err.to_string(),
+                                                    stats: None,
+                                                })
+                                                .await
+                                            {
+                                                log::error!("{}", err);
+                                            }
+                                        }
+                                        Ok(response) => {
+                                            if let Err(err) = send_response(response).await {
+                                                log::error!("{}", err);
+                                            }
+                                        }
+                                    }
+                                    *handler_thinking.lock().await = false;
+                                }
+
+                                VizierRequestContent::Prompt(_) => {
+                                    *handler_thinking.lock().await = true;
+                                    let content =
+                                        agent.handle_prompt(&request, hooks.clone()).await;
+                                    let send_response = send_response.clone();
+                                    match content {
+                                        Err(err) => {
+                                            if let Err(err) =
+                                                send_response(VizierResponse::Message {
+                                                    content: err.to_string(),
+                                                    stats: None,
+                                                })
+                                                .await
+                                            {
+                                                log::error!("{}", err);
+                                            }
+                                        }
+                                        Ok(response) => {
+                                            if let Err(err) = send_response(response).await {
+                                                log::error!("{}", err);
+                                            }
+                                        }
+                                    }
+                                    *handler_thinking.lock().await = false;
+                                }
+
+                                VizierRequestContent::Task(_) => {
+                                    *handler_thinking.lock().await = true;
+                                    let content =
+                                        agent.handle_prompt(&request, hooks.clone()).await;
                                     let send_response = send_response.clone();
                                     match content {
                                         Err(err) => {

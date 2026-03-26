@@ -9,7 +9,7 @@ use tokio::{
 
 use crate::{
     channels::VizierChannel,
-    schema::{SessionId, VizierRequest, VizierSession},
+    schema::{VizierChannelId, VizierRequest, VizierSession},
     transport::VizierTransport,
 };
 
@@ -66,7 +66,7 @@ impl VizierChannel for SocketChannel {
                 while let Ok(_) = writer.writable().await {
                     if let Ok((session, response)) = recv.lock().await.recv().await {
                         let mut is_socket = false;
-                        if let SessionId::Socket(_) = session.1 {
+                        if let VizierChannelId::Socket(_) = session.1 {
                             is_socket = true;
                         }
 

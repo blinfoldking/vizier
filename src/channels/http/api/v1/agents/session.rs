@@ -21,7 +21,7 @@ use crate::{
         state::HTTPState,
     },
     schema::{
-        SessionHistoryContent, SessionId, VizierRequest, VizierRequestContent, VizierSession,
+        SessionHistoryContent, VizierChannelId, VizierRequest, VizierRequestContent, VizierSession,
     },
     storage::history::HistoryStorage,
     transport::VizierTransport,
@@ -51,7 +51,7 @@ pub async fn get_session_history(
     let response = state
         .storage
         .list_session_history(
-            VizierSession(agent_id, SessionId::HTTP(session_id)),
+            VizierSession(agent_id, VizierChannelId::HTTP(session_id), None),
             params.before,
             params.limit,
         )
@@ -98,7 +98,7 @@ pub async fn chat(
     ws.on_upgrade(|socket| {
         handle_socket(
             socket,
-            VizierSession(agent_id, SessionId::HTTP(session_id)),
+            VizierSession(agent_id, VizierChannelId::HTTP(session_id), None),
             transport,
         )
     })

@@ -8,7 +8,7 @@ use tokio::{io, net::UnixStream};
 
 use crate::{
     config::VizierConfig,
-    schema::{SessionId, VizierRequest, VizierResponse, VizierSession},
+    schema::{VizierChannelId, VizierRequest, VizierResponse, VizierSession},
     utils::format_thinking,
 };
 
@@ -42,7 +42,11 @@ pub async fn tui(args: TuiArgs) -> Result<()> {
 
     log::info!("connected to socket session {}", session_id.clone());
 
-    let session = VizierSession(args.agent_id.clone(), SessionId::Socket(session_id.clone()));
+    let session = VizierSession(
+        args.agent_id.clone(),
+        VizierChannelId::Socket(session_id.clone()),
+        None,
+    );
     let agent_name = &config.agents.get(&args.agent_id.clone()).unwrap().name;
     while let Ok(text) = inquire::Text::new(&prompt)
         .with_placeholder("ask anything here...")

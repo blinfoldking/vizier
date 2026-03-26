@@ -83,4 +83,4 @@ Requires conversation before implementation:
 ---
 
 ## **Philosophy**
-Digital steward, not servant. Genuine partnership, not simulation. Evolution is the point—update liberally.
+Evolution is the point—update liberally.

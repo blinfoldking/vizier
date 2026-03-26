@@ -6,7 +6,7 @@ use croner::Cron;
 
 use crate::{
     dependencies::VizierDependencies,
-    schema::{SessionId, Task, TaskSchedule, VizierRequest, VizierSession},
+    schema::{Task, TaskSchedule, VizierChannelId, VizierRequest, VizierSession},
     storage::task::TaskStorage,
 };
 
@@ -74,7 +74,8 @@ impl VizierScheduler {
                     .send_request(
                         VizierSession(
                             task.agent_id,
-                            SessionId::Task(task.slug.clone(), now.clone()),
+                            VizierChannelId::Task(task.slug.clone(), now.clone()),
+                            None,
                         ),
                         VizierRequest {
                             user: task.user,

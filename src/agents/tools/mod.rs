@@ -7,6 +7,7 @@ use rig::{
 use crate::{
     agents::tools::{
         brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
+        consult::{ConsultAgent, DelegateAgent},
         discord::new_discord_tools,
         document::init_document_tools,
         scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
@@ -26,6 +27,7 @@ mod python;
 use crate::agents::tools::python::PythonInterpreter;
 
 mod brave_search;
+mod consult;
 mod discord;
 mod document;
 mod scheduler;
@@ -60,7 +62,9 @@ impl VizierTools {
             .tool(ScheduleCronTask {
                 agent_id: agent_id.clone(),
                 db: deps.storage.clone(),
-            });
+            })
+            .tool(ConsultAgent::new(agent_id.clone(), deps.clone()))
+            .tool(DelegateAgent::new(agent_id.clone(), deps.clone()));
 
         if agent_config.documents.len() > 0 {
             tool_server_builder =
