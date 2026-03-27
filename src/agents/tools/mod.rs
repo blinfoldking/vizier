@@ -12,6 +12,7 @@ use crate::{
         document::init_document_tools,
         scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
         shell::ShellExec,
+        skill::CreateSkill,
         vector_memory::init_vector_memory,
         workspace::{AgentDocument, IdentDocument, WritePrimaryDocument},
     },
@@ -32,6 +33,7 @@ mod discord;
 mod document;
 mod scheduler;
 mod shell;
+mod skill;
 mod vector_memory;
 mod workspace;
 
@@ -64,7 +66,8 @@ impl VizierTools {
                 db: deps.storage.clone(),
             })
             .tool(ConsultAgent::new(agent_id.clone(), deps.clone()))
-            .tool(DelegateAgent::new(agent_id.clone(), deps.clone()));
+            .tool(DelegateAgent::new(agent_id.clone(), deps.clone()))
+            .tool(CreateSkill::new(agent_id.clone(), deps.clone()));
 
         if agent_config.documents.len() > 0 {
             tool_server_builder =

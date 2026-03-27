@@ -169,3 +169,13 @@ pub struct DocumentIndex {
     pub embedding: Vec<f64>,
     pub context: String,
 }
+
+// is an indexed document
+#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
+pub struct Skill {
+    pub name: String,
+    pub agent_id: Option<AgentId>,
+    pub author: String,
+    pub description: String,
+    pub content: String,
+}

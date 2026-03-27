@@ -115,6 +115,7 @@ impl MemoryStorage for FileSystemStorage {
 
         let mut res = vec![];
         for index in documents.iter() {
+            log::debug!("{:?}", index);
             let (frontmatter, content) = utils::markdown::read_markdown::<MemoryFrontMatter>(
                 PathBuf::from(index.path.clone()),
             )?;

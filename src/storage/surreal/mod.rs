@@ -11,6 +11,7 @@ use crate::storage::VizierStorageProvider;
 pub mod history;
 pub mod memory;
 pub mod query;
+pub mod skill;
 pub mod task;
 
 #[derive(Clone)]

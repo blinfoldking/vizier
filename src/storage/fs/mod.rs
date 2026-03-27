@@ -12,6 +12,7 @@ use crate::{
 
 mod history;
 mod memory;
+mod skill;
 mod task;
 
 const MEMORY_PATH: &'static str = "memory";

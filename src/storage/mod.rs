@@ -5,13 +5,15 @@ use anyhow::Result;
 use crate::{
     schema::DocumentIndex,
     storage::{
-        history::HistoryStorage, indexer::DocumentIndexer, memory::MemoryStorage, task::TaskStorage,
+        history::HistoryStorage, indexer::DocumentIndexer, memory::MemoryStorage,
+        skill::SkillStorage, task::TaskStorage,
     },
 };
 
 pub mod history;
 pub mod indexer;
 pub mod memory;
+pub mod skill;
 pub mod task;
 
 pub mod fs;
@@ -19,7 +21,7 @@ pub mod surreal;
 
 pub trait VizierStorageProvider
 where
-    Self: MemoryStorage + TaskStorage + HistoryStorage + DocumentIndexer,
+    Self: MemoryStorage + TaskStorage + HistoryStorage + SkillStorage + DocumentIndexer,
 {
 }
 

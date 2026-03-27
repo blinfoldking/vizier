@@ -61,7 +61,7 @@ impl Tool for MemoryRead {
             // TODO: don't hardcode the threshold
             .query_memory(self.0.clone(), args.query, 10, 0.1)
             .await
-            .unwrap();
+            .map_err(|err| VizierError(err.to_string()))?;
 
         Ok(res.iter().map(|memory| memory.content.clone()).collect())
     }

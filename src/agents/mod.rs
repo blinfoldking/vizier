@@ -24,6 +24,7 @@ use crate::storage::history::HistoryStorage;
 pub mod agent;
 pub mod hook;
 pub mod memory;
+pub mod skill;
 pub mod tools;
 
 #[derive(Clone)]

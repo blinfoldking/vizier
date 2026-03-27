@@ -17,6 +17,7 @@ use crate::{
         },
         hook::{VizierSessionHook, VizierSessionHooks},
         memory::SessionMemories,
+        skill::VizierSkills,
         tools::VizierTools,
     },
     config::{agent::AgentConfig, user::UserConfig},
@@ -34,6 +35,7 @@ mod system_prompt;
 pub struct VizierAgent {
     model: VizierModel,
     tools: VizierTools,
+    skills: VizierSkills,
     config: AgentConfig,
     primary_user: UserConfig,
     workspace: String,
@@ -53,6 +55,7 @@ impl VizierAgent {
 
         let model = VizierModel::new(agent_id.clone(), deps.clone()).await?;
         let tools = VizierTools::new(agent_id.clone(), deps.clone()).await?;
+        let skills = VizierSkills::new(agent_id.clone(), deps.clone()).await?;
 
         let workspace = agent_workspace(&deps.config.workspace, &agent_id);
         init_workspace(workspace.clone());
@@ -60,6 +63,7 @@ impl VizierAgent {
         Ok(Self {
             model,
             tools,
+            skills,
             config: agent_config.clone(),
             primary_user: deps.config.primary_user.clone(),
             workspace,
@@ -96,7 +100,8 @@ impl VizierAgent {
         let max_turn_depth = self.config.thinking_depth;
         let mut turn_depth = 0;
 
-        let tools = self.tools.handle.get_tool_defs(None).await?;
+        let mut tools = self.tools.handle.get_tool_defs(None).await?;
+        tools.extend(self.skills.get_skills().await?);
 
         timeout(*self.config.prompt_timeout, async {
             turn_depth += 1;
@@ -193,20 +198,25 @@ impl VizierAgent {
                     );
                     (function_name, args) = hooks.on_tool_call(function_name, args).await?;
 
-                    let tool_server = self.tools.handle.clone();
-                    let mut tool_res = match timeout(
-                        *self.config.tools.timeout,
-                        tokio::spawn(
-                            async move { tool_server.call_tool(&function_name, &args).await },
-                        ),
-                    )
-                    .await??
-                    {
-                        Err(err) => err.to_string(),
-                        Ok(s) => s,
+                    // handle custom skill
+                    let mut tool_res = if function_name.starts_with("SKILL__") {
+                        self.call_skill(function_name).await
+                    } else {
+                        let tool_server = self.tools.handle.clone();
+                        match timeout(
+                            *self.config.tools.timeout,
+                            tokio::spawn(async move {
+                                tool_server.call_tool(&function_name, &args).await
+                            }),
+                        )
+                        .await??
+                        {
+                            Err(err) => err.to_string(),
+                            Ok(s) => s,
+                        }
                     };
-                    tool_res = hooks.on_tool_response(tool_res).await?;
 
+                    tool_res = hooks.on_tool_response(tool_res).await?;
                     let content = ToolResultContent::from_tool_output(tool_res);
                     tool_responses.push(if let Some(call_id) = &call.call_id {
                         UserContent::tool_result_with_call_id(
@@ -241,6 +251,14 @@ impl VizierAgent {
             Ok(response)
         })
         .await?
+    }
+
+    pub async fn call_skill(&self, skill_name: String) -> String {
+        let slug = skill_name.replace("SKILL__", "");
+        match self.skills.get_skill_content(slug).await {
+            Err(err) => err.to_string(),
+            Ok(content) => content.unwrap_or("".into()),
+        }
     }
 }
 
