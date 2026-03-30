@@ -17,6 +17,7 @@ mod constant;
 mod dependencies;
 mod embedding;
 mod error;
+mod mcp;
 mod scheduler;
 mod schema;
 mod shell;

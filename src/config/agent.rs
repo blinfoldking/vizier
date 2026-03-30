@@ -103,6 +103,7 @@ pub struct AgentToolsConfig {
     pub brave_search: ToolConfig,
     pub vector_memory: ToolConfig,
     pub discord: ToolConfig,
+    pub mcp_servers: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]

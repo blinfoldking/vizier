@@ -52,6 +52,7 @@ pub fn init_default_agent(path: PathBuf) {
                 enabled: false,
                 programmatic_tool_call: false,
             },
+            mcp_servers: vec![],
         },
         silent_read_initiative_chance: 0.,
         show_thinking: Some(false),

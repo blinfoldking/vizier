@@ -8,6 +8,7 @@ use crate::{
         storage::{DocumentIndexerConfig, StorageConfig},
     },
     embedding::VizierEmbedder,
+    mcp::VizierMcpClients,
     shell::VizierShell,
     storage::{
         VizierStorage,
@@ -24,6 +25,7 @@ pub struct VizierDependencies {
     pub embedder: Option<Arc<VizierEmbedder>>,
     pub transport: VizierTransport,
     pub storage: Arc<VizierStorage>,
+    pub mcp_clients: Arc<VizierMcpClients>,
     pub shell: Arc<VizierShell>,
 }
 
@@ -37,7 +39,6 @@ impl VizierDependencies {
 
         let surreal = SurrealStorage::new(config.workspace.clone(), embedder.clone()).await?;
 
-        println!("{:?}", config.storage);
         let storage = match &config.storage {
             StorageConfig::Surreal => {
                 println!("called!");
@@ -61,11 +62,14 @@ impl VizierDependencies {
 
         let shell = Arc::new(VizierShell::new(&config.shell).await?);
 
+        let mcp_clients = Arc::new(VizierMcpClients::new(config.clone()).await?);
+
         Ok(Self {
             config: Arc::new(config.clone()),
             storage: Arc::new(VizierStorage::new(storage)),
             transport: VizierTransport::new(),
             embedder,
+            mcp_clients,
             shell,
         })
     }

@@ -100,7 +100,7 @@ impl VizierAgent {
         let max_turn_depth = self.config.thinking_depth;
         let mut turn_depth = 0;
 
-        let mut tools = self.tools.handle.get_tool_defs(None).await?;
+        let mut tools = self.tools.tools().await?;
         tools.extend(self.skills.get_skills().await?);
 
         timeout(*self.config.prompt_timeout, async {
@@ -206,12 +206,12 @@ impl VizierAgent {
                     let mut tool_res = if function_name.starts_with("SKILL__") {
                         self.call_skill(function_name).await
                     } else {
-                        let tool_server = self.tools.handle.clone();
+                        let tool_server = self.tools.clone();
                         match timeout(
                             *self.config.tools.timeout,
-                            tokio::spawn(async move {
-                                tool_server.call_tool(&function_name, &args).await
-                            }),
+                            tokio::spawn(
+                                async move { tool_server.call(function_name, args).await },
+                            ),
                         )
                         .await??
                         {

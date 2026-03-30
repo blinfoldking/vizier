@@ -8,6 +8,7 @@ pub mod embedding;
 pub mod provider;
 pub mod shell;
 pub mod storage;
+pub mod tools;
 pub mod user;
 
 use crate::{
@@ -17,6 +18,7 @@ use crate::{
         provider::{OllamaProviderConfig, ProviderConfig},
         shell::{LocalShellConfig, ShellConfig},
         storage::StorageConfig,
+        tools::{BraveSearchConfig, ToolsConfig},
         user::UserConfig,
     },
     constant,
@@ -44,27 +46,6 @@ impl Default for DiscordChannelConfig {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HTTPChannelConfig {
     pub port: u32,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ToolsConfig {
-    pub dangerously_enable_cli_access: bool,
-    pub brave_search: Option<BraveSearchConfig>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct BraveSearchConfig {
-    pub api_key: String,
-    pub safesearch: bool,
-}
-
-impl Default for BraveSearchConfig {
-    fn default() -> Self {
-        Self {
-            api_key: "${BRAVE_API_KEY}".into(),
-            safesearch: true,
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -176,8 +157,8 @@ impl Default for VizierConfig {
                 http: Some(HTTPChannelConfig { port: 9999 }),
             },
             tools: ToolsConfig {
-                dangerously_enable_cli_access: false,
                 brave_search: Some(BraveSearchConfig::default()),
+                mcp_servers: HashMap::new(),
             },
             shell: ShellConfig::Local(LocalShellConfig { path: ".".into() }),
         }

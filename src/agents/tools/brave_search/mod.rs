@@ -6,7 +6,7 @@ use schemars::schema_for;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::BraveSearchConfig,
+    config::tools::BraveSearchConfig,
     error::{VizierError, throw_vizier_error},
 };
 

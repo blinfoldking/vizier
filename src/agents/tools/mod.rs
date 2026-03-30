@@ -1,5 +1,8 @@
+use std::{collections::HashMap, sync::Arc};
+
 use anyhow::Result;
 use rig::{
+    completion::ToolDefinition,
     tool::server::{ToolServer, ToolServerHandle},
     tools::ThinkTool,
 };
@@ -17,6 +20,8 @@ use crate::{
         workspace::{AgentDocument, IdentDocument, WritePrimaryDocument},
     },
     dependencies::VizierDependencies,
+    error::VizierError,
+    mcp::{VizierMcp, VizierMcpClient},
     schema::AgentId,
     utils::agent_workspace,
 };
@@ -31,6 +36,7 @@ mod brave_search;
 mod consult;
 mod discord;
 mod document;
+mod mcp;
 mod scheduler;
 mod shell;
 mod skill;
@@ -40,6 +46,47 @@ mod workspace;
 #[derive(Clone)]
 pub struct VizierTools {
     pub handle: ToolServerHandle,
+    pub mcp: HashMap<String, Arc<VizierMcp>>,
+}
+
+impl VizierTools {
+    pub async fn tools(&self) -> Result<Vec<ToolDefinition>> {
+        let mut res = vec![];
+
+        for tool in self.handle.get_tool_defs(None).await? {
+            res.push(tool);
+        }
+
+        for (key, mcp) in &self.mcp {
+            res.extend(mcp.tools().await?.iter().map(|tool| ToolDefinition {
+                name: format!("mcp_{}__{}", key.clone(), tool.name.clone()),
+                description: tool.description.clone(),
+                parameters: tool.parameters.clone(),
+            }));
+        }
+
+        Ok(res)
+    }
+
+    pub async fn call(&self, function_name: String, params: String) -> Result<String> {
+        // mcp calls
+        if function_name.starts_with("mcp_") {
+            let (server, function_name) = function_name.split_once("__").unwrap();
+            let server = server.replace("mcp_", "");
+
+            let res = self
+                .mcp
+                .get(&server)
+                .ok_or(VizierError("mcp not found".into()))?
+                .call(function_name.to_string(), serde_json::from_str(&params)?)
+                .await?;
+
+            return Ok(serde_json::to_string(&res)?);
+        }
+
+        let res = self.handle.call_tool(&function_name, &params).await?;
+        Ok(res)
+    }
 }
 
 impl VizierTools {
@@ -160,8 +207,16 @@ impl VizierTools {
 
         let tool_server = tool_server_builder.run();
 
+        let mut mcp = HashMap::new();
+        for m in &agent_config.tools.mcp_servers {
+            if let Some(client) = deps.mcp_clients.clients.get(m) {
+                mcp.insert(m.clone(), client.clone());
+            }
+        }
+
         Ok(Self {
             handle: tool_server,
+            mcp,
         })
     }
 }
