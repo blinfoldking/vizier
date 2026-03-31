@@ -303,32 +303,61 @@ impl SessionProcess {
                         let send_response = send_response.clone();
                         let agent = agent.clone();
                         let hooks = hooks.clone();
+                        let is_thinking_cleanup = is_thinking.clone();
 
                         let is_finished = curr_handle.is_finished();
                         curr_handle.abort();
                         if !is_finished {
                             if let Some(req) = &prev_req {
-                                main_session
-                                    .lock()
-                                    .await
-                                    .session_memory
-                                    .push_user_message(req.clone());
+                                // Wait for lock with timeout to prevent deadlock
+                                match tokio::time::timeout(
+                                    Duration::from_secs(5),
+                                    main_session.lock()
+                                ).await {
+                                    Ok(Ok(mut session_guard)) => {
+                                        session_guard.session_memory.push_user_message(req.clone());
+                                    }
+                                    Ok(Err(e)) => {
+                                        log::error!("Failed to acquire session lock: {}", e);
+                                    }
+                                    Err(_) => {
+                                        log::warn!("Session lock timeout - previous task may have deadlocked");
+                                        *is_thinking_cleanup.lock().await = false;
+                                    }
+                                }
                             }
                         }
+
+                        // Always reset thinking flag before processing new request
+                        *is_thinking_cleanup.lock().await = false;
 
                         if let VizierRequestContent::Command(command) = &request.content {
                             match &**command {
                                 "/abort" => {}
                                 "/lobotomy" => {
-                                    main_session.lock().await.lobotomy();
-
-                                    if let Err(err) = send_response(VizierResponse::Message {
-                                        content: "YIPEEEE".into(),
-                                        stats: None,
-                                    })
-                                    .await
-                                    {
-                                        log::error!("{}", err);
+                                    // Use timeout for lobotomy command
+                                    match tokio::time::timeout(
+                                        Duration::from_secs(5),
+                                        main_session.lock()
+                                    ).await {
+                                        Ok(Ok(mut session_guard)) => {
+                                            session_guard.lobotomy();
+                                            
+                                            if let Err(err) = send_response(VizierResponse::Message {
+                                                content: "YIPEEEE".into(),
+                                                stats: None,
+                                            })
+                                            .await
+                                            {
+                                                log::error!("{}", err);
+                                            }
+                                        }
+                                        Ok(Err(e)) => {
+                                            log::error!("Failed to acquire session lock for lobotomy: {}", e);
+                                        }
+                                        Err(_) => {
+                                            log::warn!("Session lock timeout during lobotomy");
+                                        }
                                     }
                                 }
                                 _ => {}
@@ -341,13 +370,37 @@ impl SessionProcess {
 
                         let handler_thinking = is_thinking.clone();
                         curr_handle = tokio::spawn(async move {
-                            let main_session = main_session.lock().await;
+                            // Use timeout to acquire lock to prevent indefinite blocking
+                            let session_guard = match tokio::time::timeout(
+                                Duration::from_secs(30),
+                                main_session.lock()
+                            ).await {
+                                Ok(Ok(guard)) => guard,
+                                Ok(Err(e)) => {
+                                    log::error!("Failed to acquire session lock: {}", e);
+                                    let _ = send_response(VizierResponse::Message {
+                                        content: "Error: Failed to acquire session lock".into(),
+                                        stats: None,
+                                    }).await;
+                                    *handler_thinking.lock().await = false;
+                                    return;
+                                }
+                                Err(_) => {
+                                    log::error!("Session lock timeout - possible deadlock detected");
+                                    let _ = send_response(VizierResponse::Message {
+                                        content: "Error: Session timeout, please try again".into(),
+                                        stats: None,
+                                    }).await;
+                                    *handler_thinking.lock().await = false;
+                                    return;
+                                }
+                            };
 
                             match &request.content {
                                 VizierRequestContent::Chat(_) => {
                                     *handler_thinking.lock().await = true;
                                     let content = agent
-                                        .handle_chat(&request, main_session, hooks.clone())
+                                        .handle_chat(&request, session_guard, hooks.clone())
                                         .await;
                                     let send_response = send_response.clone();
                                     match content {
@@ -424,9 +477,23 @@ impl SessionProcess {
                                 }
 
                                 VizierRequestContent::SilentRead(_) => {
-                                    let _ = agent
-                                        .handle_silent_read(main_session, &request, hooks.clone())
-                                        .await;
+                                    // Use timeout for SilentRead as well
+                                    match tokio::time::timeout(
+                                        Duration::from_secs(30),
+                                        main_session.lock()
+                                    ).await {
+                                        Ok(Ok(session_guard)) => {
+                                            let _ = agent
+                                                .handle_silent_read(session_guard, &request, hooks.clone())
+                                                .await;
+                                        }
+                                        Ok(Err(e)) => {
+                                            log::error!("Failed to acquire session lock for silent read: {}", e);
+                                        }
+                                        Err(_) => {
+                                            log::warn!("Session lock timeout during silent read");
+                                        }
+                                    }
                                     return;
                                 }
 
