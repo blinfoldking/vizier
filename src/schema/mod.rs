@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use anyhow::Result;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use surrealdb_types::SurrealValue;
@@ -20,6 +20,7 @@ pub enum VizierChannelId {
     Task(String, DateTime<Utc>),
     Socket(String),
     InterAgent(Vec<String>),
+    heartbeat(DateTime<Utc>),
     System,
 }
 
@@ -37,6 +38,7 @@ impl VizierChannelId {
 
                 format!("inter_agent__[{participants}]")
             }
+            Self::heartbeat(datetime) => format!("heartbeat__{}", datetime.to_rfc3339()),
             Self::System => "SYSTEM".into(),
         }
     }

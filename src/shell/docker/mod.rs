@@ -132,6 +132,7 @@ impl ShellProvider for DockerShell {
             .await?
         {
             while let Some(Ok(msg)) = output.next().await {
+                println!("{:?}", msg.to_string());
                 res.push(msg.to_string());
             }
         }

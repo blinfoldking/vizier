@@ -17,7 +17,10 @@ use crate::{
         shell::ShellExec,
         skill::CreateSkill,
         vector_memory::init_vector_memory,
-        workspace::{AgentDocument, IdentDocument, WritePrimaryDocument},
+        workspace::{
+            AgentDocument, HeartbeatDocument, IdentDocument, ReadPrimaryDocument,
+            WritePrimaryDocument,
+        },
     },
     dependencies::VizierDependencies,
     error::VizierError,
@@ -101,6 +104,12 @@ impl VizierTools {
                 agent_workspace.clone(),
             ))
             .tool(WritePrimaryDocument::<IdentDocument>::new(
+                agent_workspace.clone(),
+            ))
+            .tool(WritePrimaryDocument::<HeartbeatDocument>::new(
+                agent_workspace.clone(),
+            ))
+            .tool(ReadPrimaryDocument::<HeartbeatDocument>::new(
                 agent_workspace.clone(),
             ))
             .tool(ScheduleOneTimeTask {

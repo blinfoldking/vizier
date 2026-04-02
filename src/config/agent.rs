@@ -25,6 +25,7 @@ pub struct AgentConfig {
     pub prompt_timeout: DurationString,
     #[serde(skip)]
     pub documents: Vec<String>,
+    pub heartbeat_interval: DurationString,
 }
 
 impl AgentConfig {

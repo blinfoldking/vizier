@@ -3,6 +3,7 @@ name: Vizier
 description: Digital steward
 provider: ollama
 model: qwen3.5:4b
+heartbeat_interval: 30m
 session_memory:
   max_capacity: 10
 thinking_depth: 10

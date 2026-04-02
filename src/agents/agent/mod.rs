@@ -35,12 +35,13 @@ mod system_prompt;
 
 #[derive(Clone)]
 pub struct VizierAgent {
+    pub workspace: String,
+
     model: VizierModel,
     tools: VizierTools,
     skills: VizierSkills,
     config: AgentConfig,
     primary_user: UserConfig,
-    workspace: String,
 }
 
 impl VizierAgent {
@@ -73,6 +74,9 @@ impl VizierAgent {
     }
 
     pub async fn prepare_system_prompts(&self) -> Vec<Message> {
+        // init workspace just in case
+        init_workspace(self.workspace.clone());
+
         let agent_md = read_md_file(self.workspace.clone(), "AGENT.md".into());
         let ident_md = read_md_file(self.workspace.clone(), "IDENTITY.md".into());
         let boot = boot_md();
@@ -273,7 +277,7 @@ impl VizierAgent {
     }
 }
 
-fn read_md_file(workspace: String, file: String) -> String {
+pub fn read_md_file(workspace: String, file: String) -> String {
     let path = PathBuf::from(format!("{}/{}", workspace, file));
 
     fs::read_to_string(path).unwrap()

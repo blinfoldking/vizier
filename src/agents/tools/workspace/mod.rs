@@ -9,6 +9,7 @@ use crate::error::{VizierError, throw_vizier_error};
 pub trait PrimaryDocument {
     const NAME: &'static str;
     const WRITE_NAME: &'static str;
+    const READ_NAME: &'static str;
 }
 
 pub struct AgentDocument;
@@ -16,6 +17,7 @@ pub struct AgentDocument;
 impl PrimaryDocument for AgentDocument {
     const NAME: &'static str = "AGENT.md";
     const WRITE_NAME: &'static str = "WRITE_AGENT_MD_FILE";
+    const READ_NAME: &'static str = "READ_AGENT_MD_FILE";
 }
 
 pub struct IdentDocument;
@@ -23,6 +25,15 @@ pub struct IdentDocument;
 impl PrimaryDocument for IdentDocument {
     const NAME: &'static str = "IDENTITY.md";
     const WRITE_NAME: &'static str = "WRITE_IDENTITY_MD_FILE";
+    const READ_NAME: &'static str = "READ_IDENTITY_MD_FILE";
+}
+
+pub struct HeartbeatDocument;
+
+impl PrimaryDocument for HeartbeatDocument {
+    const NAME: &'static str = "HEARTBEAT.md";
+    const WRITE_NAME: &'static str = "WRITE_HEARTBEAT_MD_FILE";
+    const READ_NAME: &'static str = "READ_HEARTBEAT_MD_FILE";
 }
 
 pub struct WritePrimaryDocument<T: PrimaryDocument> {
@@ -74,5 +85,49 @@ where
             Ok(_) => Ok(()),
             Err(err) => throw_vizier_error("write file", err),
         }
+    }
+}
+
+pub struct ReadPrimaryDocument<T: PrimaryDocument> {
+    _phantom_data: PhantomData<T>,
+    workspace: String,
+}
+
+impl<T: PrimaryDocument> ReadPrimaryDocument<T> {
+    pub fn new(workspace: String) -> Self {
+        Self {
+            _phantom_data: PhantomData,
+            workspace,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct ReadPrimaryDocumentArgs {}
+
+impl<T: PrimaryDocument> Tool for ReadPrimaryDocument<T>
+where
+    Self: Sync + Send,
+{
+    const NAME: &'static str = T::READ_NAME;
+    type Error = VizierError;
+    type Args = ReadPrimaryDocumentArgs;
+    type Output = String;
+
+    async fn definition(&self, _prompt: String) -> ToolDefinition {
+        let parameters = serde_json::to_value(schema_for!(Self::Args)).unwrap();
+
+        ToolDefinition {
+            name: Self::NAME.to_string(),
+            description: format!("read the conten of {} file", T::NAME),
+            parameters,
+        }
+    }
+
+    async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
+        let path = std::path::PathBuf::from(format!("{}/{}", self.workspace, T::NAME));
+        let content = std::fs::read_to_string(path).map_err(|err| VizierError(err.to_string()))?;
+
+        Ok(content)
     }
 }

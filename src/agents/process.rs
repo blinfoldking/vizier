@@ -2,11 +2,11 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use anyhow::Result;
 use chrono::Utc;
-use tokio::task::JoinHandle;
+use tokio::task::{JoinHandle, JoinSet};
 
 use crate::{
     agents::{
-        agent::VizierAgent,
+        agent::{VizierAgent, read_md_file},
         hook::{
             VizierSessionHooks, debug::DebugHook, history::HistoryHook, thinking::ThinkingHook,
         },
@@ -15,8 +15,8 @@ use crate::{
     dependencies::VizierDependencies,
     error::VizierError,
     schema::{
-        AgentId, VizierRequest, VizierRequestContent, VizierResponse, VizierSession,
-        VizierSessionDetail,
+        AgentId, VizierChannelId, VizierRequest, VizierRequestContent, VizierResponse,
+        VizierSession, VizierSessionDetail,
     },
     storage::{VizierStorage, history::HistoryStorage, session::SessionStorage},
     transport::VizierTransport,
@@ -35,6 +35,42 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
 
     let mut main_handles = HashMap::<VizierSession, JoinHandle<()>>::new();
     let mut thinking_handles = HashMap::<VizierSession, Arc<JoinHandle<()>>>::new();
+
+    let heartbeat_agent_id = agent_id.clone();
+    let heartbeat_interval = *agent_config.heartbeat_interval.clone();
+    let heartbeat_transport = deps.transport.clone();
+    let heartbeat_workspace = agent.workspace.clone();
+    let heartbeat = tokio::spawn(async move {
+        loop {
+            let now = Utc::now();
+            let session = VizierSession(
+                heartbeat_agent_id.clone(),
+                VizierChannelId::heartbeat(now.clone()),
+                None,
+            );
+
+            let prompt = read_md_file(heartbeat_workspace.clone(), "HEARTBEAT.md".into());
+            if !prompt.is_empty() {
+                if let Err(err) = heartbeat_transport
+                    .send_request(
+                        session,
+                        VizierRequest {
+                            user: heartbeat_agent_id.clone(),
+                            content: VizierRequestContent::Task("TODO:".into()),
+                            metadata: serde_json::json!({
+                                "timestamp": now,
+                            }),
+                        },
+                    )
+                    .await
+                {
+                    log::error!("heartbeat error: {}", err);
+                }
+            }
+
+            tokio::time::sleep(heartbeat_interval).await;
+        }
+    });
 
     while let Ok((session, request)) = recv.recv().await {
         if session.0 != agent_id {
@@ -160,6 +196,8 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
             }),
         );
     }
+
+    heartbeat.abort();
 
     Ok(())
 }
