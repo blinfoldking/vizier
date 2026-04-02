@@ -8,6 +8,7 @@ pub enum McpClientConfig {
     Local {
         command: String,
         args: Vec<String>,
+        #[serde(default)]
         env: Option<HashMap<String, String>>,
     },
     Http {
