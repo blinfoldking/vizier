@@ -46,6 +46,13 @@ impl Default for DiscordChannelConfig {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HTTPChannelConfig {
     pub port: u32,
+    pub jwt_secret: String,
+    #[serde(default = "default_jwt_expiry")]
+    pub jwt_expiry_hours: u64,
+}
+
+fn default_jwt_expiry() -> u64 {
+    720 // 30 days
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -154,7 +161,11 @@ impl Default for VizierConfig {
                         .into_iter()
                         .collect::<HashMap<String, DiscordChannelConfig>>(),
                 ),
-                http: Some(HTTPChannelConfig { port: 9999 }),
+                http: Some(HTTPChannelConfig {
+                    port: 9999,
+                    jwt_secret: "${VIZIER_JWT_SECRET}".into(),
+                    jwt_expiry_hours: 720,
+                }),
             },
             tools: ToolsConfig {
                 brave_search: Some(BraveSearchConfig::default()),

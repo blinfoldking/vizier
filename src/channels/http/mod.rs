@@ -15,6 +15,7 @@ use crate::{
 pub mod models;
 
 mod api;
+pub mod auth;
 mod state;
 mod webui;
 
@@ -43,17 +44,19 @@ impl VizierChannel for HTTPChannel {
             ])
             .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
 
+        let state = HTTPState {
+            config: self.deps.config.clone(),
+            storage: self.deps.storage.clone(),
+            transport: self.deps.transport.clone(),
+        };
+
         let app = Router::new()
-            .nest("/api", api::api())
+            .nest("/api", api::api(state.clone()))
             // webui
             .route("/", get(webui::index))
             .route("/{*path}", get(webui::assets))
             .layer(cors)
-            .with_state(HTTPState {
-                config: self.deps.config.clone(),
-                storage: self.deps.storage.clone(),
-                transport: self.deps.transport.clone(),
-            });
+            .with_state(state);
 
         let listener =
             tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.config.port)).await?;

@@ -54,6 +54,10 @@ inquire = { version = "0.9.3", features = ["chrono"] }
 tokio-tungstenite = "0.26.0"
 tungstenite = "0.28.0"
 nanoid = "0.4.0"
+jsonwebtoken = "9"
+argon2 = "0.5"
+base64 = "0.22"
+sha2 = "0.10"
 tower-http = { version = "0.6.8", features = ["cors", "fs"] }
 rust-embed = "8.11.0"
 mime_guess = "2.0.5"

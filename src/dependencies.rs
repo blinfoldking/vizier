@@ -3,6 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 
 use crate::{
+    channels::http::auth::AuthService,
     config::{
         VizierConfig,
         storage::{DocumentIndexerConfig, StorageConfig},
@@ -15,6 +16,7 @@ use crate::{
         fs::FileSystemStorage,
         indexer::{VizierIndexer, inmem::InMemIndexer},
         surreal::SurrealStorage,
+        user::UserStorage,
     },
     transport::VizierTransport,
 };
@@ -61,6 +63,9 @@ impl VizierDependencies {
 
         let mcp_clients = Arc::new(VizierMcpClients::new(config.clone()).await?);
 
+        // Initialize default user if no users exist
+        Self::initialize_default_user(&config, &storage).await?;
+
         Ok(Self {
             config: Arc::new(config.clone()),
             storage: Arc::new(VizierStorage::new(storage)),
@@ -69,6 +74,36 @@ impl VizierDependencies {
             mcp_clients,
             shell,
         })
+    }
+
+    async fn initialize_default_user(config: &VizierConfig, storage: &VizierStorage) -> Result<()> {
+        // Check if any users exist
+        if !storage.user_exists().await? {
+            // Get the primary user name from config
+            let username = &config.primary_user.name;
+            
+            // Create default password hash
+            // We need to create a temporary AuthService for this
+            // Since we don't have the HTTP config here, we'll use a default
+            let default_http_config = crate::config::HTTPChannelConfig {
+                port: 0,
+                jwt_secret: "temp".to_string(),
+                jwt_expiry_hours: 720,
+            };
+            let auth_service = AuthService::new(&default_http_config);
+            
+            let password_hash = auth_service.hash_password("admin")?;
+            
+            // Create the user
+            storage.create_user(username, &password_hash).await?;
+            
+            log::warn!(
+                "Default user '{}' created with password 'admin'. Please change immediately!",
+                username
+            );
+        }
+        
+        Ok(())
     }
 
     pub async fn run(&self) -> Result<()> {
