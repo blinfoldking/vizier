@@ -19,12 +19,10 @@ use crate::{
 
 mod channel;
 mod memory;
-mod session;
 mod task;
 
 use channel::channel;
 use memory::memory;
-use session::session;
 use task::task;
 
 impl VizierConfig {
@@ -39,7 +37,6 @@ pub fn agents() -> Router<HTTPState> {
         .route("/{agent_id}", get(agent_detail))
         .nest("/{agent_id}/channel", channel())
         .nest("/{agent_id}/memory", memory())
-        .nest("/{agent_id}/session", session())
         .nest("/{agent_id}/tasks", task())
 }
 
