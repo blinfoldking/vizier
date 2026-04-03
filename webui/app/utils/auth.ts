@@ -1,0 +1,34 @@
+/**
+ * Decode JWT token to extract user information
+ * Note: This does NOT validate the token - validation happens on the backend
+ */
+export function decodeJWT(token: string): { sub: string; username: string } | null {
+  try {
+    const base64Url = token.split('.')[1]
+    if (!base64Url) return null
+    
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    
+    return JSON.parse(jsonPayload)
+  } catch (error) {
+    console.error('Failed to decode JWT:', error)
+    return null
+  }
+}
+
+/**
+ * Get the current username from the JWT token or return default
+ */
+export function getCurrentUsername(): string {
+  const token = localStorage.getItem('auth_token')
+  if (!token) return 'user'
+  
+  const decoded = decodeJWT(token)
+  return decoded?.username || 'user'
+}

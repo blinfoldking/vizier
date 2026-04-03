@@ -1,7 +1,6 @@
-import Editor from '~/components/editor'
-import type { Route } from './+types/home'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
-import { createSession } from '~/services/vizier'
+import type { Route } from './+types/home'
 
 export function meta({ }: Route.MetaArgs) {
   return [
@@ -11,22 +10,27 @@ export function meta({ }: Route.MetaArgs) {
 }
 
 export default function Home() {
-  const naviagate = useNavigate()
+  const navigate = useNavigate()
+
+  // Redirect to first agent when home page loads
+  useEffect(() => {
+    // Let the layout handle agent loading and redirection
+    // User will see this page momentarily before layout redirects
+  }, [])
 
   return (
-    <>
-      <div className="w-full h-full flex justify-center items-center bg-black text-white rounded-4xl">
-        <div className="text-white">
-          <div className="mb-5 font-bold">
-            Hello, what's your plan today?
-          </div>
-
-          <Editor
-            onSubmit={(value) => {
-            }}
-          />
-        </div>
-      </div>
-    </>
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      flexDirection: 'column',
+      gap: '1rem',
+    }}>
+      <h1>Vizier</h1>
+      <p style={{ color: 'var(--text-secondary)' }}>
+        Select an agent from the sidebar to begin
+      </p>
+    </div>
   )
 }

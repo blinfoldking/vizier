@@ -1,6 +1,6 @@
 use axum::{
     extract::{Request, State},
-    http::{HeaderMap, StatusCode, header::AUTHORIZATION},
+    http::{HeaderMap, StatusCode, header::AUTHORIZATION, Uri},
     middleware::Next,
     response::Response,
 };
@@ -57,13 +57,27 @@ pub async fn require_auth(
     mut request: Request,
     next: Next,
 ) -> Result<Response, AuthError> {
-    let auth_header = headers
+    // Try to get credentials from Authorization header first
+    let credentials_from_header = headers
         .get(AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
-        .ok_or(AuthError::MissingCredentials)?;
+        .and_then(|auth_header| {
+            auth_header
+                .split_once(' ')
+                .map(|(auth_type, creds)| (auth_type.to_string(), creds.to_string()))
+        });
 
-    let (auth_type, credentials) = auth_header
-        .split_once(' ')
+    // Try to get token from query parameter if header is not present
+    let credentials_from_query = if credentials_from_header.is_none() {
+        extract_token_from_query(request.uri())
+            .map(|token| ("bearer".to_string(), token))
+    } else {
+        None
+    };
+
+    // Use credentials from header or query parameter
+    let (auth_type, credentials) = credentials_from_header
+        .or(credentials_from_query)
         .ok_or(AuthError::MissingCredentials)?;
 
     let http_config = state
@@ -79,7 +93,7 @@ pub async fn require_auth(
         "bearer" => {
             // JWT token authentication
             let claims = auth_service
-                .validate_token(credentials)
+                .validate_token(&credentials)
                 .map_err(|_| AuthError::InvalidToken)?;
             
             AuthenticatedUser {
@@ -89,7 +103,7 @@ pub async fn require_auth(
         }
         "apikey" => {
             // API key authentication
-            let key_hash = auth_service.hash_api_key(credentials);
+            let key_hash = auth_service.hash_api_key(&credentials);
             let api_key = state
                 .storage
                 .get_api_key_by_hash(&key_hash)
@@ -123,4 +137,21 @@ pub async fn require_auth(
     request.extensions_mut().insert(user);
 
     Ok(next.run(request).await)
+}
+
+/// Extract token from query parameter
+/// Supports: ?token=<jwt_token>
+fn extract_token_from_query(uri: &Uri) -> Option<String> {
+    uri.query()
+        .and_then(|query| {
+            query
+                .split('&')
+                .find_map(|param| {
+                    let mut parts = param.split('=');
+                    match (parts.next(), parts.next()) {
+                        (Some("token"), Some(token)) => Some(token.to_string()),
+                        _ => None,
+                    }
+                })
+        })
 }

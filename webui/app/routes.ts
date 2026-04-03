@@ -6,8 +6,15 @@ import {
 } from '@react-router/dev/routes'
 
 export default [
+  // Public routes (no auth)
+  route('login', 'routes/login.tsx'),
+  
+  // Protected routes with layout
   layout('layout.tsx', [
     index('routes/home.tsx'),
-    route('agents/:agentId', 'routes/chats.tsx'),
+    route(':agentId/chat/:topicId', 'routes/chat.tsx'),
+    route(':agentId/memory', 'routes/memory.tsx'),
+    route(':agentId/tasks', 'routes/tasks.tsx'),
+    route(':agentId/settings', 'routes/settings.tsx'),
   ]),
 ] satisfies RouteConfig
