@@ -7,6 +7,7 @@ use crate::{
     storage::{
         history::HistoryStorage, indexer::DocumentIndexer, memory::MemoryStorage,
         session::SessionStorage, skill::SkillStorage, state::StateStorage, task::TaskStorage,
+        user::UserStorage,
     },
 };
 
@@ -17,6 +18,7 @@ pub mod session;
 pub mod skill;
 pub mod state;
 pub mod task;
+pub mod user;
 
 pub mod fs;
 pub mod surreal;
@@ -29,7 +31,8 @@ where
         + SkillStorage
         + SessionStorage
         + StateStorage
-        + DocumentIndexer,
+        + DocumentIndexer
+        + UserStorage,
 {
 }
 
@@ -65,3 +68,48 @@ impl DocumentIndexer for VizierStorage {
 }
 
 impl VizierStorageProvider for VizierStorage {}
+
+#[async_trait::async_trait]
+impl UserStorage for VizierStorage {
+    async fn get_user(&self, username: &str) -> Result<Option<crate::storage::user::User>> {
+        self.0.get_user(username).await
+    }
+
+    async fn create_user(&self, username: &str, password_hash: &str) -> Result<crate::storage::user::User> {
+        self.0.create_user(username, password_hash).await
+    }
+
+    async fn update_password(&self, user_id: &str, password_hash: &str) -> Result<()> {
+        self.0.update_password(user_id, password_hash).await
+    }
+
+    async fn user_exists(&self) -> Result<bool> {
+        self.0.user_exists().await
+    }
+
+    async fn create_api_key(
+        &self,
+        user_id: &str,
+        name: &str,
+        key_hash: &str,
+        expires_at: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<crate::storage::user::ApiKey> {
+        self.0.create_api_key(user_id, name, key_hash, expires_at).await
+    }
+
+    async fn get_api_key_by_hash(&self, key_hash: &str) -> Result<Option<crate::storage::user::ApiKey>> {
+        self.0.get_api_key_by_hash(key_hash).await
+    }
+
+    async fn list_api_keys(&self, user_id: &str) -> Result<Vec<crate::storage::user::ApiKey>> {
+        self.0.list_api_keys(user_id).await
+    }
+
+    async fn delete_api_key(&self, key_id: &str) -> Result<()> {
+        self.0.delete_api_key(key_id).await
+    }
+
+    async fn update_api_key_last_used(&self, key_id: &str) -> Result<()> {
+        self.0.update_api_key_last_used(key_id).await
+    }
+}

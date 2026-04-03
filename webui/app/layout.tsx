@@ -1,168 +1,212 @@
-'use client'
-
-import { FaDoorOpen } from 'react-icons/fa'
-import { TbPlus } from 'react-icons/tb'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router'
-import {
-  ping,
-  base_url,
-  listSession as listSessions,
-  listAgents,
-  createSession,
-} from './services/vizier'
 import { useEffect, useState } from 'react'
-import { useSessionStore } from './hooks/sessionStore'
-import type { AgentDetail } from './interfaces/chat';
+import { Outlet, useNavigate, useParams, useLocation } from 'react-router'
+import { listAgents, listTopics } from './services/vizier'
+import { FiSettings, FiMessageCircle, FiCheckCircle, FiLogOut } from 'react-icons/fi'
+import { FaBook } from 'react-icons/fa'
 import Avatar from './components/avatar'
+import type { Agent, Topic } from './interfaces/types'
 
-const OnboardModal = () => {
-  const [username, setUsername] = useState('')
-  const storeUsername = useSessionStore((state: any) => state.setUsername)
+export default function Layout() {
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [topics, setTopics] = useState<Topic[]>([])
+  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
+  const params = useParams()
+  const location = useLocation()
 
-  return (
-    <>
-      <div className="bg-transparent h-screen w-screen absolute top-0 left-0 z-100 backdrop-blur-sm"></div>
-      <div className="bg-black h-screen w-screen absolute top-0 left-0 z-101 opacity-75"></div>
-      <div className=" h-screen w-screen absolute top-0 left-0 z-101 flex justify-center items-center">
-        <div className="bg-white w-75 p-5 rounded-4xl shadow-2xl flex justify-center items-center flex-col">
-          <div className="font-bold text-2xl mb-5">Welcome!</div>
-          <div>
-            <input
-              placeholder="Enter your name"
-              className="inset-shadow-md p-2 pl-5 pr-5 rounded-full bg-white"
-              onChange={(ev) => setUsername(ev.target.value)}
-            ></input>
-          </div>
-          <button
-            className="mt-5 active:inset-shadow-md p-5 pt-2 pb-2 rounded-full hover:font-bold"
-            onClick={() => storeUsername(username.trim())}
-          >
-            Enter
-          </button>
-        </div>
-      </div>
-    </>
-  )
-}
+  const currentAgentId = params.agentId
+  const currentTopicId = params.topicId
+  const [previousTopicId, setPreviousTopicId] = useState<string | undefined>()
 
-const Layout = () => {
-  const [connected, setConnected] = useState(false)
-  const [agents, setAgents] = useState([])
-  const [activeAgent, setActiveAgent] = useState<AgentDetail | null>(null)
-  const navigate = useNavigate();
-
-  const username = useSessionStore((state: any) => state.username)
-
-
-  const init = () => {
-    listAgents().then(({ data }) => {
-      setAgents(data.data.sort((a: any, b: any) => a.name.localeCompare(b.name)))
-      setActiveAgent(data.data[0])
-    })
-  }
-
+  // Check auth
   useEffect(() => {
-    init()
-  }, [connected])
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
+      navigate('/login')
+    }
+  }, [navigate])
 
-  const checkStatus = () => {
-    ping()
-      .then((res) => setConnected(res?.data?.status === 200))
-      .catch(() => setConnected(false))
-  }
-
+  // Load agents
   useEffect(() => {
-    checkStatus()
-    setInterval(() => checkStatus(), 5000)
+    const loadAgents = async () => {
+      try {
+        const response = await listAgents()
+        setAgents(response.data || [])
+        setLoading(false)
+      } catch (error) {
+        console.error('Failed to load agents:', error)
+        setLoading(false)
+      }
+    }
+    loadAgents()
   }, [])
 
-  const AgentCard = ({ agent }: { agent: AgentDetail }) => {
-    return <div
-      className="p-5 w-full flex border-b-gray-500"
-      id="profile"
-    >
-      <div className="w-10 h-10 mr-2.5 rounded-4xl">
-        <Avatar name={agent.agent_id} />
+  // Load topics when agent changes or when navigating away from /new
+  useEffect(() => {
+    if (!currentAgentId) return
+
+    const loadTopics = async () => {
+      try {
+        const response = await listTopics(currentAgentId)
+        const topicsList = response.data || []
+
+        // If we just created a new topic (navigating from 'new' to a real topic),
+        // add it optimistically if it's not in the list yet
+        if (previousTopicId === 'new' && currentTopicId && currentTopicId !== 'new') {
+          const topicExists = topicsList.some(t => t.topic_id === currentTopicId)
+          if (!topicExists) {
+            topicsList.push({
+              topic_id: currentTopicId,
+              title: currentTopicId, // Use topic_id as title until backend provides it
+              created_at: new Date().toISOString(),
+            } as Topic)
+          }
+        }
+
+        setTopics(topicsList)
+      } catch (error) {
+        console.error('Failed to load topics:', error)
+      }
+    }
+
+    loadTopics()
+
+    // Update previous topic
+    setPreviousTopicId(currentTopicId)
+  }, [currentAgentId, currentTopicId, previousTopicId])
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token')
+    navigate('/login')
+  }
+
+  const getCurrentView = () => {
+    if (location.pathname.includes('/memory')) return 'memory'
+    if (location.pathname.includes('/tasks')) return 'tasks'
+    if (location.pathname.includes('/settings')) return 'settings'
+    if (location.pathname.includes('/chat')) return 'chat'
+    return null
+  }
+
+  const currentView = getCurrentView()
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        color: 'var(--text-tertiary)',
+      }}>
+        Loading...
       </div>
-      <div>
-        <div className="flex items-center">
-          <div>{agent.name ?? 'placeholder'}</div>
-          <div
-            className={`ml-2.5 w-2.5 h-2.5 ${connected ? 'bg-emerald-500' : 'bg-red-500'} rounded-full`}
-          ></div>
-        </div>
-        <div className="text-xs text-black overflow-hidden truncate w-40 opacity-80">
-          {agent.description}
-        </div>
-      </div>
-    </div>
+    )
   }
 
   return (
-    <>
-      {!username && <OnboardModal />}
-      <div className="bg-white flex justify-between w-screen h-screen pr-0">
-        <div
-          id="sidebar"
-          className="w-75 pt-12 pb-12 flex flex-col justify-between"
-        >
-          <div>
-            <div className='max-h-70 overflow-scroll'>
-              {
-                agents.map((agent: any) => <div
-                  key={agent.agent_id}
-                  className={`hover:bg-gray-200 ${activeAgent?.agent_id === agent.agent_id && 'bg-gray-200'}`}
-                  onClick={() => {
-                    setActiveAgent(agent)
-                    navigate(`/agents/${agent.agent_id}`)
-                  }}>
-                  <AgentCard agent={agent} />
-
-                </div>)
-              }
+    <div className="layout-container">
+      {/* Workspace sidebar (left) - Agent selector with settings and layout at bottom */}
+      <div className="workspace-sidebar">
+        <div className="workspace-items">
+          {agents.map((agent) => (
+            <div
+              key={agent.agent_id}
+              className={`workspace-item ${currentAgentId === agent.agent_id ? 'active' : ''}`}
+              onClick={() => {
+                // Navigate to chat with first topic, or show empty state
+                if (topics.length > 0) {
+                  navigate(`/${agent.agent_id}/chat/${topics[0].topic_id}`)
+                } else {
+                  navigate(`/${agent.agent_id}/chat/new`)
+                }
+              }}
+              title={agent.name}
+            >
+              <Avatar name={agent.agent_id} rounded={false} />
             </div>
-            <div className="p-5 pb-0">
-              <div>
-                <strong>/tools</strong>
-              </div>
-              <div className="pl-4">
-                <div>/memory</div>
-              </div>
-              <div className="pl-4">
-                <div>/task</div>
-              </div>
-            </div>
-            <div className="p-5 pb-0">
-              <div>
-                <strong>/utils</strong>
-              </div>
-              <div className="pl-4">
-                <div>/logs</div>
-              </div>
-            </div>
-          </div>
-          <div className="p-5 pt-2.5 pb-2.5 text-gray-500 bg-white font-bold flex items-center active:inset-shadow-md hover:text-black rounded-full m-5 mb-0">
-            <FaDoorOpen size={20} />
-            <button className="ml-2 select-none">Logout</button>
-          </div>
+          ))}
         </div>
-        <div className="w-full p-5 pl-0 pr-0">
+
+        {/* Bottom workspace controls */}
+        <div className="workspace-bottom">
           <div
-            id="content"
-            className="w-full h-full rounded-l-4xl p-1 inset-shadow-md overflow-hidden"
-            style={{ background: '#ddd' }}
+            className={`workspace-item ${currentView === 'settings' ? 'active' : ''}`}
+            onClick={() => currentAgentId && navigate(`/${currentAgentId}/settings`)}
+            title="Settings"
           >
-            {/*TODO*/}
-            {username ? (
-              <Outlet />
-            ) : (
-              <div className="w-full h-full bg-black"></div>
-            )}
+            <FiSettings size={20} />
+          </div>
+          <div
+            className="workspace-item"
+            onClick={handleLogout}
+            title="Logout"
+          >
+            <FiLogOut size={20} />
           </div>
         </div>
       </div>
-    </>
+
+      {/* Navigation sidebar (middle) - Topics and navigation */}
+      {currentAgentId && (
+        <div className="nav-sidebar">
+          <div className="nav-header">
+            {agents.find(a => a.agent_id === currentAgentId)?.name || currentAgentId}
+          </div>
+
+          <div className="nav-content">
+            {/* Tools section (moved above topics) */}
+            <div className="nav-section">
+              <div className="nav-section-title">Tools</div>
+              <div
+                className={`nav-item ${currentView === 'memory' ? 'active' : ''}`}
+                onClick={() => navigate(`/${currentAgentId}/memory`)}
+              >
+                <FaBook size={16} />
+                <span>Memory</span>
+              </div>
+              <div
+                className={`nav-item ${currentView === 'tasks' ? 'active' : ''}`}
+                onClick={() => navigate(`/${currentAgentId}/tasks`)}
+              >
+                <FiCheckCircle size={16} />
+                <span>Tasks</span>
+              </div>
+            </div>
+
+            <div className="divider" />
+
+            {/* Topics section - now showing only topic_id/slug */}
+            <div className="nav-section">
+              <div className="nav-section-title">Topics</div>
+              {topics.map((topic) => (
+                <div
+                  key={topic.topic_id}
+                  className={`nav-item ${currentTopicId === topic.topic_id ? 'active' : ''}`}
+                  onClick={() => navigate(`/${currentAgentId}/chat/${topic.topic_id}`)}
+                  title={topic.title}
+                >
+                  <FiMessageCircle size={16} />
+                  <span>{topic.topic_id}</span>
+                </div>
+              ))}
+              <div
+                className="nav-item"
+                onClick={() => navigate(`/${currentAgentId}/chat/new`)}
+                style={{ color: 'var(--text-tertiary)' }}
+              >
+                <span style={{ fontSize: '18px', lineHeight: '1' }}>+</span>
+                <span>New Topic</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main content area */}
+      <div className="main-content">
+        <Outlet />
+      </div>
+    </div>
   )
 }
-
-export default Layout

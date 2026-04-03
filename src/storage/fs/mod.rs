@@ -16,6 +16,7 @@ mod session;
 mod skill;
 mod state;
 mod task;
+mod user;
 
 const MEMORY_PATH: &'static str = "memory";
 const TASK_PATH: &'static str = "tasks";

@@ -1,6 +1,7 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use chrono::Utc;
+use croner::Cron;
 use rig::{completion::ToolDefinition, tool::Tool};
 use schemars::schema_for;
 use serde::{Deserialize, Serialize};
@@ -84,6 +85,19 @@ where
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
+        let utc_datetime = args
+            .schedule
+            .to_utc()
+            .ok_or_else(|| VizierError("Invalid datetime provided".to_string()))?;
+
+        // Validate that one-time task is in the future
+        let now = Utc::now();
+        if utc_datetime < now {
+            return Err(VizierError(
+                "One-time task datetime must be in the future".to_string(),
+            ));
+        }
+
         let response = self
             .storage
             .save_task(Task {
@@ -93,7 +107,7 @@ where
                 title: args.title,
                 instruction: args.instruction,
                 is_active: true,
-                schedule: TaskSchedule::OneTimeTask(args.schedule.to_utc().unwrap()),
+                schedule: TaskSchedule::OneTimeTask(utc_datetime),
                 last_executed_at: None,
                 timestamp: chrono::Utc::now(),
             })
@@ -155,6 +169,21 @@ where
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
+        // Validate cron expression
+        if args.cron.trim().is_empty() {
+            return Err(VizierError("Cron expression cannot be empty".to_string()));
+        }
+
+        match Cron::from_str(&args.cron) {
+            Ok(_) => {}
+            Err(e) => {
+                return Err(VizierError(format!(
+                    "Invalid cron expression: {}",
+                    e
+                )));
+            }
+        }
+
         let response = self
             .db
             .save_task(Task {

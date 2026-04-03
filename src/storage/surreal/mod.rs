@@ -15,6 +15,7 @@ pub mod session;
 pub mod skill;
 pub mod state;
 pub mod task;
+pub mod user;
 
 #[derive(Clone)]
 pub struct SurrealStorage {
@@ -33,6 +34,8 @@ impl SurrealStorage {
         db.query("DEFINE TABLE document_index SCHEMALESS;").await?;
         db.query("DEFINE TABLE skill SCHEMALESS;").await?;
         db.query("DEFINE TABLE session_detail SCHEMALESS;").await?;
+        db.query("DEFINE TABLE user SCHEMALESS;").await?;
+        db.query("DEFINE TABLE api_key SCHEMALESS;").await?;
 
         let res = Self {
             conn: Arc::new(db),

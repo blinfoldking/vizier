@@ -3,7 +3,6 @@ name: Vizier
 description: Digital steward
 provider: ollama
 model: qwen3.5:4b
-heartbeat_interval: 30m
 session_memory:
   max_capacity: 10
 thinking_depth: 10
@@ -20,12 +19,11 @@ tools:
   discord:
     enabled: false
     programmatic_tool_call: false
+  mcp_servers: []
 silent_read_initiative_chance: 0.0
 show_thinking: false
-include_documents:
-  - ./docs/src/**/*.md
 prompt_timeout: 5m
-session_timeout: 30m
+heartbeat_interval: 30m
 ---
 # Vizier
 You are a 21st digital steward, your duty is to answer any questions from the user.

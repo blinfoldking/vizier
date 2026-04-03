@@ -1,19 +1,49 @@
-use axum::Router;
-use axum::routing::get;
+use axum::{
+    Router, middleware,
+    routing::{delete, get, post},
+};
 use reqwest::StatusCode;
 
 use crate::channels::http::{
     api::v1::agents::agents,
+    auth::middleware::require_auth,
     models::{self, response::api_response},
     state::HTTPState,
 };
 
 pub mod agents;
+pub mod auth;
 
-pub fn v1() -> Router<HTTPState> {
+pub fn v1(state: HTTPState) -> Router<HTTPState> {
     Router::new()
         .route("/ping", get(ping))
-        .nest("/agents", agents())
+        // Auth routes (some public, some protected)
+        .route("/auth/login", post(auth::login))
+        .route(
+            "/auth/change-password",
+            post(auth::change_password)
+                .layer(middleware::from_fn_with_state(state.clone(), require_auth)),
+        )
+        .route(
+            "/auth/api-keys",
+            post(auth::create_api_key)
+                .layer(middleware::from_fn_with_state(state.clone(), require_auth)),
+        )
+        .route(
+            "/auth/api-keys",
+            get(auth::list_api_keys)
+                .layer(middleware::from_fn_with_state(state.clone(), require_auth)),
+        )
+        .route(
+            "/auth/api-keys/{key_id}",
+            delete(auth::delete_api_key)
+                .layer(middleware::from_fn_with_state(state.clone(), require_auth)),
+        )
+        // Protected routes
+        .nest(
+            "/agents",
+            agents().layer(middleware::from_fn_with_state(state.clone(), require_auth)),
+        )
 }
 
 async fn ping() -> models::response::Response<String> {

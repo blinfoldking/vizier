@@ -4,6 +4,6 @@ use crate::channels::http::state::HTTPState;
 
 pub mod v1;
 
-pub fn api() -> Router<HTTPState> {
-    Router::new().nest("/v1", v1::v1())
+pub fn api(state: HTTPState) -> Router<HTTPState> {
+    Router::new().nest("/v1", v1::v1(state))
 }
