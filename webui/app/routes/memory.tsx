@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useParams } from 'react-router'
 import { listMemories, getMemory, createMemory, updateMemory, deleteMemory } from '../services/vizier'
 import { autoCorrectSlug, autoCorrectSlugStrict } from '../utils/slug'
@@ -281,13 +283,13 @@ export default function MemoryManagement() {
                 
                 <div className="prose" style={{
                   marginBottom: '1.5rem',
-                  whiteSpace: 'pre-wrap',
+                  
                   background: 'var(--surface)',
                   padding: '1.5rem',
                   borderRadius: '8px',
                   border: '1px solid var(--border)',
                 }}>
-                  {selectedMemory.content}
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedMemory.content}</ReactMarkdown>
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px' }}>
