@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0-rc.1] - 2026-04-04
+
+### 🚀 Features
+
+- Implement inter-agent communication
+- Add basic structure to skill system
+- Change scheduler interval to 1m
+- Implement topic creation
+- Add local mcp server integration
+- Implement http mcp server
+- Implement topic switching on discord
+- Optimize default AGENT.md
+- Implement heartbeat loop
+- Make env on mcp not mandatory
+- Add dockerfile mode to docker shell mode
+- Implement memory and task CRUD API
+- Implement new channel api
+- Implement auth layer to http channel
+- Implement new webui
+- Tweak some design
+- Implement subagent tools
+- Adjust subagent description
+- Unrendered table
+
+### 🐛 Bug Fixes
+
+- Missing skill table
+- Missing openrouter implementation
+
+### 🚜 Refactor
+
+- Restructure agent code
+- Restructure request struct
+- Change fs file directory
+- Improve agent process handling
+
+### 📚 Documentation
+
+- Update install instruction
+- Fix subagent configuration details and update intro (#3)
+
+### ⚙️ Miscellaneous Tasks
+
+- Add remote install script
+- Update repository ownership
+- Remove unused file
+- Remove old api
 ## [0.2.3] - 2026-03-26
 
 ### 🐛 Bug Fixes
@@ -11,6 +58,10 @@ All notable changes to this project will be documented in this file.
 ### 📚 Documentation
 
 - Fix docs numbering and paging
+
+### ⚙️ Miscellaneous Tasks
+
+- Bump version to 0.2.3
 ## [0.2.2] - 2026-03-25
 
 ### 🐛 Bug Fixes
