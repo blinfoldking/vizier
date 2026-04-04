@@ -6,7 +6,6 @@ import { FaBook } from 'react-icons/fa'
 import Avatar from './components/avatar'
 import ThemeToggle from './components/ThemeToggle'
 import ToastContainer from './components/Toast'
-import MemorySearch from './components/MemorySearch'
 import type { Agent, Topic } from './interfaces/types'
 
 export default function Layout() {
@@ -167,7 +166,6 @@ export default function Layout() {
             {/* Search for memories - only show on memory page */}
             {currentView === 'memory' && (
               <div style={{ marginBottom: '16px' }}>
-                <MemorySearch />
               </div>
             )}
 
