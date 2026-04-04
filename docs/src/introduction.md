@@ -9,7 +9,7 @@ Vizier is a Rust-based AI agent framework that provides a unified interface for 
 - **Multi-Channel Support**: Connect to Discord, HTTP (REST API & WebSocket), and WebUI
 - **AI Model Integration**: Support for multiple AI providers (DeepSeek, OpenRouter, Ollama, Anthropic, OpenAI, Gemini)
 - **Memory System**: Session-based short-term memory, configurable recall depth, and vector-based long-term memory
-- **Tool System**: Extensible tool framework including CLI access, web search (Brave Search), Python interpreter (opt-in), scheduler (cron & one-time tasks), vector memory, and workspace document management
+- **Tool System**: Extensible tool framework including CLI access, web search (Brave Search), Python interpreter (opt-in), scheduler (cron & one-time tasks), vector memory, workspace document management, and **sub-agent spawning for parallel task execution**
 - **Scheduler**: Built-in task scheduler for automated agent execution
 - **WebUI**: Modern React-based web interface for interaction and management
 - **TUI Interface**: Built-in terminal user interface for local interaction (WIP)
@@ -33,6 +33,7 @@ Vizier is a Rust-based AI agent framework that provides a unified interface for 
 │  │   Memory     │  │   Tools      │  │  Scheduler   │   │
 │  │  (Session &  │  │  (Search,    │  │  (Cron &     │   │
 │  │   Vector)    │  │   Python,    │  │   Tasks)     │   │
+│  │              │  │   Subagents) │  │              │   │
 │  └──────────────┘  └──────────────┘  └──────────────┘   │
 └─────────────────────────────────────────────────────────┘
                                          │
@@ -78,10 +79,10 @@ See the [Getting Started](./getting-started/installation.md) section for detaile
 - [x] Docker Sandbox
 - [x] Simple TUI (terminal user interface)
 - [x] Additional AI providers (Google Gemini, OpenAI, Anthropic)
+- [x] **Sub-agent spawning for parallel task execution**
 - [ ] WASM-based plugin system
 - [ ] Model Context Protocol (MCP) integration
 - [ ] Built-in HTTP client tool
-- [ ] Skill system for reusable agent behaviors
 
 ## Next Steps
 
