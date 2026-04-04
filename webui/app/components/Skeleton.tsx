@@ -1,4 +1,5 @@
 import { motion } from 'motion/react'
+import { useState, useEffect } from 'react'
 
 interface SkeletonProps {
   className?: string
@@ -28,7 +29,7 @@ export function Skeleton({
 
   return (
     <div 
-      className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+      className={`${baseClasses} ${variantClasses[variant]} ${className} skeleton-wrapper`}
       style={style}
     >
       <motion.div
@@ -84,6 +85,49 @@ export function SkeletonTopicList() {
           <Skeleton variant="text" width="80%" />
         </div>
       ))}
+    </div>
+  )
+}
+
+// Wrapper component for smooth skeleton-to-content transition
+interface SkeletonTransitionProps {
+  isLoading: boolean
+  children: React.ReactNode
+  skeleton: React.ReactNode
+  className?: string
+}
+
+export function SkeletonTransition({ 
+  isLoading, 
+  children, 
+  skeleton,
+  className = ''
+}: SkeletonTransitionProps) {
+  const [isLoaded, setIsLoaded] = useState(!isLoading)
+  
+  useEffect(() => {
+    if (!isLoading) {
+      // Small delay to ensure smooth transition
+      const timer = setTimeout(() => {
+        setIsLoaded(true)
+      }, 50)
+      return () => clearTimeout(timer)
+    } else {
+      setIsLoaded(false)
+    }
+  }, [isLoading])
+
+  if (isLoading) {
+    return (
+      <div className={`skeleton-wrapper ${className}`}>
+        {skeleton}
+      </div>
+    )
+  }
+
+  return (
+    <div className={`skeleton-loaded ${className}`}>
+      {children}
     </div>
   )
 }

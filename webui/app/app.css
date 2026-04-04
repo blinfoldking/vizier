@@ -777,3 +777,34 @@ input:focus, textarea:focus {
 .dark ::-webkit-scrollbar-thumb:hover {
     background: var(--color-text-tertiary);
 }
+
+/* ============================================================================
+   SKELETON ANIMATIONS & TRANSITIONS
+   ============================================================================ */
+
+/* Smooth fade-in animation for content */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.skeleton-loaded {
+  animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Enhanced skeleton with smooth fade-out */
+.skeleton-wrapper {
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1), transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.skeleton-wrapper.hidden {
+  opacity: 0;
+  transform: scale(0.95);
+  pointer-events: none;
+}
