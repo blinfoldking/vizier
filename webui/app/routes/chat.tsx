@@ -5,6 +5,7 @@ import { getTopicHistory, getChatWebSocketUrl, listTopics, getAgentDetail } from
 import { autoCorrectSlug, autoCorrectSlugStrict } from '../utils/slug'
 import type { Agent, ChatMessage, WebSocketMessage, WebSocketResponse } from '../interfaces/types'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { getCurrentUsername } from '../utils/auth'
 import { Skeleton, SkeletonMessage } from '../components/Skeleton'
 
@@ -44,6 +45,7 @@ export default function Chat() {
       setLoading(false)
     } else {
       setIsNewTopic(false)
+      setShowNewTopicInput(false)
     }
   }, [topicId])
 
@@ -415,7 +417,7 @@ export default function Chat() {
                     borderLeft: isUserMessage ? 'none' : '3px solid var(--accent-primary)',
                     boxShadow: isUserMessage ? 'var(--shadow-sm)' : 'none',
                   }}>
-                    <ReactMarkdown>{content}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
                   </div>
                 </div>
               )
