@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router'
 import useWebSocket, { ReadyState } from 'react-use-websocket'
 import { getTopicHistory, getChatWebSocketUrl, listTopics, getAgentDetail } from '../services/vizier'
 import { autoCorrectSlug, autoCorrectSlugStrict } from '../utils/slug'
-import type { Agent, ChatMessage, WebSocketMessage, WebSocketResponse } from '../interfaces/types'
+import type { Agent, ChatMessage, Topic, WebSocketMessage, WebSocketResponse } from '../interfaces/types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
@@ -49,6 +49,9 @@ export default function Chat() {
     }
   )
 
+  // TODO: 
+  const [topicDetail, setTopicDetail] = useState<any | null>(null)
+
   // Check if this is a new topic
   useEffect(() => {
     if (topicId === 'new') {
@@ -58,6 +61,17 @@ export default function Chat() {
     } else {
       setIsNewTopic(false)
       setShowNewTopicInput(false)
+
+
+      if (agentId) {
+        listTopics(agentId).then(topic => {
+          let topicDetail = topic.data.find((item: any) => item.topic_id == topicId);
+
+          if (topicDetail) {
+            setTopicDetail(topicDetail)
+          }
+        })
+      }
     }
   }, [topicId])
 
@@ -322,14 +336,10 @@ export default function Chat() {
       <div className="main-header">
         <div style={{ flex: 1 }}>
           <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: readyState === ReadyState.OPEN ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-              display: 'inline-block',
-            }} />
-            # {topicId}
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+              {topicDetail ? topicDetail.title : topicId}
+            </ReactMarkdown>
+
           </h3>
         </div>
         <div style={{
