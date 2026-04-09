@@ -9,14 +9,14 @@ type Section = 'password' | 'api-keys'
 export default function Settings() {
   const { agentId } = useParams()
   const [activeSection, setActiveSection] = useState<Section>('password')
-  
+
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordChanging, setPasswordChanging] = useState(false)
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-  
+
   // API Keys state
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
   const [loadingKeys, setLoadingKeys] = useState(false)
@@ -66,9 +66,9 @@ export default function Settings() {
       setNewPassword('')
       setConfirmPassword('')
     } catch (error: any) {
-      setPasswordMessage({ 
-        type: 'error', 
-        text: error.response?.data?.message || 'Failed to change password' 
+      setPasswordMessage({
+        type: 'error',
+        text: error.response?.data?.message || 'Failed to change password'
       })
     } finally {
       setPasswordChanging(false)
@@ -116,14 +116,6 @@ export default function Settings() {
       <div className="main-header">
         <div>
           <h3 style={{ margin: 0 }}>Settings</h3>
-          <div style={{
-            fontSize: '12px',
-            color: 'var(--text-tertiary)',
-            marginTop: '4px',
-            fontFamily: 'var(--font-mono)',
-          }}>
-            Agent: {agentId}
-          </div>
         </div>
       </div>
 

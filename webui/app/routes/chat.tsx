@@ -9,6 +9,17 @@ import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { getCurrentUsername } from '../utils/auth'
 import { Skeleton, SkeletonMessage } from '../components/Skeleton'
+import { FaPaperPlane } from 'react-icons/fa'
+
+const textareaStyle = `
+  .chat-textarea::-webkit-scrollbar {
+    display: none;
+  }
+  .chat-textarea {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+`
 
 export default function Chat() {
   const { agentId, topicId } = useParams()
@@ -478,6 +489,7 @@ export default function Chat() {
         padding: '16px 24px',
         background: 'var(--background)',
       }}>
+        <style>{textareaStyle}</style>
         <form onSubmit={handleSendMessage} style={{
           display: 'flex',
           gap: '12px',
@@ -485,9 +497,14 @@ export default function Chat() {
           margin: '0 auto',
         }}>
           <textarea
+            className="chat-textarea"
             ref={inputRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value)
+              e.target.style.height = 'auto'
+              e.target.style.height = Math.min(e.target.scrollHeight, window.innerHeight * 0.5) + 'px'
+            }}
             onKeyDown={handleKeyDown}
             placeholder={readyState === ReadyState.OPEN ? "Type your message..." : "Connecting..."}
             disabled={readyState !== ReadyState.OPEN}
@@ -496,15 +513,17 @@ export default function Chat() {
               flex: 1,
               resize: 'none',
               minHeight: '44px',
-              maxHeight: '200px',
+              maxHeight: '50vh',
+              overflowY: 'auto',
             }}
           />
           <button
             type="submit"
             className="btn btn-primary"
             disabled={!input.trim() || readyState !== ReadyState.OPEN}
+            style={{ width: '44px', height: '44px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            Send
+            <FaPaperPlane />
           </button>
         </form>
       </div >
