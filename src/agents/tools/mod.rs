@@ -19,6 +19,7 @@ use crate::{
             shell::ShellExec,
             skill::CreateSkill,
             subagent::SpawnSubAgents,
+            telegram::new_telegram_tools,
             vector_memory::init_vector_memory,
             workspace::{
                 AgentDocument, HeartbeatDocument, IdentDocument, ReadPrimaryDocument,
@@ -47,6 +48,7 @@ mod scheduler;
 mod shell;
 mod skill;
 mod subagent;
+mod telegram;
 mod vector_memory;
 mod workspace;
 
@@ -159,6 +161,21 @@ impl VizierTools {
                 }
             }
 
+            if agent_config.tools.telegram.is_programatically_enabled() {
+                if let Some(telegram) = &deps.config.channels.telegram {
+                    if let Some((_, telegram)) = telegram.iter().find(|(id, _)| **id == agent_id) {
+                        let bot_token = telegram.token.clone();
+
+                        let (send_message, react_message, get_message) =
+                            new_telegram_tools(bot_token.clone());
+                        python_interpreter = python_interpreter
+                            .tool(send_message)
+                            .tool(react_message)
+                            .tool(get_message);
+                    }
+                }
+            }
+
             if agent_config.tools.brave_search.is_programatically_enabled() {
                 if let Some(brave_search) = tool_config.brave_search.clone() {
                     python_interpreter = python_interpreter
@@ -190,6 +207,21 @@ impl VizierTools {
                     let token = discord.token.clone();
 
                     let (send_message, react_message, get_message) = new_discord_tools(token);
+                    tool_server_builder = tool_server_builder
+                        .tool(send_message)
+                        .tool(react_message)
+                        .tool(get_message);
+                }
+            }
+        }
+
+        if agent_config.tools.telegram.enabled && !agent_config.tools.telegram.programmatic_tool_call
+        {
+            if let Some(telegram) = &deps.config.channels.telegram {
+                if let Some((_, telegram)) = telegram.iter().find(|(id, _)| **id == agent_id) {
+                    let bot_token = telegram.token.clone();
+
+                    let (send_message, react_message, get_message) = new_telegram_tools(bot_token);
                     tool_server_builder = tool_server_builder
                         .tool(send_message)
                         .tool(react_message)

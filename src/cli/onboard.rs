@@ -292,6 +292,7 @@ pub async fn onboard(args: OnboardArgs) -> Result<()> {
                 jwt_secret: "${VIZIER_JWT_SECRET}".into(),
                 jwt_expiry_hours: 720,
             }),
+            telegram: None,
         },
         tools: ToolsConfig {
             brave_search: if brave_search_enabled {
@@ -338,6 +339,10 @@ pub async fn onboard(args: OnboardArgs) -> Result<()> {
             },
             discord: ToolConfig {
                 enabled: discord_enabled,
+                programmatic_tool_call: false,
+            },
+            telegram: ToolConfig {
+                enabled: false,
                 programmatic_tool_call: false,
             },
             mcp_servers: vec![],

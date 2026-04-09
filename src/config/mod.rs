@@ -28,6 +28,7 @@ use crate::{
 pub struct ChannelsConfig {
     pub discord: Option<HashMap<String, DiscordChannelConfig>>,
     pub http: Option<HTTPChannelConfig>,
+    pub telegram: Option<HashMap<String, TelegramChannelConfig>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -39,6 +40,19 @@ impl Default for DiscordChannelConfig {
     fn default() -> Self {
         Self {
             token: "${DISCORD_BOT_TOKEN}".into(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TelegramChannelConfig {
+    pub token: String,
+}
+
+impl Default for TelegramChannelConfig {
+    fn default() -> Self {
+        Self {
+            token: "${TELEGRAM_BOT_TOKEN}".into(),
         }
     }
 }
@@ -166,6 +180,7 @@ impl Default for VizierConfig {
                     jwt_secret: "${VIZIER_JWT_SECRET}".into(),
                     jwt_expiry_hours: 720,
                 }),
+                telegram: None,
             },
             tools: ToolsConfig {
                 brave_search: Some(BraveSearchConfig::default()),

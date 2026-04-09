@@ -5,6 +5,7 @@ pub mod markdown;
 pub mod ollama;
 pub mod python;
 pub mod tar;
+pub mod telegram;
 
 pub fn remove_think_tags(text: &str) -> String {
     let re = Regex::new(r"(.*\n)*</think>\n?").unwrap();

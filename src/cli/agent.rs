@@ -162,6 +162,10 @@ pub async fn agent_new(args: AgentNewArgs) -> Result<()> {
                 enabled: discord_enabled,
                 programmatic_tool_call: false,
             },
+            telegram: ToolConfig {
+                enabled: false,
+                programmatic_tool_call: false,
+            },
             mcp_servers: vec![],
         },
         silent_read_initiative_chance: 0.,

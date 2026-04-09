@@ -16,6 +16,7 @@ pub struct VizierSession(pub AgentId, pub VizierChannelId, pub Option<TopicId>);
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, SurrealValue)]
 pub enum VizierChannelId {
     DiscordChanel(u64),
+    TelegramChannel(i64),
     HTTP(String),
     Task(String, DateTime<Utc>),
     InterAgent(Vec<String>),
@@ -28,6 +29,7 @@ impl VizierChannelId {
     pub fn to_slug(&self) -> String {
         match self {
             Self::DiscordChanel(id) => format!("discord__{}", id),
+            Self::TelegramChannel(id) => format!("telegram__{}", id),
             Self::HTTP(id) => format!("http__{}", id),
             Self::Task(id, datetime) => {
                 format!("task__{}__{}", id, datetime.timestamp_subsec_nanos())

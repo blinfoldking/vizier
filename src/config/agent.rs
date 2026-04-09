@@ -98,11 +98,19 @@ pub struct MemoryConfig {
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct AgentToolsConfig {
     pub timeout: DurationString,
+    #[serde(default)]
     pub python_interpreter: bool,
+    #[serde(default)]
     pub shell_access: bool,
+    #[serde(default)]
     pub brave_search: ToolConfig,
+    #[serde(default)]
     pub vector_memory: ToolConfig,
+    #[serde(default)]
     pub discord: ToolConfig,
+    #[serde(default)]
+    pub telegram: ToolConfig,
+    #[serde(default)]
     pub mcp_servers: Vec<String>,
 }
 

@@ -5,11 +5,11 @@
 
 > 21st Century Digital Steward; Right-hand agent for you majesty
 
-Vizier is a Rust-based AI agent framework that provides a unified interface for AI assistants across multiple communication channels (Discord, HTTP, etc.) with memory, tool usage, and extensible architecture.
+Vizier is a Rust-based AI agent framework that provides a unified interface for AI assistants across multiple communication channels (Discord, Telegram, HTTP, etc.) with memory, tool usage, and extensible architecture.
 
 ## Features
 
-- **Multi-Channel Support**: Connect to Discord, HTTP (REST API & WebSocket), and WebUI
+- **Multi-Channel Support**: Connect to Discord, Telegram, HTTP (REST API & WebSocket), and WebUI
 - **AI Model Integration**: Support for multiple AI providers (DeepSeek, OpenRouter, Ollama, etc.)
 - **Memory System**: Session-based short-term memory, configurable recall depth, and vector-based long-term memory
 - **Tool System**: Extensible tool framework including CLI access, web search (Brave Search), Python interpreter (opt-in), scheduler (cron & one-time tasks), vector memory, and workspace document management

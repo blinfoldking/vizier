@@ -4,6 +4,7 @@ use crate::{
     channels::{
         discord::{DiscordChannelReader, DiscordChannelWriter},
         http::HTTPChannel,
+        telegram::{TelegramChannelReader, TelegramChannelWriter},
     },
     config::ChannelsConfig,
     dependencies::VizierDependencies,
@@ -11,6 +12,7 @@ use crate::{
 
 pub mod discord;
 pub mod http;
+pub mod telegram;
 
 pub trait VizierChannel {
     async fn run(&mut self) -> Result<()>;
@@ -65,6 +67,38 @@ impl VizierChannels {
             tokio::spawn(async move {
                 if let Err(e) = http.run().await {
                     log::error!("Err{:?}", e);
+                }
+            });
+        }
+
+        if let Some(telegram_configs) = &self.config.telegram {
+            for (agent_id, telegram_config) in telegram_configs.iter() {
+                let agent_id = agent_id.clone();
+                let deps = self.deps.clone();
+                let reader_telegram_config = telegram_config.clone();
+                tokio::spawn(async move {
+                    let mut telegram_reader = TelegramChannelReader::new(
+                        agent_id.clone(),
+                        reader_telegram_config.clone(),
+                        deps.clone(),
+                    )
+                    .await
+                    .unwrap();
+
+                    if let Err(e) = telegram_reader.run().await {
+                        log::error!("Err{:?}", e)
+                    }
+                });
+            }
+
+            let transport = self.deps.transport.clone();
+            let telegram_configs = telegram_configs.clone();
+            tokio::spawn(async move {
+                let mut telegram_writer =
+                    TelegramChannelWriter::new(transport.clone(), telegram_configs.clone());
+
+                if let Err(e) = telegram_writer.run().await {
+                    log::error!("Err{:?}", e)
                 }
             });
         }

@@ -11,7 +11,13 @@ channels:
       token: "${DISCORD_TOKEN}"
     assistant:                          # Another agent's Discord config
       token: "${DISCORD_TOKEN_2}"
-  
+
+  telegram:                             # Telegram bot configuration
+    vizier:                             # Agent-specific Telegram config
+      token: "${TELEGRAM_BOT_TOKEN}"
+    assistant:                          # Another agent's Telegram config
+      token: "${TELEGRAM_BOT_TOKEN_2}"
+
   http:                                 # HTTP/WebSocket server
     port: 9999                          # Default port
 ```
@@ -26,6 +32,33 @@ channels:
     <agent_name>:
       token: "${DISCORD_TOKEN}"
 ```
+
+## Telegram Channel
+
+Each agent can have its own Telegram bot configuration:
+
+```yaml
+channels:
+  telegram:
+    <agent_name>:
+      token: "${TELEGRAM_BOT_TOKEN}"
+```
+
+### Telegram Commands
+
+When the Telegram channel is enabled, the following commands are available:
+
+- `/ping` - Check if the bot is responsive
+- `/new` - Create a new session with a fresh topic
+- `/session [topic_id]` - Switch to a specific session or list all sessions if no topic_id provided
+
+### Telegram Tools
+
+When enabled, agents can use these tools to interact with Telegram:
+
+- `telegram_send_message` - Send a message to a Telegram chat
+- `telegram_react_message` - React to a message with an emoji
+- `telegram_get_message_by_id` - Retrieve a message by its ID
 
 ## HTTP Channel
 

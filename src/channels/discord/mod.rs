@@ -327,6 +327,8 @@ If I am halucinating, feel free to `/lobotomy` me
             None
         };
 
+        let is_dm = msg.guild_id.is_none();
+
         if let Ok(is_mention) = msg.mentions_me(ctx.http).await {
             let agent_id = self.0.clone();
             let transport = self.1.transport.clone();
@@ -346,9 +348,10 @@ If I am halucinating, feel free to `/lobotomy` me
                 "replied_message_id": replied_to,
                 "message_id": msg.id.to_string(),
                 "discord_channel_id": msg.channel_id.to_string(),
+                "is_dm": is_dm,
             });
 
-            if !is_mention {
+            if !is_mention && !is_dm {
                 tokio::spawn(async move {
                     if let Err(err) = transport
                         .send_request(
