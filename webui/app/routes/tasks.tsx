@@ -4,9 +4,25 @@ import { listTasks, getTask, createTask, updateTask, deleteTask } from '../servi
 import { autoCorrectSlug, autoCorrectSlugStrict } from '../utils/slug'
 import { FiPlus, FiTrash2, FiClock } from 'react-icons/fi'
 import type { Task } from '../interfaces/types'
+import DatePicker from '../components/DatePicker'
 
 type ModalMode = 'create' | 'edit' | 'view' | null
 type ScheduleType = 'Cron' | 'OneTime'
+
+const CRON_TEMPLATES = [
+  { label: 'Custom', value: '' },
+  { label: 'Every 15 minutes', value: '*/15 * * * *' },
+  { label: 'Every hour', value: '0 * * * *' },
+  { label: 'Daily at midnight', value: '0 0 * * *' },
+  { label: 'Daily at noon', value: '0 12 * * *' },
+  { label: 'Weekly on Sunday 6pm', value: '0 18 * * 0' },
+  { label: 'Weekly on Monday 9am', value: '0 9 * * 1' },
+  { label: 'Weekdays at 9am', value: '0 9 * * 1-5' },
+  { label: 'Monthly on 1st', value: '0 0 1 * *' },
+  { label: 'Monthly on 15th', value: '0 0 15 * *' },
+  { label: 'Quarterly', value: '0 0 1 1,4,7,10 *' },
+  { label: 'Yearly on Jan 1st', value: '0 0 1 1 *' },
+]
 
 export default function TaskManagement() {
   const { agentId } = useParams()
@@ -503,29 +519,60 @@ export default function TaskManagement() {
                     </select>
                   </div>
 
-                  <div className="input-group">
-                    <label htmlFor="schedule-value">
-                      {formScheduleType === 'Cron' ? 'Cron Expression' : 'Datetime (ISO 8601)'}
-                    </label>
-                    <input
-                      id="schedule-value"
-                      type="text"
+                  {formScheduleType === 'Cron' ? (
+                    <>
+                      <div className="input-group">
+                        <label htmlFor="cron-template">Template</label>
+                        <select
+                          id="cron-template"
+                          value={CRON_TEMPLATES.find(t => t.value === formScheduleValue)?.value ?? ''}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setFormScheduleValue(e.target.value)
+                            }
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: '4px',
+                            border: '1px solid var(--border)',
+                            background: 'var(--background)',
+                          }}
+                        >
+                          {CRON_TEMPLATES.map(t => (
+                            <option key={t.value} value={t.value}>{t.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="input-group">
+                        <label htmlFor="schedule-value">Cron Expression</label>
+                        <input
+                          id="schedule-value"
+                          type="text"
+                          value={formScheduleValue}
+                          onChange={(e) => setFormScheduleValue(e.target.value)}
+                          required
+                          placeholder="0 0 * * *"
+                        />
+                        <p style={{
+                          fontSize: '12px',
+                          color: 'var(--text-tertiary)',
+                          marginTop: '4px',
+                        }}>
+                          {formScheduleType === 'Cron'
+                            ? 'Example: "0 0 * * *" (daily at midnight)'
+                            : 'Example: "2026-04-04T14:00:00Z"'
+                          }
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <DatePicker
+                      label="Datetime (UTC)"
                       value={formScheduleValue}
-                      onChange={(e) => setFormScheduleValue(e.target.value)}
-                      required
-                      placeholder={formScheduleType === 'Cron' ? '0 0 * * *' : '2026-04-04T14:00:00Z'}
+                      onChange={setFormScheduleValue}
                     />
-                    <p style={{
-                      fontSize: '12px',
-                      color: 'var(--text-tertiary)',
-                      marginTop: '4px',
-                    }}>
-                      {formScheduleType === 'Cron'
-                        ? 'Example: "0 0 * * *" (daily at midnight)'
-                        : 'Example: "2026-04-04T14:00:00Z"'
-                      }
-                    </p>
-                  </div>
+                  )}
 
                   <div style={{ display: 'flex', gap: '8px', marginTop: '0.5rem' }}>
                     <button
