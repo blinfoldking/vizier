@@ -158,7 +158,10 @@ export default function Layout() {
       {currentAgentId && (
         <div className="nav-sidebar">
           <div className="nav-header">
-            <span>{agents.find(a => a.agent_id === currentAgentId)?.name || currentAgentId}</span>
+            <div className='flex flex-col'>
+              <span>{agents.find(a => a.agent_id === currentAgentId)?.name || currentAgentId}</span>
+              <div className='opacity-50 m-2 text-xs font-mono font-extralight'>{currentAgentId}</div>
+            </div>
             <ThemeToggle />
           </div>
 
@@ -215,12 +218,13 @@ export default function Layout() {
             </div>
           </div>
         </div>
-      )}
+      )
+      }
 
       {/* Main content area */}
       <div className="main-content">
         <Outlet />
       </div>
-    </div>
+    </div >
   )
 }

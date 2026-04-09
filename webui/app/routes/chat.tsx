@@ -331,14 +331,6 @@ export default function Chat() {
             }} />
             # {topicId}
           </h3>
-          <div style={{
-            fontSize: '12px',
-            color: 'var(--text-tertiary)',
-            marginTop: '4px',
-            fontFamily: 'var(--font-mono)',
-          }}>
-            Agent: {agentId}
-          </div>
         </div>
         <div style={{
           fontSize: '12px',

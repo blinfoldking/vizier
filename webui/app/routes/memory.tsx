@@ -18,7 +18,7 @@ export default function MemoryManagement() {
   const [selectedMemory, setSelectedMemory] = useState<MemoryDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [modalMode, setModalMode] = useState<ModalMode>(null)
-  
+
   // Form state
   const [formTitle, setFormTitle] = useState('')
   const [formContent, setFormContent] = useState('')
@@ -33,7 +33,7 @@ export default function MemoryManagement() {
 
   const loadMemories = async () => {
     if (!agentId) return
-    
+
     try {
       setLoading(true)
       const response = await listMemories(agentId)
@@ -48,7 +48,7 @@ export default function MemoryManagement() {
 
   const handleViewMemory = async (slug: string) => {
     if (!agentId) return
-    
+
     try {
       const response = await getMemory(agentId, slug)
       setSelectedMemory(response.data)
@@ -76,7 +76,7 @@ export default function MemoryManagement() {
 
   const handleSubmit = async () => {
     if (!agentId || !formTitle.trim() || !formContent.trim()) return
-    
+
     setSubmitting(true)
     try {
       // Apply strict validation to finalize slug if provided
@@ -89,7 +89,7 @@ export default function MemoryManagement() {
         await updateMemory(agentId, selectedMemory.slug, formTitle, formContent)
         addToast('success', 'Memory updated successfully')
       }
-      
+
       await loadMemories()
       closeModal()
     } catch (error: any) {
@@ -103,7 +103,7 @@ export default function MemoryManagement() {
   const handleDeleteMemory = async (slug: string) => {
     if (!agentId) return
     if (!confirm('Are you sure you want to delete this memory?')) return
-    
+
     try {
       await deleteMemory(agentId, slug)
       addToast('success', 'Memory deleted successfully')
@@ -129,14 +129,6 @@ export default function MemoryManagement() {
       <div className="main-header">
         <div style={{ flex: 1 }}>
           <h3 style={{ margin: 0 }}>Memory Management</h3>
-          <div style={{
-            fontSize: '12px',
-            color: 'var(--text-tertiary)',
-            marginTop: '4px',
-            fontFamily: 'var(--font-mono)',
-          }}>
-            Agent: {agentId}
-          </div>
         </div>
         <button className="btn btn-primary" onClick={handleCreateMemory}>
           <FiPlus size={16} />
@@ -167,8 +159,8 @@ export default function MemoryManagement() {
             <div style={{ fontSize: '48px', marginBottom: '1rem', opacity: 0.5 }}>📚</div>
             <p style={{ fontSize: '16px', marginBottom: '0.5rem' }}>No memories yet</p>
             <p style={{ fontSize: '14px', marginBottom: '1.5rem' }}>Create your first memory to get started</p>
-            <button 
-              className="btn btn-primary" 
+            <button
+              className="btn btn-primary"
               onClick={handleCreateMemory}
             >
               <FiPlus size={16} />
@@ -281,10 +273,10 @@ export default function MemoryManagement() {
                   </div>
                   <button className="btn btn-ghost" onClick={closeModal} style={{ padding: '8px' }}>✕</button>
                 </div>
-                
+
                 <div className="prose" style={{
                   marginBottom: '1.5rem',
-                  
+
                   background: 'var(--surface)',
                   padding: '1.5rem',
                   borderRadius: '8px',

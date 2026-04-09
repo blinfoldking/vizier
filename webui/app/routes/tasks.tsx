@@ -15,7 +15,7 @@ export default function TaskManagement() {
   const [loading, setLoading] = useState(true)
   const [modalMode, setModalMode] = useState<ModalMode>(null)
   const [filterActive, setFilterActive] = useState<boolean | undefined>(undefined)
-  
+
   // Form state
   const [formSlug, setFormSlug] = useState('')
   const [formUser, setFormUser] = useState('user')
@@ -31,7 +31,7 @@ export default function TaskManagement() {
 
   const loadTasks = async () => {
     if (!agentId) return
-    
+
     try {
       setLoading(true)
       const response = await listTasks(agentId, filterActive)
@@ -45,7 +45,7 @@ export default function TaskManagement() {
 
   const handleViewTask = async (slug: string) => {
     if (!agentId) return
-    
+
     try {
       const response = await getTask(agentId, slug)
       setSelectedTask(response.data)
@@ -61,7 +61,7 @@ export default function TaskManagement() {
     setFormUser(task.user)
     setFormTitle(task.title)
     setFormInstruction(task.instruction)
-    
+
     if ('CronTask' in task.schedule) {
       setFormScheduleType('Cron')
       setFormScheduleValue(task.schedule.CronTask)
@@ -69,7 +69,7 @@ export default function TaskManagement() {
       setFormScheduleType('OneTime')
       setFormScheduleValue(task.schedule.OneTimeTask)
     }
-    
+
     setModalMode('edit')
   }
 
@@ -85,7 +85,7 @@ export default function TaskManagement() {
 
   const handleSubmit = async () => {
     if (!agentId || !formSlug.trim() || !formTitle.trim() || !formInstruction.trim() || !formScheduleValue.trim()) return
-    
+
     setSubmitting(true)
     try {
       // Apply strict validation to finalize slug
@@ -107,7 +107,7 @@ export default function TaskManagement() {
       } else if (modalMode === 'edit' && selectedTask) {
         await updateTask(agentId, selectedTask.slug, taskData)
       }
-      
+
       await loadTasks()
       closeModal()
     } catch (error) {
@@ -121,7 +121,7 @@ export default function TaskManagement() {
   const handleDeleteTask = async (slug: string) => {
     if (!agentId) return
     if (!confirm('Are you sure you want to delete this task?')) return
-    
+
     try {
       await deleteTask(agentId, slug)
       await loadTasks()
@@ -170,14 +170,6 @@ export default function TaskManagement() {
       <div className="main-header">
         <div style={{ flex: 1 }}>
           <h3 style={{ margin: 0 }}>Task Management</h3>
-          <div style={{
-            fontSize: '12px',
-            color: 'var(--text-tertiary)',
-            marginTop: '4px',
-            fontFamily: 'var(--font-mono)',
-          }}>
-            Agent: {agentId}
-          </div>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <select
@@ -213,8 +205,8 @@ export default function TaskManagement() {
             padding: '3rem',
           }}>
             <p>No tasks yet.</p>
-            <button 
-              className="btn btn-primary" 
+            <button
+              className="btn btn-primary"
               onClick={handleCreateTask}
               style={{ marginTop: '1rem' }}
             >
@@ -352,7 +344,7 @@ export default function TaskManagement() {
                   </div>
                   <button className="btn btn-ghost" onClick={closeModal}>✕</button>
                 </div>
-                
+
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -528,7 +520,7 @@ export default function TaskManagement() {
                       color: 'var(--text-tertiary)',
                       marginTop: '4px',
                     }}>
-                      {formScheduleType === 'Cron' 
+                      {formScheduleType === 'Cron'
                         ? 'Example: "0 0 * * *" (daily at midnight)'
                         : 'Example: "2026-04-04T14:00:00Z"'
                       }
