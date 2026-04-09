@@ -112,7 +112,7 @@ export default function Layout() {
   return (
     <div className="layout-container">
       <ToastContainer />
-      
+
       {/* Workspace sidebar (left) - Agent selector with settings and layout at bottom */}
       <div className="workspace-sidebar">
         <div className="workspace-items">
