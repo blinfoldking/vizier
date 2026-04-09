@@ -12,11 +12,20 @@ All notable changes to this project will be documented in this file.
 - Adjust onboarding and add command to generate new agent
 - Tweak styling
 - Add windows  support
+- Adjust light theme coloscheme
+- Adjust codeblock
+- Syntax hightlighting
+- Adjust chat text input
+- Adjust layout
+- Tweak paddings and layouts
+- Add utility to modify primary documetns of agents
 
 ### ⚙️ Miscellaneous Tasks
 
 - Delete default vizier agent
 - Rename template file
+- Bump version to 0.3.0-rc.2
+- Fix windows build
 ## [0.3.0-rc.1] - 2026-04-04
 
 ### 🚀 Features
