@@ -16,6 +16,7 @@ export default [
     route(':agentId/chat/:topicId', 'routes/chat.tsx'),
     route(':agentId/memory', 'routes/memory.tsx'),
     route(':agentId/tasks', 'routes/tasks.tsx'),
+    route(':agentId/documents', 'routes/documents.tsx'),
     route(':agentId/settings', 'routes/settings.tsx'),
   ]),
 ] satisfies RouteConfig

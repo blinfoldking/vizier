@@ -232,6 +232,40 @@ export const deleteTask = async (agentId: string, slug: string) => {
 }
 
 // ============================================================================
+// DOCUMENT ENDPOINTS
+// ============================================================================
+
+export const getAgentDocument = async (agentId: string) => {
+  const res = await apiClient.get(`/agents/${agentId}/documents/agent`)
+  return res.data
+}
+
+export const updateAgentDocument = async (agentId: string, content: string) => {
+  const res = await apiClient.put(`/agents/${agentId}/documents/agent`, { content })
+  return res.data
+}
+
+export const getIdentityDocument = async (agentId: string) => {
+  const res = await apiClient.get(`/agents/${agentId}/documents/identity`)
+  return res.data
+}
+
+export const updateIdentityDocument = async (agentId: string, content: string) => {
+  const res = await apiClient.put(`/agents/${agentId}/documents/identity`, { content })
+  return res.data
+}
+
+export const getHeartbeatDocument = async (agentId: string) => {
+  const res = await apiClient.get(`/agents/${agentId}/documents/heartbeat`)
+  return res.data
+}
+
+export const updateHeartbeatDocument = async (agentId: string, content: string) => {
+  const res = await apiClient.put(`/agents/${agentId}/documents/heartbeat`, { content })
+  return res.data
+}
+
+// ============================================================================
 // UTILITY
 // ============================================================================
 

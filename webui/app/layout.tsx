@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useParams, useLocation } from 'react-router'
 import { listAgents, listTopics } from './services/vizier'
 import { FiSettings, FiMessageCircle, FiCheckCircle, FiLogOut, FiSearch } from 'react-icons/fi'
-import { FaBook } from 'react-icons/fa'
+import { FaBook, FaFile } from 'react-icons/fa'
 import Avatar from './components/avatar'
 import ThemeToggle from './components/ThemeToggle'
 import ToastContainer from './components/Toast'
@@ -85,6 +85,7 @@ export default function Layout() {
   const getCurrentView = () => {
     if (location.pathname.includes('/memory')) return 'memory'
     if (location.pathname.includes('/tasks')) return 'tasks'
+    if (location.pathname.includes('/documents')) return 'documents'
     if (location.pathname.includes('/settings')) return 'settings'
     if (location.pathname.includes('/chat')) return 'chat'
     return null
@@ -188,6 +189,13 @@ export default function Layout() {
               >
                 <FiCheckCircle size={16} />
                 <span>Tasks</span>
+              </div>
+              <div
+                className={`nav-item ${currentView === 'documents' ? 'active' : ''}`}
+                onClick={() => navigate(`/${currentAgentId}/documents`)}
+              >
+                <FaFile size={16} />
+                <span>Documents</span>
               </div>
             </div>
 
