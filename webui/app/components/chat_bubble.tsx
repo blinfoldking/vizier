@@ -4,6 +4,7 @@ import DotLoader from './dot_loader'
 import { motion, type Transition } from 'motion/react'
 
 import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
 import Avatar from './avatar'
 
 interface ChatBubbleProps {
@@ -45,7 +46,7 @@ const ChatBubble = (props: ChatBubbleProps) => {
       {
         props.chat.choice
           ? <div className='p-5 prose mb-5 mt-5 min-w-full border-l-2 border-dashed bg-gray-300 shadow-md'>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
               {`**${props.chat.username}** ${formatChoice(props.chat.choice)}`}
             </ReactMarkdown>
           </div>
@@ -68,7 +69,7 @@ const ChatBubble = (props: ChatBubbleProps) => {
                     <DotLoader />
                   </div>
                 ) : (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
                     {props.chat.content}
                   </ReactMarkdown>
                 )}

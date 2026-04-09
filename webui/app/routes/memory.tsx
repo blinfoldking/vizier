@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
 import { useParams } from 'react-router'
 import { listMemories, getMemory, createMemory, updateMemory, deleteMemory } from '../services/vizier'
 import { autoCorrectSlug, autoCorrectSlugStrict } from '../utils/slug'
@@ -289,7 +290,7 @@ export default function MemoryManagement() {
                   borderRadius: '8px',
                   border: '1px solid var(--border)',
                 }}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedMemory.content}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{selectedMemory.content}</ReactMarkdown>
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px' }}>

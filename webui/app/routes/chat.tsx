@@ -6,6 +6,7 @@ import { autoCorrectSlug, autoCorrectSlugStrict } from '../utils/slug'
 import type { Agent, ChatMessage, WebSocketMessage, WebSocketResponse } from '../interfaces/types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
 import { getCurrentUsername } from '../utils/auth'
 import { Skeleton, SkeletonMessage } from '../components/Skeleton'
 
@@ -426,7 +427,7 @@ export default function Chat() {
                     borderLeft: isUserMessage ? 'none' : '3px solid var(--accent-primary)',
                     boxShadow: isUserMessage ? 'var(--shadow-sm)' : 'none',
                   }}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{content}</ReactMarkdown>
                   </div>
                 </div>
               )

@@ -1906,3 +1906,155 @@ textarea:focus {
   transform: scale(0.95);
   pointer-events: none;
 }
+
+/* ============================================================================
+   HIGHLIGHT.JS SYNTAX HIGHLIGHTING
+   ============================================================================ */
+
+.hljs {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.prose pre .hljs {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Light mode syntax colors */
+:not(.dark) .hljs {
+  color: #24292e;
+}
+
+:not(.dark) .hljs-comment,
+:not(.dark) .hljs-quote {
+  color: #6a737d;
+}
+
+:not(.dark) .hljs-keyword,
+:not(.dark) .hljs-selector-tag {
+  color: #d73a49;
+}
+
+:not(.dark) .hljs-string,
+:not(.dark) .hljs-attr {
+  color: #032f62;
+}
+
+:not(.dark) .hljs-number,
+:not(.dark) .hljs-literal {
+  color: #005cc5;
+}
+
+:not(.dark) .hljs-title,
+:not(.dark) .hljs-section {
+  color: #6f42c1;
+}
+
+:not(.dark) .hljs-type,
+:not(.dark) .hljs-class .hljs-title {
+  color: #6f42c1;
+}
+
+:not(.dark) .hljs-tag,
+:not(.dark) .hljs-name {
+  color: #22863a;
+}
+
+:not(.dark) .hljs-attribute {
+  color: #6f42c1;
+}
+
+:not(.dark) .hljs-variable,
+:not(.dark) .hljs-template-variable {
+  color: #e36209;
+}
+
+:not(.dark) .hljs-built_in,
+:not(.dark) .hljs-builtin-name {
+  color: #6f42c1;
+}
+
+:not(.dark) .hljs-symbol,
+:not(.dark) .hljs-bullet {
+  color: #005cc5;
+}
+
+:not(.dark) .hljs-addition {
+  color: #22863a;
+  background-color: #f0fdf4;
+}
+
+:not(.dark) .hljs-deletion {
+  color: #b31d28;
+  background-color: #fff0f0;
+}
+
+/* Dark mode syntax colors */
+.dark .hljs {
+  color: #c9d1d9;
+}
+
+.dark .hljs-comment,
+.dark .hljs-quote {
+  color: #8b949e;
+}
+
+.dark .hljs-keyword,
+.dark .hljs-selector-tag {
+  color: #ff7b72;
+}
+
+.dark .hljs-string,
+.dark .hljs-attr {
+  color: #a5d6ff;
+}
+
+.dark .hljs-number,
+.dark .hljs-literal {
+  color: #79c0ff;
+}
+
+.dark .hljs-title,
+.dark .hljs-section {
+  color: #d2a8ff;
+}
+
+.dark .hljs-type,
+.dark .hljs-class .hljs-title {
+  color: #d2a8ff;
+}
+
+.dark .hljs-tag,
+.dark .hljs-name {
+  color: #7ee787;
+}
+
+.dark .hljs-attribute {
+  color: #d2a8ff;
+}
+
+.dark .hljs-variable,
+.dark .hljs-template-variable {
+  color: #ffa657;
+}
+
+.dark .hljs-built_in,
+.dark .hljs-builtin-name {
+  color: #d2a8ff;
+}
+
+.dark .hljs-symbol,
+.dark .hljs-bullet {
+  color: #79c0ff;
+}
+
+.dark .hljs-addition {
+  color: #7ee787;
+  background-color: rgba(46, 160, 67, 0.15);
+}
+
+.dark .hljs-deletion {
+  color: #ff7b72;
+  background-color: rgba(255, 123, 114, 0.15);
+}
