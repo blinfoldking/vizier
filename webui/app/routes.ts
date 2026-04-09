@@ -12,6 +12,7 @@ export default [
   // Protected routes with layout
   layout('layout.tsx', [
     index('routes/home.tsx'),
+    route('settings', 'routes/settingsRoot.tsx'),
     route(':agentId/chat/:topicId', 'routes/chat.tsx'),
     route(':agentId/memory', 'routes/memory.tsx'),
     route(':agentId/tasks', 'routes/tasks.tsx'),

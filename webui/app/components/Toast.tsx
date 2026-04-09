@@ -26,7 +26,7 @@ function ToastItem({ toast }: { toast: Toast }) {
       initial={{ opacity: 0, y: -20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -20, scale: 0.95 }}
-      className={`flex items-start gap-3 p-4 rounded-lg border shadow-lg ${toastColors[toast.type]}`}
+      className={`flex items-start gap-3 p-5 rounded-lg border shadow-lg ${toastColors[toast.type]}`}
     >
       <Icon className="flex-shrink-0 mt-0.5" size={18} />
       <div className="flex-1">

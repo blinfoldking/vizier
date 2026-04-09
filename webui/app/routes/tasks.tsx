@@ -179,7 +179,7 @@ export default function TaskManagement() {
               else setFilterActive(e.target.value === 'active')
             }}
             style={{
-              padding: '8px 12px',
+              padding: '8px 16px',
               borderRadius: '4px',
               border: '1px solid var(--border)',
               background: 'var(--background)',
@@ -492,7 +492,7 @@ export default function TaskManagement() {
                       value={formScheduleType}
                       onChange={(e) => setFormScheduleType(e.target.value as ScheduleType)}
                       style={{
-                        padding: '8px 12px',
+                        padding: '8px 16px',
                         borderRadius: '4px',
                         border: '1px solid var(--border)',
                         background: 'var(--background)',

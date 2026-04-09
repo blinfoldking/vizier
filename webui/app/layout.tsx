@@ -137,9 +137,10 @@ export default function Layout() {
 
         {/* Bottom workspace controls */}
         <div className="workspace-bottom">
+          <ThemeToggle />
           <div
             className={`workspace-item ${currentView === 'settings' ? 'active' : ''}`}
-            onClick={() => currentAgentId && navigate(`/${currentAgentId}/settings`)}
+            onClick={() => navigate(currentAgentId ? `/${currentAgentId}/settings` : '/settings')}
             title="Settings"
           >
             <FiSettings size={20} />
@@ -162,7 +163,6 @@ export default function Layout() {
               <span>{agents.find(a => a.agent_id === currentAgentId)?.name || currentAgentId}</span>
               <div className='opacity-50 m-2 text-xs font-mono font-extralight'>{currentAgentId}</div>
             </div>
-            <ThemeToggle />
           </div>
 
           <div className="nav-content">

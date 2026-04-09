@@ -10,8 +10,8 @@ export default function ThemeToggle() {
       className="theme-toggle"
       title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
-      <FiSun className="theme-icon-light" size={18} />
-      <FiMoon className="theme-icon-dark" size={18} />
+      <FiSun className="theme-icon-light" size={20} />
+      <FiMoon className="theme-icon-dark" size={20} />
     </button>
   )
 }
