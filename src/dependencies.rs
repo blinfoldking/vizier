@@ -80,7 +80,7 @@ impl VizierDependencies {
         // Check if any users exist
         if !storage.user_exists().await? {
             // Get the primary user name from config
-            let username = &config.primary_user.name;
+            let username = &config.primary_user.username;
             
             // Create default password hash
             // We need to create a temporary AuthService for this

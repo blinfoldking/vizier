@@ -59,6 +59,10 @@ pub fn init_default_agent(path: PathBuf) {
                 enabled: false,
                 programmatic_tool_call: false,
             },
+            notify_primary_user: ToolConfig {
+                enabled: true,
+                programmatic_tool_call: false,
+            },
             mcp_servers: vec![],
         },
         silent_read_initiative_chance: 0.,

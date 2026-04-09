@@ -54,7 +54,7 @@ where
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
         let response = crate::utils::telegram::send_message(
             &self.bot,
-            &ChatId(args.chat_id),
+            ChatId(args.chat_id),
             args.content,
         )
         .await;

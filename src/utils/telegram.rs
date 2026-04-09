@@ -1,5 +1,6 @@
 use teloxide::Bot;
 use teloxide::prelude::*;
+use teloxide::types::Recipient;
 
 use crate::error::VizierError;
 
@@ -19,13 +20,18 @@ fn escape_markdown_v2(text: &str) -> String {
     escaped
 }
 
-pub async fn send_message(bot: &Bot, chat_id: &ChatId, content: String) -> Result<(), VizierError> {
-    let escaped_content = escape_markdown_v2(&content);
+pub async fn send_message<C, T>(bot: &Bot, recipient: C, content: T) -> Result<(), VizierError>
+where
+    C: Into<Recipient>,
+    T: Into<String>,
+{
+    let escaped_content = escape_markdown_v2(&content.into());
+    let recipient = recipient.into();
 
     if escaped_content.len() < MAX_MESSAGE_LENGTH {
         if let Err(err) = bot
             .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-            .send_message(*chat_id, escaped_content)
+            .send_message(recipient.clone(), escaped_content)
             .await
         {
             log::error!("{:?}", err);
@@ -43,7 +49,7 @@ pub async fn send_message(bot: &Bot, chat_id: &ChatId, content: String) -> Resul
     for msg in chunks {
         if let Err(err) = bot
             .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-            .send_message(*chat_id, msg)
+            .send_message(recipient.clone(), msg)
             .await
         {
             log::error!("{:?}", err);

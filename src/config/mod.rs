@@ -151,9 +151,10 @@ impl Default for VizierConfig {
         VizierConfig {
             workspace: "~/.vizier".into(),
             primary_user: UserConfig {
-                name: "admin".into(),
+                username: "admin".into(),
                 discord_id: "".into(),
                 discord_username: "".into(),
+                telegram_username: "".into(),
                 alias: vec![],
             },
             storage: StorageConfig::Filesystem(storage::DocumentIndexerConfig::InMem),

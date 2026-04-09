@@ -15,6 +15,10 @@ use crate::{
             consult::{ConsultAgent, DelegateAgent},
             discord::new_discord_tools,
             document::init_document_tools,
+            notify::{
+                DiscordDmPrimaryUser, NotifyPrimaryUser, TelegramDmPrimaryUser,
+                WebUiNotifyPrimaryUser,
+            },
             scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
             shell::ShellExec,
             skill::CreateSkill,
@@ -44,6 +48,7 @@ mod brave_search;
 mod consult;
 mod discord;
 mod document;
+mod notify;
 mod scheduler;
 mod shell;
 mod skill;
@@ -195,6 +200,25 @@ impl VizierTools {
                 }
             }
 
+            if agent_config
+                .tools
+                .notify_primary_user
+                .is_programatically_enabled()
+            {
+                python_interpreter = python_interpreter
+                    .tool(DiscordDmPrimaryUser::new(deps.config.clone()))
+                    .tool(TelegramDmPrimaryUser::new(deps.config.clone()))
+                    .tool(WebUiNotifyPrimaryUser::new(
+                        agent_id.clone(),
+                        deps.transport.clone(),
+                    ))
+                    .tool(NotifyPrimaryUser::new(
+                        deps.config.clone(),
+                        agent_id.clone(),
+                        deps.transport.clone(),
+                    ));
+            }
+
             let python_tool_docs = python_interpreter.generate_docs_tool().await;
             tool_server_builder = tool_server_builder.tool(python_interpreter);
             tool_server_builder = tool_server_builder.tool(python_tool_docs);
@@ -215,7 +239,8 @@ impl VizierTools {
             }
         }
 
-        if agent_config.tools.telegram.enabled && !agent_config.tools.telegram.programmatic_tool_call
+        if agent_config.tools.telegram.enabled
+            && !agent_config.tools.telegram.programmatic_tool_call
         {
             if let Some(telegram) = &deps.config.channels.telegram {
                 if let Some((_, telegram)) = telegram.iter().find(|(id, _)| **id == agent_id) {
@@ -250,6 +275,19 @@ impl VizierTools {
                 tool_server_builder = tool_server_builder.tool(read_memory).tool(write_memory);
             }
         }
+
+        tool_server_builder = tool_server_builder
+            .tool(DiscordDmPrimaryUser::new(deps.config.clone()))
+            .tool(TelegramDmPrimaryUser::new(deps.config.clone()))
+            .tool(WebUiNotifyPrimaryUser::new(
+                agent_id.clone(),
+                deps.transport.clone(),
+            ))
+            .tool(NotifyPrimaryUser::new(
+                deps.config.clone(),
+                agent_id.clone(),
+                deps.transport.clone(),
+            ));
 
         let tool_server = tool_server_builder.run();
 

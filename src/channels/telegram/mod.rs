@@ -315,7 +315,7 @@ impl VizierChannel for TelegramChannelWriter {
                         VizierResponse::Thinking { name, args } => {
                             let _ = crate::utils::telegram::send_message(
                                 &bot,
-                                &chat_id,
+                                chat_id,
                                 crate::utils::format_thinking(&name, &args),
                             )
                             .await;
@@ -326,7 +326,7 @@ impl VizierChannel for TelegramChannelWriter {
                             }
                             let content = remove_think_tags(&content.clone());
                             let _ =
-                                crate::utils::telegram::send_message(&bot, &chat_id, content).await;
+                                crate::utils::telegram::send_message(&bot, chat_id, content).await;
                         }
                         VizierResponse::Abort => {
                             if let Some(handle) = typing_handles.remove(&chat_id.0) {
@@ -334,8 +334,8 @@ impl VizierChannel for TelegramChannelWriter {
                             }
                             let _ = crate::utils::telegram::send_message(
                                 &bot,
-                                &chat_id,
-                                "thinking aborted".into(),
+                                chat_id,
+                                "thinking aborted".to_string(),
                             )
                             .await;
                         }

@@ -275,9 +275,10 @@ pub async fn onboard(args: OnboardArgs) -> Result<()> {
             model: crate::config::embedding::LocalEmbeddingModelVariant::AllMiniLml6V2,
         }),
         primary_user: UserConfig {
-            name: user_name,
+            username: user_name,
             discord_id: "".into(),
             discord_username: "".into(),
+            telegram_username: "".into(),
             alias: vec![],
         },
         providers,
@@ -343,6 +344,10 @@ pub async fn onboard(args: OnboardArgs) -> Result<()> {
             },
             telegram: ToolConfig {
                 enabled: false,
+                programmatic_tool_call: false,
+            },
+            notify_primary_user: ToolConfig {
+                enabled: true,
                 programmatic_tool_call: false,
             },
             mcp_servers: vec![],
