@@ -258,6 +258,15 @@ jobs:
           name: vizier-x86_64-pc-windows-msvc
           path: target/x86_64-pc-windows-msvc/release/
 
+      - name: Extract Windows binary from artifact
+        shell: powershell
+        run: |
+          $VERSION = "${{ needs.prepare-release.outputs.version }}"
+          $TARGET = "x86_64-pc-windows-msvc"
+          $ZIP = "target/${TARGET}/release/vizier-v${VERSION}-${TARGET}.zip"
+          Expand-Archive -Path $ZIP -DestinationPath "target/${TARGET}/release/" -Force
+          Copy-Item "target/${TARGET}/release/vizier-v${VERSION}-${TARGET}/vizier.exe" "target/${TARGET}/release/vizier.exe" -Force
+
       - name: Install NSIS
         run: choco install nsis -y
 
