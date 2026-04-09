@@ -167,6 +167,10 @@ jobs:
           npm ci
           npm run build
 
+      - name: Clear node_modules to prevent rebuild during cargo
+        shell: bash
+        run: rm -rf webui/node_modules
+
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
