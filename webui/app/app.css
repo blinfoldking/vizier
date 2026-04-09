@@ -18,9 +18,9 @@
 
 /* Light mode inline code - darker background for contrast */
 :not(.dark) .prose code {
-  background: #f3f4f6;
-  color: #1f2937;
-  border-color: #e5e7eb;
+  background: #e8e8e3;
+  color: #2a2a2a;
+  border-color: #d4d2cc;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
@@ -43,8 +43,8 @@
 
 /* Light mode code blocks */
 :not(.dark) .prose pre {
-  background: #f9fafb;
-  border-color: #e5e7eb;
+  background: #f0f0eb;
+  border-color: #d4d2cc;
 }
 
 /* Dark mode code blocks - better contrast */
@@ -64,7 +64,7 @@
 
 /* Light mode pre code */
 :not(.dark) .prose pre code {
-  color: #374151;
+  color: #3a3a3a;
 }
 
 /* Dark mode pre code - brighter for readability */
@@ -89,13 +89,13 @@
 
 /* Light mode tables */
 :not(.dark) .prose thead th {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: #e8e8e3;
+  color: #2a2a2a;
   font-weight: 600;
 }
 
 :not(.dark) .prose tbody tr:nth-child(even) {
-  background: #f9fafb;
+  background: #f0f0eb;
 }
 
 /* Dark mode tables */
@@ -126,17 +126,17 @@
 
 :root {
   /* Light Mode Colors */
-  --color-white: #ffffff;
-  --color-black: #0a0a0a;
-  --color-bg-primary: #fafbfc;
-  --color-bg-secondary: #f6f8fa;
-  --color-surface: #ffffff;
-  --color-border-light: #e5e7eb;
-  --color-border-medium: #d1d5db;
-  --color-text-primary: #1a202c;
-  --color-text-secondary: #4b5563;
-  --color-text-tertiary: #9ca3af;
-  --color-text-muted: #d1d5db;
+  --color-white: #fafaf8;
+  --color-black: #1a1a1a;
+  --color-bg-primary: #f5f4f0;
+  --color-bg-secondary: #ebebE6;
+  --color-surface: #f8f8f5;
+  --color-border-light: #dcdad4;
+  --color-border-medium: #c4c2bc;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #4a4a48;
+  --color-text-tertiary: #8a8a88;
+  --color-text-muted: #c4c2bc;
 
   /* Accent color - Vizier Emerald Green */
   --accent-primary: #10B981;
@@ -250,9 +250,9 @@
 
 /* Light mode inline code - darker background for contrast */
 :not(.dark) .prose code {
-  background: #f3f4f6;
-  color: #1f2937;
-  border-color: #e5e7eb;
+  background: #e8e8e3;
+  color: #2a2a2a;
+  border-color: #d4d2cc;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
@@ -275,8 +275,8 @@
 
 /* Light mode code blocks */
 :not(.dark) .prose pre {
-  background: #f9fafb;
-  border-color: #e5e7eb;
+  background: #f0f0eb;
+  border-color: #d4d2cc;
 }
 
 /* Dark mode code blocks - better contrast */
@@ -296,7 +296,7 @@
 
 /* Light mode pre code */
 :not(.dark) .prose pre code {
-  color: #374151;
+  color: #3a3a3a;
 }
 
 /* Dark mode pre code - brighter for readability */
@@ -321,13 +321,13 @@
 
 /* Light mode tables */
 :not(.dark) .prose thead th {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: #e8e8e3;
+  color: #2a2a2a;
   font-weight: 600;
 }
 
 :not(.dark) .prose tbody tr:nth-child(even) {
-  background: #f9fafb;
+  background: #f0f0eb;
 }
 
 /* Dark mode tables */
@@ -481,9 +481,9 @@ textarea:focus {
 
 /* Light mode inline code - darker background for contrast */
 :not(.dark) .prose code {
-  background: #f3f4f6;
-  color: #1f2937;
-  border-color: #e5e7eb;
+  background: #e8e8e3;
+  color: #2a2a2a;
+  border-color: #d4d2cc;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
@@ -506,8 +506,8 @@ textarea:focus {
 
 /* Light mode code blocks */
 :not(.dark) .prose pre {
-  background: #f9fafb;
-  border-color: #e5e7eb;
+  background: #f0f0eb;
+  border-color: #d4d2cc;
 }
 
 /* Dark mode code blocks - better contrast */
@@ -527,7 +527,7 @@ textarea:focus {
 
 /* Light mode pre code */
 :not(.dark) .prose pre code {
-  color: #374151;
+  color: #3a3a3a;
 }
 
 /* Dark mode pre code - brighter for readability */
@@ -552,13 +552,13 @@ textarea:focus {
 
 /* Light mode tables */
 :not(.dark) .prose thead th {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: #e8e8e3;
+  color: #2a2a2a;
   font-weight: 600;
 }
 
 :not(.dark) .prose tbody tr:nth-child(even) {
-  background: #f9fafb;
+  background: #f0f0eb;
 }
 
 /* Dark mode tables */
@@ -732,9 +732,9 @@ textarea:focus {
 
 /* Light mode inline code - darker background for contrast */
 :not(.dark) .prose code {
-  background: #f3f4f6;
-  color: #1f2937;
-  border-color: #e5e7eb;
+  background: #e8e8e3;
+  color: #2a2a2a;
+  border-color: #d4d2cc;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
@@ -757,8 +757,8 @@ textarea:focus {
 
 /* Light mode code blocks */
 :not(.dark) .prose pre {
-  background: #f9fafb;
-  border-color: #e5e7eb;
+  background: #f0f0eb;
+  border-color: #d4d2cc;
 }
 
 /* Dark mode code blocks - better contrast */
@@ -778,7 +778,7 @@ textarea:focus {
 
 /* Light mode pre code */
 :not(.dark) .prose pre code {
-  color: #374151;
+  color: #3a3a3a;
 }
 
 /* Dark mode pre code - brighter for readability */
@@ -803,13 +803,13 @@ textarea:focus {
 
 /* Light mode tables */
 :not(.dark) .prose thead th {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: #e8e8e3;
+  color: #2a2a2a;
   font-weight: 600;
 }
 
 :not(.dark) .prose tbody tr:nth-child(even) {
-  background: #f9fafb;
+  background: #f0f0eb;
 }
 
 /* Dark mode tables */
@@ -889,9 +889,9 @@ textarea:focus {
 
 /* Light mode inline code - darker background for contrast */
 :not(.dark) .prose code {
-  background: #f3f4f6;
-  color: #1f2937;
-  border-color: #e5e7eb;
+  background: #e8e8e3;
+  color: #2a2a2a;
+  border-color: #d4d2cc;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
@@ -914,8 +914,8 @@ textarea:focus {
 
 /* Light mode code blocks */
 :not(.dark) .prose pre {
-  background: #f9fafb;
-  border-color: #e5e7eb;
+  background: #f0f0eb;
+  border-color: #d4d2cc;
 }
 
 /* Dark mode code blocks - better contrast */
@@ -935,7 +935,7 @@ textarea:focus {
 
 /* Light mode pre code */
 :not(.dark) .prose pre code {
-  color: #374151;
+  color: #3a3a3a;
 }
 
 /* Dark mode pre code - brighter for readability */
@@ -960,13 +960,13 @@ textarea:focus {
 
 /* Light mode tables */
 :not(.dark) .prose thead th {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: #e8e8e3;
+  color: #2a2a2a;
   font-weight: 600;
 }
 
 :not(.dark) .prose tbody tr:nth-child(even) {
-  background: #f9fafb;
+  background: #f0f0eb;
 }
 
 /* Dark mode tables */
@@ -1218,9 +1218,9 @@ textarea:focus {
 
 /* Light mode inline code - darker background for contrast */
 :not(.dark) .prose code {
-  background: #f3f4f6;
-  color: #1f2937;
-  border-color: #e5e7eb;
+  background: #e8e8e3;
+  color: #2a2a2a;
+  border-color: #d4d2cc;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
@@ -1243,8 +1243,8 @@ textarea:focus {
 
 /* Light mode code blocks */
 :not(.dark) .prose pre {
-  background: #f9fafb;
-  border-color: #e5e7eb;
+  background: #f0f0eb;
+  border-color: #d4d2cc;
 }
 
 /* Dark mode code blocks - better contrast */
@@ -1264,7 +1264,7 @@ textarea:focus {
 
 /* Light mode pre code */
 :not(.dark) .prose pre code {
-  color: #374151;
+  color: #3a3a3a;
 }
 
 /* Dark mode pre code - brighter for readability */
@@ -1289,13 +1289,13 @@ textarea:focus {
 
 /* Light mode tables */
 :not(.dark) .prose thead th {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: #e8e8e3;
+  color: #2a2a2a;
   font-weight: 600;
 }
 
 :not(.dark) .prose tbody tr:nth-child(even) {
-  background: #f9fafb;
+  background: #f0f0eb;
 }
 
 /* Dark mode tables */
@@ -1472,9 +1472,9 @@ textarea:focus {
 
 /* Light mode inline code - darker background for contrast */
 :not(.dark) .prose code {
-  background: #f3f4f6;
-  color: #1f2937;
-  border-color: #e5e7eb;
+  background: #e8e8e3;
+  color: #2a2a2a;
+  border-color: #d4d2cc;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
@@ -1497,8 +1497,8 @@ textarea:focus {
 
 /* Light mode code blocks */
 :not(.dark) .prose pre {
-  background: #f9fafb;
-  border-color: #e5e7eb;
+  background: #f0f0eb;
+  border-color: #d4d2cc;
 }
 
 /* Dark mode code blocks - better contrast */
@@ -1518,7 +1518,7 @@ textarea:focus {
 
 /* Light mode pre code */
 :not(.dark) .prose pre code {
-  color: #374151;
+  color: #3a3a3a;
 }
 
 /* Dark mode pre code - brighter for readability */
@@ -1543,13 +1543,13 @@ textarea:focus {
 
 /* Light mode tables */
 :not(.dark) .prose thead th {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: #e8e8e3;
+  color: #2a2a2a;
   font-weight: 600;
 }
 
 :not(.dark) .prose tbody tr:nth-child(even) {
-  background: #f9fafb;
+  background: #f0f0eb;
 }
 
 /* Dark mode tables */
@@ -1625,9 +1625,9 @@ textarea:focus {
 
 /* Light mode inline code - darker background for contrast */
 :not(.dark) .prose code {
-  background: #f3f4f6;
-  color: #1f2937;
-  border-color: #e5e7eb;
+  background: #e8e8e3;
+  color: #2a2a2a;
+  border-color: #d4d2cc;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
@@ -1650,8 +1650,8 @@ textarea:focus {
 
 /* Light mode code blocks */
 :not(.dark) .prose pre {
-  background: #f9fafb;
-  border-color: #e5e7eb;
+  background: #f0f0eb;
+  border-color: #d4d2cc;
 }
 
 /* Dark mode code blocks - better contrast */
@@ -1671,7 +1671,7 @@ textarea:focus {
 
 /* Light mode pre code */
 :not(.dark) .prose pre code {
-  color: #374151;
+  color: #3a3a3a;
 }
 
 /* Dark mode pre code - brighter for readability */
@@ -1696,13 +1696,13 @@ textarea:focus {
 
 /* Light mode tables */
 :not(.dark) .prose thead th {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: #e8e8e3;
+  color: #2a2a2a;
   font-weight: 600;
 }
 
 :not(.dark) .prose tbody tr:nth-child(even) {
-  background: #f9fafb;
+  background: #f0f0eb;
 }
 
 /* Dark mode tables */
@@ -1773,9 +1773,9 @@ textarea:focus {
 
 /* Light mode inline code - darker background for contrast */
 :not(.dark) .prose code {
-  background: #f3f4f6;
-  color: #1f2937;
-  border-color: #e5e7eb;
+  background: #e8e8e3;
+  color: #2a2a2a;
+  border-color: #d4d2cc;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
@@ -1798,8 +1798,8 @@ textarea:focus {
 
 /* Light mode code blocks */
 :not(.dark) .prose pre {
-  background: #f9fafb;
-  border-color: #e5e7eb;
+  background: #f0f0eb;
+  border-color: #d4d2cc;
 }
 
 /* Dark mode code blocks - better contrast */
@@ -1819,7 +1819,7 @@ textarea:focus {
 
 /* Light mode pre code */
 :not(.dark) .prose pre code {
-  color: #374151;
+  color: #3a3a3a;
 }
 
 /* Dark mode pre code - brighter for readability */
@@ -1844,13 +1844,13 @@ textarea:focus {
 
 /* Light mode tables */
 :not(.dark) .prose thead th {
-  background: #f3f4f6;
-  color: #1f2937;
+  background: #e8e8e3;
+  color: #2a2a2a;
   font-weight: 600;
 }
 
 :not(.dark) .prose tbody tr:nth-child(even) {
-  background: #f9fafb;
+  background: #f0f0eb;
 }
 
 /* Dark mode tables */
