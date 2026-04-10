@@ -9,13 +9,14 @@ use crate::{
         agent::{AgentConfig, AgentToolsConfig, MemoryConfig, ToolConfig},
     },
     constant::AGENT_TEMPLATE,
+    utils::build_path,
 };
 
 pub async fn init() -> Result<()> {
     let current_dir = env::current_dir()?;
 
     let mut config = VizierConfig::default();
-    config.workspace = format!("{}/.vizier", current_dir.to_str().unwrap());
+    config.workspace = build_path(current_dir.to_str().unwrap(), &[".vizier"]).to_string_lossy().to_string();
 
     let mut config_path = current_dir.clone();
     config_path.push(".vizier.yaml");

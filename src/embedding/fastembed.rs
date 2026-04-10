@@ -1,5 +1,5 @@
 /// originally from yoinked from https://github.com/0xPlaygrounds/rig/blob/main/rig-integrations/rig-fastembed/src/lib.rs
-use std::{path::PathBuf, str::FromStr, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 pub use fastembed::EmbeddingModel as FastembedModel;
 use fastembed::TextEmbedding;
@@ -8,7 +8,7 @@ use rig::embeddings::{self, EmbeddingError};
 use fastembed::InitOptions;
 use rig::{Embed, embeddings::EmbeddingsBuilder};
 
-use crate::embedding::VizierEmbeddingModel;
+use crate::{embedding::VizierEmbeddingModel, utils::build_path};
 
 #[derive(Clone)]
 pub struct Client;
@@ -37,9 +37,7 @@ impl Client {
             match workspace {
                 None => None,
                 Some(workspace) => {
-                    let path =
-                        PathBuf::from_str(&format!("{workspace}/embeddings/{}", model.to_string()))
-                            .unwrap();
+                    let path = build_path(&workspace, &["embeddings", &model.to_string()]);
                     Some(path)
                 }
             },

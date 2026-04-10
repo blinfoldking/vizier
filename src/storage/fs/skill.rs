@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use std::collections::HashMap;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     schema::{AgentId, Skill},
     storage::{fs::FileSystemStorage, skill::SkillStorage},
+    utils::{build_glob_path, build_path},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -28,19 +29,17 @@ impl From<Skill> for SkillFrontMatter {
 #[async_trait::async_trait]
 impl SkillStorage for FileSystemStorage {
     async fn save_skill(&self, agent_id: Option<AgentId>, skill: Skill) -> Result<()> {
-        let mut path = format!("{}/skills/{}/SKILL.md", self.workspace, skill.name);
-        if let Some(agent_id) = agent_id {
-            path = format!(
-                "{}/agents/{}/skills/{}/SKILL.md",
-                self.workspace, agent_id, skill.name
-            );
-        }
+        let path = if let Some(agent_id) = agent_id {
+            build_path(&self.workspace, &["agents", &agent_id, "skills", &skill.name, "SKILL.md"])
+        } else {
+            build_path(&self.workspace, &["skills", &skill.name, "SKILL.md"])
+        };
 
         let frontmatter = SkillFrontMatter::from(skill.clone());
         crate::utils::markdown::write_markdown(
             &frontmatter,
             skill.content.clone(),
-            PathBuf::from_str(&path)?,
+            path,
         )?;
 
         Ok(())
@@ -49,7 +48,7 @@ impl SkillStorage for FileSystemStorage {
     async fn list_skill(&self, agent_id: Option<AgentId>) -> Result<Vec<Skill>> {
         let mut skills = HashMap::<String, Skill>::new();
 
-        let path = format!("{}/skills/*/SKILL.md", self.workspace);
+        let path = build_glob_path(&self.workspace, &["skills", "*", "SKILL.md"]);
         for entry in glob::glob(&path)? {
             let entry = entry?;
 
@@ -68,7 +67,7 @@ impl SkillStorage for FileSystemStorage {
         }
 
         if let Some(agent_id) = agent_id {
-            let path = format!("{}/agents/{}/skills/*/SKILL.md", self.workspace, agent_id);
+            let path = build_glob_path(&self.workspace, &["agents", &agent_id, "skills", "*", "SKILL.md"]);
 
             for entry in glob::glob(&path)? {
                 let entry = entry?;
@@ -92,13 +91,10 @@ impl SkillStorage for FileSystemStorage {
     }
     async fn get_skill(&self, agent_id: Option<AgentId>, slug: String) -> Result<Option<Skill>> {
         if let Some(agent_id) = agent_id {
-            let path = format!(
-                "{}/agents/{}/skills/{}/SKILL.md",
-                self.workspace, agent_id, slug
-            );
+            let path = build_path(&self.workspace, &["agents", &agent_id, "skills", &slug, "SKILL.md"]);
 
             let (frontmatter, content) = crate::utils::markdown::read_markdown::<SkillFrontMatter>(
-                PathBuf::from_str(&path)?,
+                path,
             )?;
 
             let skill = Skill {
@@ -112,10 +108,10 @@ impl SkillStorage for FileSystemStorage {
             return Ok(Some(skill));
         }
 
-        let path = format!("{}/skills/{}/SKILL.md", self.workspace, slug);
+        let path = build_path(&self.workspace, &["skills", &slug, "SKILL.md"]);
 
         let (frontmatter, content) =
-            crate::utils::markdown::read_markdown::<SkillFrontMatter>(PathBuf::from_str(&path)?)?;
+            crate::utils::markdown::read_markdown::<SkillFrontMatter>(path)?;
 
         let skill = Skill {
             name: frontmatter.name,

@@ -4,7 +4,10 @@ use rig::{completion::ToolDefinition, tool::Tool};
 use schemars::schema_for;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{VizierError, throw_vizier_error};
+use crate::{
+    error::{VizierError, throw_vizier_error},
+    utils::build_path,
+};
 
 pub trait PrimaryDocument {
     const NAME: &'static str;
@@ -79,7 +82,7 @@ where
     }
 
     async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
-        let path = std::path::PathBuf::from(format!("{}/{}", self.workspace, T::NAME));
+        let path = build_path(&self.workspace, &[T::NAME]);
 
         match std::fs::write(path, args.content) {
             Ok(_) => Ok(()),
@@ -124,8 +127,8 @@ where
         }
     }
 
-    async fn call(&self, args: Self::Args) -> Result<Self::Output, Self::Error> {
-        let path = std::path::PathBuf::from(format!("{}/{}", self.workspace, T::NAME));
+    async fn call(&self, _args: Self::Args) -> Result<Self::Output, Self::Error> {
+        let path = build_path(&self.workspace, &[T::NAME]);
         let content = std::fs::read_to_string(path).map_err(|err| VizierError(err.to_string()))?;
 
         Ok(content)

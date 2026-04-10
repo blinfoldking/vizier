@@ -1,13 +1,14 @@
-use std::path::PathBuf;
-
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::storage::{
-    fs::FileSystemStorage,
-    user::{ApiKey, User, UserStorage},
+use crate::{
+    storage::{
+        fs::FileSystemStorage,
+        user::{ApiKey, User, UserStorage},
+    },
+    utils::build_path,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -26,7 +27,7 @@ const API_KEYS_PATH: &str = "users/api_keys.json";
 #[async_trait::async_trait]
 impl UserStorage for FileSystemStorage {
     async fn get_user(&self, username: &str) -> Result<Option<User>> {
-        let path = PathBuf::from(format!("{}/{}", self.workspace, USERS_PATH));
+        let path = build_path(&self.workspace, &[USERS_PATH]);
 
         if !path.exists() {
             return Ok(None);
@@ -39,7 +40,7 @@ impl UserStorage for FileSystemStorage {
     }
 
     async fn create_user(&self, username: &str, password_hash: &str) -> Result<User> {
-        let mut path = PathBuf::from(format!("{}/{}", self.workspace, USERS_PATH));
+        let path = build_path(&self.workspace, &[USERS_PATH]);
         let _ = std::fs::create_dir_all(path.parent().unwrap())?;
 
         let mut store = if path.exists() {
@@ -64,7 +65,7 @@ impl UserStorage for FileSystemStorage {
     }
 
     async fn update_password(&self, user_id: &str, password_hash: &str) -> Result<()> {
-        let path = PathBuf::from(format!("{}/{}", self.workspace, USERS_PATH));
+        let path = build_path(&self.workspace, &[USERS_PATH]);
 
         if !path.exists() {
             return Err(anyhow::anyhow!("User store not found"));
@@ -85,7 +86,7 @@ impl UserStorage for FileSystemStorage {
     }
 
     async fn user_exists(&self) -> Result<bool> {
-        let path = PathBuf::from(format!("{}/{}", self.workspace, USERS_PATH));
+        let path = build_path(&self.workspace, &[USERS_PATH]);
 
         if !path.exists() {
             return Ok(false);
@@ -104,7 +105,7 @@ impl UserStorage for FileSystemStorage {
         key_hash: &str,
         expires_at: Option<DateTime<Utc>>,
     ) -> Result<ApiKey> {
-        let mut path = PathBuf::from(format!("{}/{}", self.workspace, API_KEYS_PATH));
+        let path = build_path(&self.workspace, &[API_KEYS_PATH]);
         let _ = std::fs::create_dir_all(path.parent().unwrap())?;
 
         let mut store = if path.exists() {
@@ -132,7 +133,7 @@ impl UserStorage for FileSystemStorage {
     }
 
     async fn get_api_key_by_hash(&self, key_hash: &str) -> Result<Option<ApiKey>> {
-        let path = PathBuf::from(format!("{}/{}", self.workspace, API_KEYS_PATH));
+        let path = build_path(&self.workspace, &[API_KEYS_PATH]);
 
         if !path.exists() {
             return Ok(None);
@@ -148,7 +149,7 @@ impl UserStorage for FileSystemStorage {
     }
 
     async fn list_api_keys(&self, user_id: &str) -> Result<Vec<ApiKey>> {
-        let path = PathBuf::from(format!("{}/{}", self.workspace, API_KEYS_PATH));
+        let path = build_path(&self.workspace, &[API_KEYS_PATH]);
 
         if !path.exists() {
             return Ok(vec![]);
@@ -165,7 +166,7 @@ impl UserStorage for FileSystemStorage {
     }
 
     async fn delete_api_key(&self, key_id: &str) -> Result<()> {
-        let path = PathBuf::from(format!("{}/{}", self.workspace, API_KEYS_PATH));
+        let path = build_path(&self.workspace, &[API_KEYS_PATH]);
 
         if !path.exists() {
             return Err(anyhow::anyhow!("API key store not found"));
@@ -182,7 +183,7 @@ impl UserStorage for FileSystemStorage {
     }
 
     async fn update_api_key_last_used(&self, key_id: &str) -> Result<()> {
-        let path = PathBuf::from(format!("{}/{}", self.workspace, API_KEYS_PATH));
+        let path = build_path(&self.workspace, &[API_KEYS_PATH]);
 
         if !path.exists() {
             return Err(anyhow::anyhow!("API key store not found"));

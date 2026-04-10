@@ -108,7 +108,8 @@ impl VizierTools {
         let agent_config = deps.config.agents.get(&agent_id).unwrap();
         let tool_config = deps.config.tools.clone();
         let workspace = deps.config.workspace.clone();
-        let agent_workspace = agent_workspace(&workspace, &agent_id);
+        let agent_workspace_path = agent_workspace(&workspace, &agent_id);
+        let agent_workspace = agent_workspace_path.to_string_lossy().to_string();
 
         let mut tool_server_builder = ToolServer::new()
             .tool(ThinkTool)

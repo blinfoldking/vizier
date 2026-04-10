@@ -1,7 +1,7 @@
 use axum::{
     Router,
     extract::{Path, State},
-    routing::{get, put},
+    routing::get,
     Json,
 };
 use reqwest::StatusCode;
@@ -15,6 +15,7 @@ use crate::{
         },
         state::HTTPState,
     },
+    utils::build_path,
 };
 
 pub fn documents() -> Router<HTTPState> {
@@ -30,7 +31,7 @@ pub struct UpdateDocumentRequest {
 }
 
 fn get_document_path(workspace: &str, agent_id: &str, doc_name: &str) -> String {
-    format!("{}/agents/{}/{}", workspace, agent_id, doc_name)
+    build_path(workspace, &["agents", agent_id, doc_name]).to_string_lossy().to_string()
 }
 
 fn read_document(path: &str) -> Result<String, std::io::Error> {

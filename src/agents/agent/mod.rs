@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf, sync::Arc};
+use std::{fs, sync::Arc};
 
 use anyhow::Result;
 use chrono::Utc;
@@ -27,7 +27,7 @@ use crate::{
         VizierResponseStats,
     },
     storage::indexer::DocumentIndexer,
-    utils::agent_workspace,
+    utils::{agent_workspace, build_path},
 };
 
 mod model;
@@ -60,7 +60,7 @@ impl VizierAgent {
         let tools = VizierTools::new(agent_id.clone(), deps.clone()).await?;
         let skills = VizierSkills::new(agent_id.clone(), deps.clone()).await?;
 
-        let workspace = agent_workspace(&deps.config.workspace, &agent_id);
+        let workspace = agent_workspace(&deps.config.workspace, &agent_id).to_string_lossy().to_string();
         init_workspace(workspace.clone());
 
         Ok(Self {
@@ -278,7 +278,7 @@ impl VizierAgent {
 }
 
 pub fn read_md_file(workspace: String, file: String) -> String {
-    let path = PathBuf::from(format!("{}/{}", workspace, file));
+    let path = build_path(&workspace, &[&file]);
 
     fs::read_to_string(path).unwrap()
 }

@@ -12,7 +12,7 @@ use crate::{
         indexer::DocumentIndexer,
         memory::MemoryStorage,
     },
-    utils,
+    utils::{self, build_glob_path},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -37,7 +37,7 @@ impl From<Memory> for MemoryFrontMatter {
 impl FileSystemStorage {
     pub async fn reindex_memory(&self) -> Result<()> {
         log::info!("reindex existing memory");
-        let path = format!("{}/agents/**/{MEMORY_PATH}/*.md", self.workspace);
+        let path = build_glob_path(&self.workspace, &["agents", "**", MEMORY_PATH, "*.md"]);
         for entry in glob::glob(&path)? {
             let entry = entry?;
 
@@ -140,12 +140,7 @@ impl MemoryStorage for FileSystemStorage {
     }
 
     async fn get_all_agent_memory(&self, agent_id: String) -> Result<Vec<Memory>> {
-        let path = format!(
-            "{}/agents/{}/{}/*",
-            self.workspace,
-            agent_id.clone(),
-            MEMORY_PATH
-        );
+        let path = build_glob_path(&self.workspace, &["agents", &agent_id, MEMORY_PATH, "*"]);
 
         let mut res = vec![];
         for entry in glob::glob(&path)? {

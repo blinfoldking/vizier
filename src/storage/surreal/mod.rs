@@ -5,8 +5,11 @@ use anyhow::Result;
 use surrealdb::Surreal;
 use surrealdb::engine::local::{Db, RocksDb};
 
-use crate::embedding::VizierEmbedder;
-use crate::storage::VizierStorageProvider;
+use crate::{
+    embedding::VizierEmbedder,
+    storage::VizierStorageProvider,
+    utils::build_path,
+};
 
 pub mod history;
 pub mod memory;
@@ -25,7 +28,8 @@ pub struct SurrealStorage {
 
 impl SurrealStorage {
     pub async fn new(workspace: String, embedder: Option<Arc<VizierEmbedder>>) -> Result<Self> {
-        let db = Surreal::new::<RocksDb>(format!("{workspace}/vizier.db")).await?;
+        let db_path = build_path(&workspace, &["vizier.db"]);
+        let db = Surreal::new::<RocksDb>(db_path).await?;
         db.use_ns("vizier").use_db("v1").await?;
 
         db.query("DEFINE TABLE memory SCHEMALESS;").await?;
