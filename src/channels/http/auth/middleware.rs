@@ -126,7 +126,7 @@ pub async fn require_auth(
                 .ok_or(AuthError::InvalidCredentials)?;
 
             AuthenticatedUser {
-                user_id: user.id,
+                user_id: user.user_id,
                 username: user.username,
             }
         }

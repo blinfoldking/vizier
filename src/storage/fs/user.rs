@@ -50,7 +50,7 @@ impl UserStorage for FileSystemStorage {
         };
 
         let user = User {
-            id: Uuid::new_v4().to_string(),
+            user_id: Uuid::new_v4().to_string(),
             username: username.to_string(),
             password_hash: password_hash.to_string(),
             created_at: Utc::now(),
@@ -73,7 +73,7 @@ impl UserStorage for FileSystemStorage {
         let raw = std::fs::read_to_string(&path)?;
         let mut store: UserStore = serde_json::from_str(&raw)?;
 
-        if let Some(user) = store.users.iter_mut().find(|u| u.id == user_id) {
+        if let Some(user) = store.users.iter_mut().find(|u| u.user_id == user_id) {
             user.password_hash = password_hash.to_string();
         } else {
             return Err(anyhow::anyhow!("User not found"));

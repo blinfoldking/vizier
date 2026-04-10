@@ -22,7 +22,7 @@ impl UserStorage for SurrealStorage {
 
     async fn create_user(&self, username: &str, password_hash: &str) -> Result<User> {
         let user = User {
-            id: Uuid::new_v4().to_string(),
+            user_id: Uuid::new_v4().to_string(),
             username: username.to_string(),
             password_hash: password_hash.to_string(),
             created_at: Utc::now(),
@@ -30,7 +30,7 @@ impl UserStorage for SurrealStorage {
 
         let created: Option<User> = self
             .conn
-            .create(("user", user.id.clone()))
+            .create(("user", user.user_id.clone()))
             .content(user)
             .await?;
 

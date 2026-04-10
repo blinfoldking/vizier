@@ -107,7 +107,7 @@ pub async fn login(
     }
 
     // Generate JWT token
-    match auth_service.generate_token(&user.id, &user.username) {
+    match auth_service.generate_token(&user.user_id, &user.username) {
         Ok(token) => api_response(StatusCode::OK, LoginResponse { token }),
         Err(e) => {
             log::error!("Failed to generate token: {}", e);

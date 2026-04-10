@@ -5,7 +5,7 @@ use surrealdb_types::SurrealValue;
 
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct User {
-    pub id: String,
+    pub user_id: String,
     pub username: String,
     pub password_hash: String,
     pub created_at: DateTime<Utc>,
