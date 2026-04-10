@@ -1,9 +1,0 @@
-# only used for debug and developmetn only
-services:
-  ollama:
-    build:
-      context: ./dockerfile/ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - .data/ollama:/root/.ollama
