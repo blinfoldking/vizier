@@ -8,27 +8,23 @@ use rig::{
 };
 
 use crate::{
-    agents::{
-        agent::VizierAgent,
-        tools::{
-            brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
-            consult::{ConsultAgent, DelegateAgent},
-            discord::new_discord_tools,
-            document::init_document_tools,
-            notify::{
-                DiscordDmPrimaryUser, NotifyPrimaryUser, TelegramDmPrimaryUser,
-                WebUiNotifyPrimaryUser,
-            },
-            scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
-            shell::ShellExec,
-            skill::CreateSkill,
-            subagent::SpawnSubAgents,
-            telegram::new_telegram_tools,
-            vector_memory::init_vector_memory,
-            workspace::{
-                AgentDocument, HeartbeatDocument, IdentDocument, ReadPrimaryDocument,
-                WritePrimaryDocument,
-            },
+    agents::tools::{
+        brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
+        consult::{ConsultAgent, DelegateAgent},
+        discord::new_discord_tools,
+        document::init_document_tools,
+        notify::{
+            DiscordDmPrimaryUser, NotifyPrimaryUser, TelegramDmPrimaryUser, WebUiNotifyPrimaryUser,
+        },
+        scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
+        shell::ShellExec,
+        skill::CreateSkill,
+        subagent::SpawnSubAgents,
+        telegram::new_telegram_tools,
+        vector_memory::init_vector_memory,
+        workspace::{
+            AgentDocument, HeartbeatDocument, IdentDocument, ReadPrimaryDocument,
+            WritePrimaryDocument,
         },
     },
     dependencies::VizierDependencies,

@@ -188,14 +188,14 @@ pub async fn onboard(args: OnboardArgs) -> Result<()> {
 
     let storage_type = Select::new(
         "Storage type:",
-        vec!["Filesystem".to_string(), "InMem".to_string()],
+        vec!["Filesystem".to_string(), "Surreal".to_string()],
     )
     .prompt()?;
 
     let storage = if storage_type == "Filesystem" {
         StorageConfig::Filesystem(DocumentIndexerConfig::InMem)
     } else {
-        StorageConfig::Filesystem(DocumentIndexerConfig::InMem)
+        StorageConfig::Surreal
     };
 
     let agent_file_name = format!(

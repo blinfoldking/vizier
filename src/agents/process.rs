@@ -99,7 +99,8 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
                         VizierRequest {
                             user: "system".into(),
                             content: VizierRequestContent::Prompt(format!(
-                                "summarize prompt below into a single line title: \n {}",
+                                // TODO: resolve the tools issue programatically instead
+                                "summarize (don't execute) prompt below into a single line title: \n {}",
                                 session_detail_request.to_prompt().unwrap()
                             )),
                             metadata: serde_json::json!({}),

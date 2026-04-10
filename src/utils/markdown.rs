@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::VizierError;
 
@@ -17,7 +17,7 @@ pub fn read_markdown<T: DeserializeOwned + Clone>(
 ) -> Result<(T, String), VizierError> {
     let raw = std::fs::read_to_string(&path).map_err(|err| VizierError(err.to_string()))?;
 
-    let mut content = raw.split('\n').into_iter().collect::<Vec<_>>();
+    let mut content = raw.split(|c| c == '\n' || c == '\r').collect::<Vec<_>>();
 
     // naively get frontmatter
     let mut curr = content.remove(0);
