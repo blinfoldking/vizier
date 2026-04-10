@@ -38,11 +38,84 @@ jobs:
     secrets: inherit
 
   # ====================
+  # Publish Docker image to ghcr.io
+  # ====================
+  publish-docker:
+    name: Publish Docker Image
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ inputs.version }}
+
+      - name: Download Linux x86_64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: vizier-x86_64-unknown-linux-gnu
+          path: binary
+
+      - name: Extract binary
+        shell: bash
+        run: |
+          VERSION="${{ inputs.version }}"
+          mkdir -p dist
+          tar -xzf binary/vizier-v${VERSION}-x86_64-unknown-linux-gnu.tar.gz -C dist
+          mv dist/vizier-v${VERSION}-x86_64-unknown-linux-gnu/vizier dist/
+          chmod +x dist/vizier
+          ls -la dist/
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !inputs.dry_run }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ !inputs.dry_run }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ inputs.version }}
+
+      - name: Dry run docker summary
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "## Dry Run - Docker Image" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Would push:" >> $GITHUB_STEP_SUMMARY
+          echo "- ghcr.io/${{ github.repository }}:${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ghcr.io/${{ github.repository }}:latest" >> $GITHUB_STEP_SUMMARY
+
+  # ====================
   # Summary
   # ====================
   summary:
     name: Summary
-    needs: [release, publish]
+    needs: [release, publish, publish-docker]
     runs-on: ubuntu-latest
     if: ${{ !inputs.dry_run }}
     steps:
@@ -59,13 +132,67 @@ jobs:
           echo "- ✅ Binaries built for all platforms" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ GitHub Release created with assets" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Published to crates.io" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Docker image published to ghcr.io" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Install:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "cargo binstall vizier  # Fast (prebuilt binary)" >> $GITHUB_STEP_SUMMARY
           echo "cargo install vizier   # Build from source" >> $GITHUB_STEP_SUMMARY
+          echo "docker run ghcr.io/${{ github.repository }}:${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Links:" >> $GITHUB_STEP_SUMMARY
           echo "- [GitHub Release](https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY
           echo "- [crates.io](https://crates.io/crates/vizier/${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Docker Image](https://github.com/${{ github.repository }}/pkgs/container/vizier)" >> $GITHUB_STEP_SUMMARY
+
+  # ====================
+  # Cleanup on failure - delete tag and release
+  # ====================
+  cleanup-failure:
+    name: Cleanup on Failure
+    needs: [release, publish, publish-docker]
+    runs-on: ubuntu-latest
+    if: ${{ failure() && !inputs.dry_run }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Delete GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view v${{ inputs.version }} --repo ${{ github.repository }} &>/dev/null; then
+            echo "Deleting GitHub release v${{ inputs.version }}"
+            gh release delete v${{ inputs.version }} --yes
+          else
+            echo "No GitHub release found to delete"
+          fi
+
+      - name: Delete Git Tag
+        run: |
+          if git tag | grep -q "^v${{ inputs.version }}$"; then
+            echo "Deleting git tag v${{ inputs.version }}"
+            git tag -d v${{ inputs.version }}
+            git push origin :refs/tags/v${{ inputs.version }}
+          else
+            echo "No git tag found to delete"
+          fi
+
+      - name: Report cleanup
+        run: |
+          echo "## Cleanup Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Release v${{ inputs.version }} failed** - cleaned up git tag and GitHub release." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "You can now retry the release with the same version." >> $GITHUB_STEP_SUMMARY
