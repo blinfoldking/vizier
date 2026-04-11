@@ -132,26 +132,25 @@ jobs:
           build-args: |
             BINARY_PATH=dist/arm64/vizier
 
-      - name: Create and push multi-arch manifest (latest)
-        if: ${{ !inputs.dry_run }}
-        shell: bash
-        run: |
-          VERSION="${{ inputs.version }}"
-          IMAGE="ghcr.io/${{ github.repository }}"
-          docker manifest create ${IMAGE}:${VERSION} ${IMAGE}:${VERSION}-amd64 ${IMAGE}:${VERSION}-arm64
-          docker manifest create ${IMAGE}:latest ${IMAGE}:latest-amd64 ${IMAGE}:latest-arm64
-          docker manifest push ${IMAGE}:${VERSION}
-          docker manifest push ${IMAGE}:latest
-
-      - name: Create and push multi-arch manifest (minor)
+      - name: Create and push multi-arch manifest
         if: ${{ !inputs.dry_run }}
         shell: bash
         run: |
           VERSION="${{ inputs.version }}"
           MAJOR_MINOR="${VERSION%.*}"
           IMAGE="ghcr.io/${{ github.repository }}"
-          docker manifest create ${IMAGE}:${MAJOR_MINOR} ${IMAGE}:${MAJOR_MINOR}-amd64 ${IMAGE}:${MAJOR_MINOR}-arm64
-          docker manifest push ${IMAGE}:${MAJOR_MINOR}
+          docker buildx imagetools create \
+            ${IMAGE}:${VERSION}-amd64 \
+            ${IMAGE}:${VERSION}-arm64 \
+            -t ${IMAGE}:${VERSION}
+          docker buildx imagetools create \
+            ${IMAGE}:latest-amd64 \
+            ${IMAGE}:latest-arm64 \
+            -t ${IMAGE}:latest
+          docker buildx imagetools create \
+            ${IMAGE}:${MAJOR_MINOR}-amd64 \
+            ${IMAGE}:${MAJOR_MINOR}-arm64 \
+            -t ${IMAGE}:${MAJOR_MINOR}
 
       - name: Dry run docker summary
         if: ${{ inputs.dry_run }}
