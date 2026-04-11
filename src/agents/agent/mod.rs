@@ -60,7 +60,9 @@ impl VizierAgent {
         let tools = VizierTools::new(agent_id.clone(), deps.clone()).await?;
         let skills = VizierSkills::new(agent_id.clone(), deps.clone()).await?;
 
-        let workspace = agent_workspace(&deps.config.workspace, &agent_id).to_string_lossy().to_string();
+        let workspace = agent_workspace(&deps.config.workspace, &agent_id)
+            .to_string_lossy()
+            .to_string();
         init_workspace(workspace.clone());
 
         Ok(Self {

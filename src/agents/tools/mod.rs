@@ -19,7 +19,6 @@ use crate::{
         scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
         shell::ShellExec,
         skill::CreateSkill,
-        subagent::SpawnSubAgents,
         telegram::new_telegram_tools,
         vector_memory::init_vector_memory,
         workspace::{
@@ -48,7 +47,6 @@ mod notify;
 mod scheduler;
 mod shell;
 mod skill;
-mod subagent;
 mod telegram;
 mod vector_memory;
 mod workspace;
@@ -129,7 +127,6 @@ impl VizierTools {
                 agent_id: agent_id.clone(),
                 db: deps.storage.clone(),
             })
-            .tool(SpawnSubAgents::new(agent_id.clone(), deps.clone()))
             .tool(ConsultAgent::new(agent_id.clone(), deps.clone()))
             .tool(DelegateAgent::new(agent_id.clone(), deps.clone()))
             .tool(CreateSkill::new(agent_id.clone(), deps.clone()));
