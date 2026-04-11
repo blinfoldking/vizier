@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2026-04-10
+
+### ⚙️ Miscellaneous Tasks
+
+- Update lock
+## [0.3.0] - 2026-04-10
+
+### 🐛 Bug Fixes
+
+- Remove unused docker files
+- Various release hotfixes
+
+### ⚙️ Miscellaneous Tasks
+
+- Add docker release
+- Bump version to 0.3.0
 ## [0.3.0-rc.7] - 2026-04-10
 
 ### 🚀 Features
