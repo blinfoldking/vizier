@@ -17,6 +17,7 @@ export default [
     route(':agentId/memory', 'routes/memory.tsx'),
     route(':agentId/tasks', 'routes/tasks.tsx'),
     route(':agentId/documents', 'routes/documents.tsx'),
+    route(':agentId/usage', 'routes/usage.tsx'),
     route(':agentId/settings', 'routes/settings.tsx'),
   ]),
 ] satisfies RouteConfig

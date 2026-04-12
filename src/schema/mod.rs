@@ -203,3 +203,42 @@ pub struct VizierSessionDetail {
     pub topic: Option<TopicId>,
     pub title: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UsageSummary {
+    pub total_tokens: u64,
+    pub total_input_tokens: u64,
+    pub total_output_tokens: u64,
+    pub total_requests: u64,
+    pub avg_duration_ms: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelUsage {
+    pub channel_id: String,
+    pub total_tokens: u64,
+    pub total_requests: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelTypeUsage {
+    pub total_tokens: u64,
+    pub total_requests: u64,
+    pub channels: Vec<ChannelUsage>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DailyUsage {
+    pub date: chrono::NaiveDate,
+    pub total_tokens: u64,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub total_requests: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentUsageStats {
+    pub summary: UsageSummary,
+    pub by_channel_type: std::collections::HashMap<String, ChannelTypeUsage>,
+    pub by_day: Vec<DailyUsage>,
+}

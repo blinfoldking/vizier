@@ -88,6 +88,19 @@ export const getAgentDetail = async (agentId: string) => {
   return res.data
 }
 
+export const getAgentUsage = async (
+  agentId: string,
+  startDate?: string,
+  endDate?: string
+) => {
+  const params = new URLSearchParams()
+  if (startDate) params.append('start_date', startDate)
+  if (endDate) params.append('end_date', endDate)
+
+  const res = await apiClient.get(`/agents/${agentId}/usage?${params}`)
+  return res.data
+}
+
 // ============================================================================
 // CHAT/TOPIC ENDPOINTS
 // ============================================================================

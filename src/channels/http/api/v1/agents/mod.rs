@@ -1,9 +1,11 @@
 use axum::{
     Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     routing::get,
 };
+use chrono::{DateTime, Utc};
 use reqwest::StatusCode;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
@@ -15,6 +17,8 @@ use crate::{
         state::HTTPState,
     },
     config::VizierConfig,
+    schema::AgentUsageStats,
+    storage::{history::HistoryStorage, VizierStorage},
 };
 
 mod channel;
@@ -37,6 +41,7 @@ pub fn agents() -> Router<HTTPState> {
     Router::new()
         .route("/", get(list_agents))
         .route("/{agent_id}", get(agent_detail))
+        .route("/{agent_id}/usage", get(agent_usage))
         .nest("/{agent_id}/channel", channel())
         .nest("/{agent_id}/documents", documents())
         .nest("/{agent_id}/memory", memory())
@@ -78,5 +83,43 @@ async fn agent_detail(
         err_response(StatusCode::NOT_FOUND, "not found".into())
     } else {
         api_response(StatusCode::OK, res.unwrap())
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct UsageQuery {
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+}
+
+async fn agent_usage(
+    Path(agent_id): Path<String>,
+    Query(query): Query<UsageQuery>,
+    State(state): State<HTTPState>,
+) -> models::response::Response<AgentUsageStats> {
+    if !state.config.is_agent_exists(&agent_id) {
+        return err_response(StatusCode::NOT_FOUND, "agent not found".into());
+    }
+
+    let start_date = query.start_date.as_ref().and_then(|s| {
+        DateTime::parse_from_rfc3339(s)
+            .ok()
+            .map(|dt| dt.with_timezone(&Utc))
+    });
+
+    let end_date = query.end_date.as_ref().and_then(|s| {
+        DateTime::parse_from_rfc3339(s)
+            .ok()
+            .map(|dt| dt.with_timezone(&Utc))
+    });
+
+    let storage: &VizierStorage = &state.storage;
+    let usage_result = storage
+        .aggregate_usage(&agent_id, start_date, end_date)
+        .await;
+
+    match usage_result {
+        Ok(stats) => api_response(StatusCode::OK, stats),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, e.to_string().into()),
     }
 }

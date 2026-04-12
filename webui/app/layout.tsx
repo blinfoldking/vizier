@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useParams, useLocation } from 'react-router'
 import { listAgents, listTopics, deleteTopic } from './services/vizier'
-import { FiSettings, FiMessageCircle, FiCheckCircle, FiLogOut, FiSearch, FiTrash2 } from 'react-icons/fi'
+import { FiSettings, FiMessageCircle, FiCheckCircle, FiLogOut, FiSearch, FiTrash2, FiTrendingUp } from 'react-icons/fi'
 import { FaBook, FaFile } from 'react-icons/fa'
 import Avatar from './components/avatar'
 import ThemeToggle from './components/ThemeToggle'
@@ -107,6 +107,7 @@ export default function Layout() {
     if (location.pathname.includes('/memory')) return 'memory'
     if (location.pathname.includes('/tasks')) return 'tasks'
     if (location.pathname.includes('/documents')) return 'documents'
+    if (location.pathname.includes('/usage')) return 'usage'
     if (location.pathname.includes('/settings')) return 'settings'
     if (location.pathname.includes('/chat')) return 'chat'
     return null
@@ -217,6 +218,13 @@ export default function Layout() {
               >
                 <FaFile size={16} />
                 <span>Documents</span>
+              </div>
+              <div
+                className={`nav-item ${currentView === 'usage' ? 'active' : ''}`}
+                onClick={() => navigate(`/${currentAgentId}/usage`)}
+              >
+                <FiTrendingUp size={16} />
+                <span>Usage</span>
               </div>
             </div>
 

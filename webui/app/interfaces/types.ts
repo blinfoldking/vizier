@@ -163,3 +163,41 @@ export interface CreateTaskRequest {
 }
 
 export interface UpdateTaskRequest extends CreateTaskRequest {}
+
+// ============================================================================
+// USAGE
+// ============================================================================
+
+export interface UsageSummary {
+  total_tokens: number
+  total_input_tokens: number
+  total_output_tokens: number
+  total_requests: number
+  avg_duration_ms: number
+}
+
+export interface ChannelUsage {
+  channel_id: string
+  total_tokens: number
+  total_requests: number
+}
+
+export interface ChannelTypeUsage {
+  total_tokens: number
+  total_requests: number
+  channels: ChannelUsage[]
+}
+
+export interface DailyUsage {
+  date: string
+  total_tokens: number
+  input_tokens: number
+  output_tokens: number
+  total_requests: number
+}
+
+export interface AgentUsageStats {
+  summary: UsageSummary
+  by_channel_type: Record<string, ChannelTypeUsage>
+  by_day: DailyUsage[]
+}

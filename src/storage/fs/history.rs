@@ -1,12 +1,14 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use chrono::Utc;
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::{
     schema::{
-        SessionHistory, SessionHistoryContent, VizierRequest, VizierRequestContent,
+        AgentUsageStats, ChannelTypeUsage, ChannelUsage, DailyUsage, SessionHistory,
+        SessionHistoryContent, UsageSummary, VizierRequest, VizierRequestContent,
         VizierResponse, VizierResponseContent, VizierResponseStats, VizierSession,
     },
     storage::{
@@ -249,5 +251,147 @@ impl HistoryStorage for FileSystemStorage {
         });
 
         Ok(res)
+    }
+
+    async fn aggregate_usage(
+        &self,
+        agent_id: &str,
+        start_date: Option<DateTime<Utc>>,
+        end_date: Option<DateTime<Utc>>,
+    ) -> Result<AgentUsageStats> {
+        let mut total_tokens: u64 = 0;
+        let mut total_input_tokens: u64 = 0;
+        let mut total_output_tokens: u64 = 0;
+        let mut total_requests: u64 = 0;
+        let mut total_duration_ms: u64 = 0;
+
+        let mut by_channel_type: HashMap<String, ChannelTypeUsage> = HashMap::new();
+        let mut by_day: HashMap<NaiveDate, DailyUsage> = HashMap::new();
+
+        let path_pattern = format!(
+            "{}/agents/{}/{}/*/*/*.md",
+            self.workspace, agent_id, HISTORY_PATH
+        );
+
+        for entry in glob::glob(&path_pattern)? {
+            let entry = entry?;
+            if !entry.is_file() {
+                continue;
+            }
+
+            if let Ok((frontmatter, _)) =
+                utils::markdown::read_markdown::<SessionHistoryFrontMatter>(entry.clone())
+            {
+                let timestamp = frontmatter.timestamp;
+
+                if let Some(start) = start_date {
+                    if timestamp < start {
+                        continue;
+                    }
+                }
+                if let Some(end) = end_date {
+                    if timestamp > end {
+                        continue;
+                    }
+                }
+
+                if let ContentMetadata::response { stats, .. } = frontmatter.content_metadata {
+                    if let Some(stats) = stats {
+                        total_tokens += stats.total_tokens;
+                        total_input_tokens += stats.total_input_tokens;
+                        total_output_tokens += stats.total_output_tokens;
+                        total_requests += 1;
+                        total_duration_ms += stats.duration.as_millis() as u64;
+
+                        let channel_slug = frontmatter.session.1.to_slug();
+                        let channel_type = get_channel_type(&channel_slug);
+                        let date = timestamp.date_naive();
+
+                        let channel_entry = by_channel_type
+                            .entry(channel_type.clone())
+                            .or_insert_with(|| ChannelTypeUsage {
+                                total_tokens: 0,
+                                total_requests: 0,
+                                channels: Vec::new(),
+                            });
+                        channel_entry.total_tokens += stats.total_tokens;
+                        channel_entry.total_requests += 1;
+
+                        let channel_id = channel_slug.clone();
+                        if let Some(ch) = channel_entry
+                            .channels
+                            .iter_mut()
+                            .find(|c| c.channel_id == channel_id)
+                        {
+                            ch.total_tokens += stats.total_tokens;
+                            ch.total_requests += 1;
+                        } else {
+                            channel_entry.channels.push(ChannelUsage {
+                                channel_id,
+                                total_tokens: stats.total_tokens,
+                                total_requests: 1,
+                            });
+                        }
+
+                        let day_entry = by_day
+                            .entry(date)
+                            .or_insert_with(|| DailyUsage {
+                                date,
+                                total_tokens: 0,
+                                input_tokens: 0,
+                                output_tokens: 0,
+                                total_requests: 0,
+                            });
+                        day_entry.total_tokens += stats.total_tokens;
+                        day_entry.input_tokens += stats.total_input_tokens;
+                        day_entry.output_tokens += stats.total_output_tokens;
+                        day_entry.total_requests += 1;
+                    }
+                }
+            }
+        }
+
+        let mut by_day_vec: Vec<DailyUsage> = by_day.into_values().collect();
+        by_day_vec.sort_by(|a, b| a.date.cmp(&b.date));
+
+        let avg_duration_ms = if total_requests > 0 {
+            total_duration_ms as f64 / total_requests as f64
+        } else {
+            0.0
+        };
+
+        Ok(AgentUsageStats {
+            summary: UsageSummary {
+                total_tokens,
+                total_input_tokens,
+                total_output_tokens,
+                total_requests,
+                avg_duration_ms,
+            },
+            by_channel_type,
+            by_day: by_day_vec,
+        })
+    }
+}
+
+fn get_channel_type(channel_slug: &str) -> String {
+    if channel_slug.starts_with("http__") {
+        "http".to_string()
+    } else if channel_slug.starts_with("discord__") {
+        "discord".to_string()
+    } else if channel_slug.starts_with("telegram__") {
+        "telegram".to_string()
+    } else if channel_slug.starts_with("task__") {
+        "task".to_string()
+    } else if channel_slug.starts_with("inter_agent__") {
+        "inter_agent".to_string()
+    } else if channel_slug.starts_with("heartbeat__") {
+        "heartbeat".to_string()
+    } else if channel_slug == "SYSTEM" {
+        "system".to_string()
+    } else if channel_slug == "SUBAGENT" {
+        "subagent".to_string()
+    } else {
+        "other".to_string()
     }
 }
