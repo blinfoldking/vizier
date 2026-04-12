@@ -129,7 +129,7 @@ pub async fn agent_new(args: AgentNewArgs) -> Result<()> {
             .collect::<String>()
     );
 
-    let mut agent_path = workspace.clone();
+    let mut agent_path = workspace.clone().parent().unwrap().to_path_buf();
     agent_path.push(&agent_file_name);
 
     let agent = AgentConfig {
@@ -211,10 +211,12 @@ pub async fn agent_new(args: AgentNewArgs) -> Result<()> {
         agent.name, AGENT_TEMPLATE
     );
 
-    let path = agent_path.parent().unwrap().to_path_buf();
-    let _ = crate::utils::markdown::write_markdown(&agent, agent_content, path.clone());
+    let _ = crate::utils::markdown::write_markdown(&agent, agent_content, agent_path.clone())?;
 
-    println!("Successfully created agent at {}", path.to_string_lossy());
+    println!(
+        "Successfully created agent at {}",
+        agent_path.to_string_lossy()
+    );
 
     Ok(())
 }
