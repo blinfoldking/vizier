@@ -148,10 +148,12 @@ export default function UsageDashboard() {
   }
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 600 }}>Usage Dashboard</h1>
-
+    <>
+      {/* Header */}
+      <div className="main-header">
+        <div style={{ flex: 1 }}>
+          <h3 style={{ margin: 0 }}>Usage Analytics</h3>
+        </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ position: 'relative' }}>
             <button
@@ -274,181 +276,192 @@ export default function UsageDashboard() {
               </div>
             )}
           </div>
+
         </div>
+
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
-        <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            Total Tokens
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--accent-primary)' }}>
-            {formatNumber(usage.summary.total_tokens)}
-          </div>
-        </div>
-        <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            Input Tokens
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 600 }}>
-            {formatNumber(usage.summary.total_input_tokens)}
-          </div>
-        </div>
-        <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            Output Tokens
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 600 }}>
-            {formatNumber(usage.summary.total_output_tokens)}
-          </div>
-        </div>
-        <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            Total Requests
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 600 }}>
-            {formatNumber(usage.summary.total_requests)}
-          </div>
-        </div>
-      </div>
+      <div style={{ padding: '24px', maxWidth: '100%', }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 600 }}>Usage Dashboard</h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 600 }}>Token Usage by Day</h2>
-            <select
-              value={dayMetric}
-              onChange={(e) => setDayMetric(e.target.value as UsageMetric)}
-              style={{
-                padding: '4px 8px',
-                fontSize: '12px',
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border)',
-                borderRadius: '4px',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-              }}
-            >
-              {METRIC_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <UsageBarChart data={getDayChartData()} metric={dayMetric} />
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}></div>
         </div>
 
-        <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 600 }}>Token Usage by Channel Type</h2>
-            <select
-              value={channelTypeMetric}
-              onChange={(e) => setChannelTypeMetric(e.target.value as UsageMetric)}
-              style={{
-                padding: '4px 8px',
-                fontSize: '12px',
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border)',
-                borderRadius: '4px',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-              }}
-            >
-              {METRIC_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              Total Tokens
+            </div>
+            <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--accent-primary)' }}>
+              {formatNumber(usage.summary.total_tokens)}
+            </div>
           </div>
-          <ChannelTypeBarChart data={getChannelTypeChartData()} metric={channelTypeMetric} />
+          <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              Input Tokens
+            </div>
+            <div style={{ fontSize: '24px', fontWeight: 600 }}>
+              {formatNumber(usage.summary.total_input_tokens)}
+            </div>
+          </div>
+          <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              Output Tokens
+            </div>
+            <div style={{ fontSize: '24px', fontWeight: 600 }}>
+              {formatNumber(usage.summary.total_output_tokens)}
+            </div>
+          </div>
+          <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              Total Requests
+            </div>
+            <div style={{ fontSize: '24px', fontWeight: 600 }}>
+              {formatNumber(usage.summary.total_requests)}
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Channels</h2>
-
-        {Object.keys(usage.by_channel_type || {}).length === 0 ? (
-          <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '32px' }}>
-            No channel data available
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {Object.entries(usage.by_channel_type).map(([channelType, data]) => (
-              <div
-                key={channelType}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 600 }}>Token Usage by Day</h2>
+              <select
+                value={dayMetric}
+                onChange={(e) => setDayMetric(e.target.value as UsageMetric)}
                 style={{
+                  padding: '4px 8px',
+                  fontSize: '12px',
+                  background: 'var(--bg-secondary)',
                   border: '1px solid var(--border)',
-                  borderRadius: '6px',
-                  overflow: 'hidden',
+                  borderRadius: '4px',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
                 }}
               >
+                {METRIC_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <UsageBarChart data={getDayChartData()} metric={dayMetric} />
+          </div>
+
+          <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 600 }}>Token Usage by Channel Type</h2>
+              <select
+                value={channelTypeMetric}
+                onChange={(e) => setChannelTypeMetric(e.target.value as UsageMetric)}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '12px',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '4px',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                }}
+              >
+                {METRIC_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <ChannelTypeBarChart data={getChannelTypeChartData()} metric={channelTypeMetric} />
+          </div>
+        </div>
+
+        <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '16px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>Channels</h2>
+
+          {Object.keys(usage.by_channel_type || {}).length === 0 ? (
+            <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '32px' }}>
+              No channel data available
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {Object.entries(usage.by_channel_type).map(([channelType, data]) => (
                 <div
-                  onClick={() => toggleChannelType(channelType)}
+                  key={channelType}
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    background: 'var(--bg-secondary)',
-                    userSelect: 'none',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    overflow: 'hidden',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {expandedChannels[channelType] ? <FiChevronDown size={16} /> : <FiChevronRight size={16} />}
-                    <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{channelType}</span>
-                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      ({data.channels.length} channels)
-                    </span>
+                  <div
+                    onClick={() => toggleChannelType(channelType)}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '12px 16px',
+                      cursor: 'pointer',
+                      background: 'var(--bg-secondary)',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {expandedChannels[channelType] ? <FiChevronDown size={16} /> : <FiChevronRight size={16} />}
+                      <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{channelType}</span>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        ({data.channels.length} channels)
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                        {formatNumber(data.total_tokens)} tokens
+                      </span>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        {data.total_requests} requests
+                      </span>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        avg {formatDuration(data.total_tokens / data.total_requests)}/req
+                      </span>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 500 }}>
-                      {formatNumber(data.total_tokens)} tokens
-                    </span>
-                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {data.total_requests} requests
-                    </span>
-                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      avg {formatDuration(data.total_tokens / data.total_requests)}/req
-                    </span>
-                  </div>
-                </div>
 
-                {expandedChannels[channelType] && (
-                  <div style={{ padding: '8px 16px 8px 32px' }}>
-                    {data.channels.map((channel) => (
-                      <div
-                        key={channel.channel_id}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '8px 0',
-                          borderBottom: '1px solid var(--border)',
-                        }}
-                      >
-                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                          {channel.channel_id.replace(/__/g, ' / ')}
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                          <span style={{ fontSize: '13px' }}>
-                            {formatNumber(channel.total_tokens)} tokens
+                  {expandedChannels[channelType] && (
+                    <div style={{ padding: '8px 16px 8px 32px' }}>
+                      {data.channels.map((channel) => (
+                        <div
+                          key={channel.channel_id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '8px 0',
+                            borderBottom: '1px solid var(--border)',
+                          }}
+                        >
+                          <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                            {channel.channel_id.replace(/__/g, ' / ')}
                           </span>
-                          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                            {channel.total_requests} requests
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <span style={{ fontSize: '13px' }}>
+                              {formatNumber(channel.total_tokens)} tokens
+                            </span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                              {channel.total_requests} requests
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+    </>
   )
 }

@@ -102,19 +102,16 @@ export function ChannelTypeBarChart({ data, metric }: ChannelTypeBarChartProps) 
       <ResponsiveContainer>
         <BarChart
           data={data}
-          layout="vertical"
-          margin={{ top: 20, right: 30, left: 80, bottom: 5 }}
+          layout="horizontal"
+          margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis
-            type="number"
+            dataKey="name"
             tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
             axisLine={{ stroke: 'var(--border)' }}
-            tickFormatter={(value) => value.toLocaleString()}
           />
           <YAxis
-            type="category"
-            dataKey="name"
             tick={{ fill: 'var(--text-secondary)', fontSize: 11 }}
             axisLine={{ stroke: 'var(--border)' }}
             width={70}
