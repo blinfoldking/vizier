@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router'
 import useWebSocket, { ReadyState } from 'react-use-websocket'
 import { getTopicHistory, getChatWebSocketUrl, listTopics, getAgentDetail } from '../services/vizier'
 import { autoCorrectSlug, autoCorrectSlugStrict } from '../utils/slug'
-import type { Agent, ChatMessage, Topic, WebSocketMessage, WebSocketResponse } from '../interfaces/types'
+import type { Agent, ChatMessage, Topic, WebSocketMessage, WebSocketResponse, VizierResponseStats } from '../interfaces/types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
@@ -453,6 +453,7 @@ export default function Chat() {
               const isUserMessage = msg.content.Request !== undefined
               let content: string | undefined
               let senderName: string = 'Unknown'
+              let stats: VizierResponseStats | undefined
 
               if (isUserMessage && msg.content.Request) {
                 const request = msg.content.Request as any
@@ -466,6 +467,7 @@ export default function Chat() {
                   content = response.content.message.content
                 }
                 senderName = agentDetail?.name || 'Agent'
+                stats = response?.content?.message?.stats as VizierResponseStats | undefined
               }
 
               if (!content) return null
@@ -502,29 +504,53 @@ export default function Chat() {
                     <div className="prose">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{content}</ReactMarkdown>
                     </div>
-                    {!isUserMessage && (
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(content)
-                          addToast('success', 'Copied!', 'Message copied to clipboard')
-                        }}
-                        style={{
-                          marginTop: '8px',
-                          padding: '4px 8px',
-                          background: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: 'var(--text-tertiary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontSize: '12px',
-                        }}
-                        title="Copy to clipboard"
-                      >
-                        <FiCopy size={14} />
-                      </button>
-                    )}
+{!isUserMessage && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(content)
+                            addToast('success', 'Copied!', 'Message copied to clipboard')
+                          }}
+                          style={{
+                            marginTop: '8px',
+                            padding: '4px 8px',
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--text-tertiary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '12px',
+                          }}
+                          title="Copy to clipboard"
+                        >
+                          <FiCopy size={14} />
+                        </button>
+                      )}
+                      {!isUserMessage && stats && (
+                        <div
+                          title={`Input: ${stats.total_input_tokens} | Output: ${stats.total_output_tokens} | Cached: ${stats.total_cached_input_tokens}`}
+                          style={{
+                            marginTop: '8px',
+                            padding: '4px 8px',
+                            background: 'var(--surface)',
+                            borderRadius: '4px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '11px',
+                            color: 'var(--text-tertiary)',
+                          }}
+                        >
+                          <span>{stats.total_tokens} tokens</span>
+                          <span style={{ opacity: 0.5 }}>·</span>
+                          <span>in: {stats.total_input_tokens}</span>
+                          <span style={{ opacity: 0.5 }}>·</span>
+                          <span>out: {stats.total_output_tokens}</span>
+                          <span style={{ opacity: 0.5 }}>·</span>
+                          <span>{Math.round(stats.duration.secs * 1000 + stats.duration.nanos / 1000000)}ms</span>
+                        </div>
+                      )}
                   </div>
                 </div>
               )
