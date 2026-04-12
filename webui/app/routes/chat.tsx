@@ -34,7 +34,7 @@ interface InlineEvent {
 const formatToolChoice = (name: string, args: Record<string, unknown>): string => {
   switch (name) {
     case 'think':
-      return `> ${args.thought as string}`
+      return `${args.thought as string}`
     case 'memory_read':
       return `**search memory:** '${args.query as string}'`
     case 'memory_write':
@@ -501,56 +501,49 @@ export default function Chat() {
                     borderLeft: isUserMessage ? 'none' : '3px solid var(--accent-primary)',
                     boxShadow: isUserMessage ? 'var(--shadow-sm)' : 'none',
                   }}>
-                    <div className="prose">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{content}</ReactMarkdown>
+                    <div className="flex items-start justify-between">
+                      <div className='prose'>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{content}</ReactMarkdown>
+                      </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(content)
+                          addToast('success', 'Copied!', 'Message copied to clipboard')
+                        }}
+                        className='sticky border flex items-center justify-center mt-1!'
+                        style={{
+                          color: 'var(--text-tertiary)',
+                        }}
+                        title="Copy to clipboard"
+                      >
+                        <FiCopy size={14} />
+                      </button>
                     </div>
-{!isUserMessage && (
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(content)
-                            addToast('success', 'Copied!', 'Message copied to clipboard')
-                          }}
-                          style={{
-                            marginTop: '8px',
-                            padding: '4px 8px',
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: 'var(--text-tertiary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '12px',
-                          }}
-                          title="Copy to clipboard"
-                        >
-                          <FiCopy size={14} />
-                        </button>
-                      )}
-                      {!isUserMessage && stats && (
-                        <div
-                          title={`Input: ${stats.total_input_tokens} | Output: ${stats.total_output_tokens} | Cached: ${stats.total_cached_input_tokens}`}
-                          style={{
-                            marginTop: '8px',
-                            padding: '4px 8px',
-                            background: 'var(--surface)',
-                            borderRadius: '4px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '11px',
-                            color: 'var(--text-tertiary)',
-                          }}
-                        >
-                          <span>{stats.total_tokens} tokens</span>
-                          <span style={{ opacity: 0.5 }}>·</span>
-                          <span>in: {stats.total_input_tokens}</span>
-                          <span style={{ opacity: 0.5 }}>·</span>
-                          <span>out: {stats.total_output_tokens}</span>
-                          <span style={{ opacity: 0.5 }}>·</span>
-                          <span>{Math.round(stats.duration.secs * 1000 + stats.duration.nanos / 1000000)}ms</span>
-                        </div>
-                      )}
+
+                    {!isUserMessage && stats && (
+                      <div
+                        title={`Input: ${stats.total_input_tokens} | Output: ${stats.total_output_tokens} | Cached: ${stats.total_cached_input_tokens}`}
+                        style={{
+                          marginTop: '8px',
+                          padding: '4px 8px',
+                          background: 'var(--surface)',
+                          borderRadius: '4px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '11px',
+                          color: 'var(--text-tertiary)',
+                        }}
+                      >
+                        <span>{stats.total_tokens} tokens</span>
+                        <span style={{ opacity: 0.5 }}>·</span>
+                        <span>in: {stats.total_input_tokens}</span>
+                        <span style={{ opacity: 0.5 }}>·</span>
+                        <span>out: {stats.total_output_tokens}</span>
+                        <span style={{ opacity: 0.5 }}>·</span>
+                        <span>{Math.round(stats.duration.secs * 1000 + stats.duration.nanos / 1000000)}ms</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )
