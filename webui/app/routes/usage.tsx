@@ -4,6 +4,7 @@ import { getAgentUsage } from '../services/vizier'
 import { useToastStore } from '../hooks/toastStore'
 import type { AgentUsageStats } from '../interfaces/types'
 import { UsageBarChart, ChannelTypeStackedChart, type UsageMetric, type DisplayMode } from '../components/UsageBarChart'
+import CustomSelect from '../components/CustomSelect'
 import { FiChevronDown, FiChevronRight, FiCalendar } from 'react-icons/fi'
 
 const DATE_RANGE_OPTIONS = [
@@ -362,44 +363,16 @@ export default function UsageDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '16px', fontWeight: 600 }}>Token Usage by Day (Input/Output)</h2>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <select
+                <CustomSelect
                   value={dayMetric}
-                  onChange={(e) => setDayMetric(e.target.value as UsageMetric)}
-                  style={{
-                    padding: '4px 8px',
-                    fontSize: '12px',
-                    background: 'var(--bg-secondary)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '4px',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {METRIC_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <select
+                  onChange={(val) => setDayMetric(val as UsageMetric)}
+                  options={METRIC_OPTIONS}
+                />
+                <CustomSelect
                   value={displayMode}
-                  onChange={(e) => setDisplayMode(e.target.value as DisplayMode)}
-                  style={{
-                    padding: '4px 8px',
-                    fontSize: '12px',
-                    background: 'var(--bg-secondary)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '4px',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {DISPLAY_MODE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setDisplayMode(val as DisplayMode)}
+                  options={DISPLAY_MODE_OPTIONS}
+                />
               </div>
             </div>
             <UsageBarChart data={getDayChartData()} metric={dayMetric} displayMode={displayMode} />
