@@ -22,7 +22,6 @@ impl HistoryStorage for SurrealStorage {
                 uid: uuid.to_string(),
                 vizier_session: session.clone(),
                 content,
-                timestamp: Utc::now(),
             })
             .await?;
 
@@ -38,23 +37,23 @@ impl HistoryStorage for SurrealStorage {
         let query = if let Some(before_dt) = before {
             if let Some(limit_val) = limit {
                 format!(
-                    "SELECT * FROM session_history WHERE vizier_session == $vizier_session AND timestamp < {} ORDER BY timestamp DESC LIMIT {}",
+                    "SELECT * FROM session_history WHERE vizier_session == $vizier_session AND content.timestamp < {} ORDER BY content.timestamp DESC LIMIT {}",
                     before_dt.timestamp_millis(),
                     limit_val
                 )
             } else {
                 format!(
-                    "SELECT * FROM session_history WHERE vizier_session == $vizier_session AND timestamp < {} ORDER BY timestamp DESC",
+                    "SELECT * FROM session_history WHERE vizier_session == $vizier_session AND content.timestamp < {} ORDER BY content.timestamp DESC",
                     before_dt.timestamp_millis()
                 )
             }
         } else if let Some(limit_val) = limit {
             format!(
-                "SELECT * FROM session_history WHERE vizier_session == $vizier_session ORDER BY timestamp DESC LIMIT {}",
+                "SELECT * FROM session_history WHERE vizier_session == $vizier_session ORDER BY content.timestamp DESC LIMIT {}",
                 limit_val
             )
         } else {
-            "SELECT * FROM session_history WHERE vizier_session == $vizier_session ORDER BY timestamp DESC"
+            "SELECT * FROM session_history WHERE vizier_session == $vizier_session ORDER BY content.timestamp DESC"
                 .to_string()
         };
 
@@ -66,8 +65,17 @@ impl HistoryStorage for SurrealStorage {
 
         let mut list: Vec<SessionHistory> = response.take(0)?;
 
-        // Sort back to ascending order (oldest first) for the final result
-        list.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+        list.sort_by(|a, b| {
+            let a_ts = match &a.content {
+                SessionHistoryContent::Request(r) => r.timestamp,
+                SessionHistoryContent::Response(r) => r.timestamp,
+            };
+            let b_ts = match &b.content {
+                SessionHistoryContent::Request(r) => r.timestamp,
+                SessionHistoryContent::Response(r) => r.timestamp,
+            };
+            a_ts.cmp(&b_ts)
+        });
 
         Ok(list)
     }

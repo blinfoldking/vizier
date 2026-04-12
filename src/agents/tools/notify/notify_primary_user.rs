@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     config::VizierConfig,
     error::VizierError,
-    schema::{VizierChannelId, VizierSession},
+    schema::{VizierChannelId, VizierResponse, VizierResponseContent, VizierSession},
     transport::VizierTransport,
 };
 
@@ -163,9 +163,12 @@ impl NotifyPrimaryUser {
             Some("notification".to_string()),
         );
 
-        let response = VizierResponse::Message {
-            content: content.to_string(),
-            stats: None,
+        let response = VizierResponse {
+            timestamp: chrono::Utc::now(),
+            content: VizierResponseContent::Message {
+                content: content.to_string(),
+                stats: None,
+            },
         };
 
         if let Err(err) = transport.send_response(session, response).await {

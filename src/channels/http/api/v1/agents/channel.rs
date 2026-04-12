@@ -185,9 +185,7 @@ pub async fn handle_socket(
             match message {
                 Message::Text(text) => {
                     if let Ok(request) = serde_json::from_str::<VizierRequest>(&text.to_string()) {
-                        let _ = transport
-                            .send_request(curr_session.clone(), request)
-                            .await;
+                        let _ = transport.send_request(curr_session.clone(), request).await;
                     }
                 }
                 Message::Close(_) => break,

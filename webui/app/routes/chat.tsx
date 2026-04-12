@@ -62,13 +62,19 @@ export default function Chat() {
   const { addToast } = useToastStore()
 
   // WebSocket connection
+  const wsUrl = agentId && topicId && topicId !== 'new'
+    ? getChatWebSocketUrl(agentId, topicId)
+    : null
+  console.log('WebSocket URL:', wsUrl)
+
   const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(
-    agentId && topicId && topicId !== 'new'
-      ? getChatWebSocketUrl(agentId, topicId)
-      : null,
+    wsUrl,
     {
       shouldReconnect: () => true,
       reconnectInterval: 3000,
+      onOpen: () => console.log('WebSocket connected'),
+      onClose: () => console.log('WebSocket disconnected'),
+      onError: (e) => console.error('WebSocket error:', e),
     }
   )
 
@@ -156,76 +162,68 @@ export default function Chat() {
 
   // Handle incoming WebSocket messages
   useEffect(() => {
+    console.log('WebSocket message received:', lastJsonMessage)
     if (!lastJsonMessage) return
 
-    const wsResponse = lastJsonMessage as any
+    const wsResponse = lastJsonMessage as WebSocketResponse
 
-    // Handle string format
-    if (typeof wsResponse === 'string') {
-      if (wsResponse === 'ThinkingStart') {
-        setInlineEvents([{ id: Date.now().toString(), type: 'start', timestamp: Date.now() }])
-        startThinkingTimeout()
-      } else if (wsResponse === 'Empty') {
-        clearInlineEvents()
-      } else if (wsResponse === 'Abort') {
-        clearInlineEvents()
-      }
-      return
-    }
-
-    // Handle object format
     if (typeof wsResponse !== 'object' || wsResponse === null) {
       return
     }
 
-    if ('ThinkingStart' in wsResponse) {
-      setInlineEvents([{ id: Date.now().toString(), type: 'start', timestamp: Date.now() }])
-      startThinkingTimeout()
-      return
+    const { timestamp, content } = wsResponse
+
+    switch (content) {
+      case 'thinking_start':
+        setInlineEvents([{ id: Date.now().toString(), type: 'start', timestamp: Date.now() }])
+        startThinkingTimeout()
+        return
+
+      case 'empty':
+        clearInlineEvents()
+        return
+
+      case 'abort':
+        clearInlineEvents()
+        return
     }
 
-    if (wsResponse.ToolChoice) {
-      const { name, args } = wsResponse.ToolChoice as { name: string; args: Record<string, unknown> }
-      const content = formatToolChoice(name, args)
-      addInlineEvent('tool_choice', content)
-      return
-    }
-
-    if (typeof wsResponse.Thinking === 'string') {
-      addInlineEvent('thinking', wsResponse.Thinking)
-      return
-    }
-
-    if (wsResponse.Message) {
-      clearInlineEvents()
-
-      const newMessage: ChatMessage = {
-        uid: Date.now().toString(),
-        vizier_session: {
-          agent_id: agentId!,
-          channel: 'vizier-webui',
-          topic: topicId!,
-        },
-        content: {
-          Response: {
-            content: wsResponse.Message.content,
-          },
-        },
-        timestamp: new Date().toISOString(),
+    if (typeof content === 'object') {
+      if ('thinking' in content) {
+        addInlineEvent('thinking', content.thinking)
+        return
       }
 
-      setMessages(prev => [...prev, newMessage])
-      return
-    }
+      if ('tool_choice' in content) {
+        const toolContent = formatToolChoice(content.tool_choice.name, content.tool_choice.args)
+        addInlineEvent('tool_choice', toolContent)
+        return
+      }
 
-    if ('Empty' in wsResponse) {
-      clearInlineEvents()
-      return
-    }
-
-    if ('Abort' in wsResponse) {
-      clearInlineEvents()
-      return
+      if ('message' in content) {
+        clearInlineEvents()
+        setMessages(prev => {
+          if (prev.some(m => m.content.Response?.timestamp === timestamp)) {
+            return prev
+          }
+          const newMessage: ChatMessage = {
+            uid: timestamp,
+            vizier_session: {
+              agent_id: agentId!,
+              channel: 'vizier-webui',
+              topic: topicId!,
+            },
+            content: {
+              Response: {
+                timestamp,
+                content,
+              },
+            },
+          }
+          return [...prev, newMessage]
+        })
+        return
+      }
     }
   }, [lastJsonMessage, agentId, topicId])
 
@@ -262,13 +260,22 @@ export default function Chat() {
     e.preventDefault()
     if (!input.trim() || !agentId || !topicId) return
 
+    console.log('WebSocket readyState before check:', readyState)
+    if (readyState !== 1) { // 1 = OPEN
+      console.error('WebSocket not ready, state:', readyState)
+      return
+    }
+
     const username = getCurrentUsername()
 
     const message: WebSocketMessage = {
+      timestamp: new Date().toISOString(),
       user: username,
-      content: { Chat: input.trim() },
-      metadata: {},
+      content: { chat: input.trim() },
+      metadata: null,
     }
+
+    console.log('Sending message:', JSON.stringify(message))
 
     const userMessage: ChatMessage = {
       uid: Date.now().toString(),
@@ -279,16 +286,19 @@ export default function Chat() {
       },
       content: {
         Request: {
+          timestamp: new Date().toISOString(),
           user: username,
-          content: input.trim(),
+          content: { chat: input.trim() },
         },
       },
-      timestamp: new Date().toISOString(),
     }
 
     setMessages(prev => [...prev, userMessage])
     setInput('')
+    console.log('Calling sendJsonMessage with:', message)
+    console.log('WebSocket readyState:', readyState)
     sendJsonMessage(message)
+    console.log('sendJsonMessage called, readyState now:', readyState)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -446,20 +456,14 @@ export default function Chat() {
 
               if (isUserMessage && msg.content.Request) {
                 const request = msg.content.Request as any
-                if (request.content?.Chat) {
-                  content = request.content.Chat
-                } else if (typeof request.content === 'string') {
-                  content = request.content
+                if (request.content?.chat) {
+                  content = request.content.chat
                 }
                 senderName = request.user || 'You'
               } else if (!isUserMessage && msg.content.Response) {
                 const response = msg.content.Response as any
-                if (Array.isArray(response)) {
-                  content = response[0]
-                } else if (typeof response === 'object' && 'content' in response) {
-                  content = response.content
-                } else if (typeof response === 'string') {
-                  content = response
+                if (response?.content?.message?.content) {
+                  content = response.content.message.content
                 }
                 senderName = agentDetail?.name || 'Agent'
               }

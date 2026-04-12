@@ -80,6 +80,7 @@ impl VizierScheduler {
                             None,
                         ),
                         VizierRequest {
+                            timestamp: now,
                             user: task.user,
                             content: crate::schema::VizierRequestContent::Task(task.instruction),
                             metadata: serde_json::json!({

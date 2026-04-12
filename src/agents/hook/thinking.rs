@@ -3,7 +3,7 @@ use serde_json::Value;
 
 use crate::{
     agents::hook::VizierSessionHook,
-    schema::{VizierResponse, VizierSession},
+    schema::{VizierResponse, VizierResponseContent, VizierSession},
     transport::VizierTransport,
 };
 
@@ -27,7 +27,10 @@ impl VizierSessionHook for ThinkingHook {
                 self.transport
                     .send_response(
                         self.session.clone(),
-                        VizierResponse::Thinking(thinking["thought"].to_string()),
+                        VizierResponse {
+                            timestamp: chrono::Utc::now(),
+                            content: VizierResponseContent::Thinking(thinking["thought"].to_string()),
+                        },
                     )
                     .await?;
             }

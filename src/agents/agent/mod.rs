@@ -21,13 +21,13 @@ use crate::{
     },
     config::{agent::AgentConfig, user::UserConfig},
     dependencies::VizierDependencies,
-    error::VizierError,
     schema::{
-        SessionHistory, SessionHistoryContent, VizierRequest, VizierRequestContent, VizierResponse,
-        VizierResponseStats,
+        SessionHistory, SessionHistoryContent, VizierRequest, VizierRequestContent,
+        VizierResponse, VizierResponseContent, VizierResponseStats,
     },
     storage::indexer::DocumentIndexer,
     utils::{agent_workspace, build_path},
+    VizierError,
 };
 
 mod model;
@@ -126,7 +126,13 @@ impl VizierAgent {
             let mut history = self.prepare_system_prompts().await;
             history.extend(memory.iter().map(|history| match &history.content {
                 SessionHistoryContent::Request(req) => Message::user(req.to_prompt().unwrap()),
-                SessionHistoryContent::Response(content, _) => Message::assistant(content),
+                SessionHistoryContent::Response(r) => {
+                    if let VizierResponseContent::Message { content, .. } = &r.content {
+                        Message::assistant(content.clone())
+                    } else {
+                        Message::assistant("".to_string())
+                    }
+                }
             }));
 
             let mut req = req;
@@ -136,7 +142,10 @@ impl VizierAgent {
 
             if let VizierRequestContent::SilentRead(_) = req.content {
                 if initiative_factor > self.config.silent_read_initiative_chance {
-                    return Ok(VizierResponse::Empty);
+                    return Ok(VizierResponse {
+                        timestamp: chrono::Utc::now(),
+                        content: VizierResponseContent::Empty,
+                    });
                 }
             }
 
@@ -249,17 +258,20 @@ impl VizierAgent {
                 }
             }
 
-            let mut response = VizierResponse::Message {
-                content: output.clone(),
-                stats: Some(VizierResponseStats {
-                    total_tokens,
-                    total_cached_input_tokens,
-                    total_input_tokens,
-                    total_output_tokens,
-                    input_tokens,
-                    cached_input_tokens,
-                    duration: start.elapsed(),
-                }),
+            let mut response = VizierResponse {
+                timestamp: chrono::Utc::now(),
+                content: VizierResponseContent::Message {
+                    content: output.clone(),
+                    stats: Some(VizierResponseStats {
+                        total_tokens,
+                        total_cached_input_tokens,
+                        total_input_tokens,
+                        total_output_tokens,
+                        input_tokens,
+                        cached_input_tokens,
+                        duration: start.elapsed(),
+                    }),
+                },
             };
             if let Some(hooks) = hooks.clone() {
                 response = hooks.on_response(response).await?;

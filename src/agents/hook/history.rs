@@ -4,7 +4,7 @@ use anyhow::Result;
 
 use crate::{
     agents::hook::VizierSessionHook,
-    schema::{SessionHistoryContent, VizierRequest, VizierResponse, VizierSession},
+    schema::{SessionHistoryContent, VizierRequest, VizierResponse, VizierResponseContent, VizierSession},
     storage::{VizierStorage, history::HistoryStorage},
 };
 
@@ -37,15 +37,14 @@ impl VizierSessionHook for HistoryHook {
     }
 
     async fn on_response(&self, res: VizierResponse) -> Result<VizierResponse> {
-        if let VizierResponse::Message {
-            content,
-            stats: stats,
-        } = res.clone()
-        {
+        if let VizierResponse { content: VizierResponseContent::Message { content, stats }, timestamp: _ } = res.clone() {
             self.storage
                 .save_session_history(
                     self.session.clone(),
-                    SessionHistoryContent::Response(content, stats),
+                    SessionHistoryContent::Response(VizierResponse {
+                        timestamp: res.timestamp,
+                        content: VizierResponseContent::Message { content, stats },
+                    }),
                 )
                 .await?;
         }

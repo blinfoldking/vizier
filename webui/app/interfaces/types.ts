@@ -43,17 +43,26 @@ export interface Topic {
   channel: string
 }
 
-// VizierRequestContent can be one of: Chat(string), Prompt(string), Task(string), Command(string), SilentRead(string)
-export interface VizierRequestContent {
-  Chat?: string
-  Prompt?: string
-  Task?: string
-  Command?: string
-  SilentRead?: string
-}
+// VizierRequestContent - matches backend VizierRequestContent enum with serde rename_all = "snake_case"
+export type VizierRequestContent =
+  | { chat: string }
+  | { prompt: string }
+  | { silent_read: string }
+  | { task: string }
+  | { command: string }
+
+// VizierResponseContent - matches backend VizierResponseContent enum with serde rename_all = "snake_case"
+export type VizierResponseContent =
+  | 'thinking_start'
+  | { thinking: string }
+  | { tool_choice: { name: string; args: Record<string, unknown> } }
+  | { message: { content: string; stats?: VizierResponseStats } }
+  | 'empty'
+  | 'abort'
 
 // VizierRequest as returned by backend
 export interface VizierRequestMessage {
+  timestamp: string
   user: string
   content: VizierRequestContent
   metadata?: Record<string, unknown>
@@ -79,42 +88,25 @@ export interface ChatMessage {
   }
   content: {
     Request?: VizierRequestMessage
-    Response?: [string, VizierResponseStats | null] | null
+    Response?: {
+      timestamp: string
+      content: VizierResponseContent
+    }
   }
-  timestamp: string
 }
 
 export interface WebSocketMessage {
+  timestamp: string
   user: string
-  content: { Chat: string } | { Prompt: string } | { Task: string } | { Command: string }
+  content: VizierRequestContent
   metadata?: Record<string, unknown>
 }
 
-export type WebSocketResponse =
-  | { ThinkingStart: null }
-  | { 
-      ToolChoice: {
-        name: string
-        args: Record<string, unknown>
-      }
-    }
-  | { Thinking: string }
-  | {
-      Message: {
-        content: string
-        stats?: {
-          input_tokens: number
-          cached_input_tokens: number
-          total_cached_input_tokens: number
-          total_input_tokens: number
-          total_output_tokens: number
-          total_tokens: number
-          duration: { secs: number; nanos: number }
-        }
-      }
-    }
-  | { Empty: null }
-  | { Abort: null }
+// WebSocketResponse matches backend VizierResponse struct
+export interface WebSocketResponse {
+  timestamp: string
+  content: VizierResponseContent
+}
 
 // ============================================================================
 // MEMORY

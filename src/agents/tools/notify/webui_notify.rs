@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::VizierError,
-    schema::{VizierChannelId, VizierResponse, VizierSession},
+    schema::{VizierChannelId, VizierResponse, VizierResponseContent, VizierSession},
     transport::VizierTransport,
 };
 
@@ -50,9 +50,12 @@ where
             Some("notification".to_string()),
         );
 
-        let response = VizierResponse::Message {
-            content: args.content,
-            stats: None,
+        let response = VizierResponse {
+            timestamp: chrono::Utc::now(),
+            content: VizierResponseContent::Message {
+                content: args.content,
+                stats: None,
+            },
         };
 
         match self.transport.send_response(session, response).await {

@@ -12,7 +12,7 @@ use crate::dependencies::VizierDependencies;
 use crate::error::VizierError;
 use crate::schema::{
     AgentId, TopicId, VizierChannelId, VizierRequest, VizierRequestContent, VizierResponse,
-    VizierSession,
+    VizierResponseContent, VizierSession,
 };
 use crate::transport::VizierTransport;
 
@@ -110,6 +110,7 @@ impl Tool for ConsultAgent {
             .send_request(
                 curr_session.clone(),
                 VizierRequest {
+                    timestamp: chrono::Utc::now(),
                     user: self.agent_id.clone(),
                     content: VizierRequestContent::Chat(args.prompt.clone()),
                     metadata: json!({}),
@@ -129,7 +130,7 @@ impl Tool for ConsultAgent {
                 continue;
             }
 
-            if let VizierResponse::Message { content, stats: _ } = response {
+            if let VizierResponse { content: VizierResponseContent::Message { content, stats: _ }, timestamp: _ } = response {
                 return Ok(content);
             }
         }
@@ -220,6 +221,7 @@ impl Tool for DelegateAgent {
             .send_request(
                 curr_session.clone(),
                 VizierRequest {
+                    timestamp: chrono::Utc::now(),
                     user: self.agent_id.clone(),
                     content: VizierRequestContent::Prompt(args.prompt.clone()),
                     metadata: json!({}),

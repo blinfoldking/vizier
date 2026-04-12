@@ -17,7 +17,8 @@ use crate::channels::VizierChannel;
 use crate::config::DiscordChannelConfig;
 use crate::dependencies::VizierDependencies;
 use crate::schema::{
-    TopicId, VizierChannelId, VizierRequest, VizierRequestContent, VizierResponse, VizierSession,
+    TopicId, VizierChannelId, VizierRequest, VizierRequestContent, VizierResponse,
+    VizierResponseContent, VizierSession,
 };
 use crate::storage::session::SessionStorage;
 use crate::storage::state::StateStorage;
@@ -85,13 +86,13 @@ impl VizierChannel for DiscordChannelWriter {
                     let discord_channel_id = ChannelId::new(channel_id);
 
                     match res {
-                        VizierResponse::ThinkingStart => {
+                        VizierResponse { content: VizierResponseContent::ThinkingStart, timestamp: _ } => {
                             typing_state.insert(
                                 channel_id,
                                 Typing::start(http.clone(), discord_channel_id),
                             );
                         }
-                        VizierResponse::ToolChoice { name, args } => {
+                        VizierResponse { content: VizierResponseContent::ToolChoice { name, args }, timestamp: _ } => {
                             let _ = crate::utils::discord::send_message(
                                 http.clone(),
                                 &discord_channel_id,
@@ -99,7 +100,7 @@ impl VizierChannel for DiscordChannelWriter {
                             )
                             .await;
                         }
-                        VizierResponse::Thinking(thought) => {
+                        VizierResponse { content: VizierResponseContent::Thinking(thought), timestamp: _ } => {
                             let _ = crate::utils::discord::send_message(
                                 http.clone(),
                                 &discord_channel_id,
@@ -107,7 +108,7 @@ impl VizierChannel for DiscordChannelWriter {
                             )
                             .await;
                         }
-                        VizierResponse::Message { content, stats: _ } => {
+                        VizierResponse { content: VizierResponseContent::Message { content, stats: _ }, timestamp: _ } => {
                             if let Some(typing) = typing_state.remove(&channel_id) {
                                 typing.stop();
                             }
@@ -120,7 +121,7 @@ impl VizierChannel for DiscordChannelWriter {
                             )
                             .await;
                         }
-                        VizierResponse::Abort => {
+                        VizierResponse { content: VizierResponseContent::Abort, timestamp: _ } => {
                             if let Some(typing) = typing_state.remove(&channel_id) {
                                 typing.stop();
                             }
@@ -369,6 +370,7 @@ If I am halucinating, feel free to `/lobotomy` me
                                 topic_id,
                             ),
                             VizierRequest {
+                                timestamp: chrono::Utc::now(),
                                 user: format!(
                                     "@{} (DiscordId: {})",
                                     msg.author.display_name(),
@@ -396,6 +398,7 @@ If I am halucinating, feel free to `/lobotomy` me
                             topic_id,
                         ),
                         VizierRequest {
+                            timestamp: chrono::Utc::now(),
                             user: format!(
                                 "@{} (DiscordId: {})",
                                 msg.author.display_name(),

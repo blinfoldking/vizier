@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     schema::{
         SessionHistory, SessionHistoryContent, VizierRequest, VizierRequestContent,
-        VizierResponseStats, VizierSession,
+        VizierResponse, VizierResponseContent, VizierResponseStats, VizierSession,
     },
     storage::{
         fs::{FileSystemStorage, HISTORY_PATH},
@@ -29,6 +29,7 @@ enum ContentMetadata {
         metadata: serde_json::Value,
     },
     response {
+        content: String,
         stats: Option<VizierResponseStats>,
     },
 }
@@ -43,9 +44,13 @@ struct SessionHistoryFrontMatter {
 
 impl From<SessionHistory> for SessionHistoryFrontMatter {
     fn from(value: SessionHistory) -> Self {
+        let timestamp = match &value.content {
+            SessionHistoryContent::Request(r) => r.timestamp,
+            SessionHistoryContent::Response(r) => r.timestamp,
+        };
         Self {
             uid: value.uid,
-            timestamp: value.timestamp,
+            timestamp,
             session: value.vizier_session,
             content_metadata: match value.content {
                 SessionHistoryContent::Request(req) => ContentMetadata::request {
@@ -77,8 +82,13 @@ impl From<SessionHistory> for SessionHistoryFrontMatter {
                     },
                     metadata: req.metadata,
                 },
-                SessionHistoryContent::Response(_, stats) => {
-                    ContentMetadata::response { stats: stats }
+                SessionHistoryContent::Response(r) => {
+                    match &r.content {
+                        VizierResponseContent::Message { content, stats } => {
+                            ContentMetadata::response { content: content.clone(), stats: stats.clone() }
+                        }
+                        _ => ContentMetadata::response { content: String::new(), stats: None },
+                    }
                 }
             },
         }
@@ -99,12 +109,16 @@ impl HistoryStorage for FileSystemStorage {
             uid: slug.clone(),
             vizier_session: session.clone(),
             content: content.clone(),
-            timestamp: Utc::now(),
         };
 
-        let content = match content {
+        let history_text = match &content {
             SessionHistoryContent::Request(req) => format!("{}", req.content),
-            SessionHistoryContent::Response(content, _) => content.clone(),
+            SessionHistoryContent::Response(r) => {
+                match &r.content {
+                    VizierResponseContent::Message { content, stats: _ } => content.clone(),
+                    _ => String::new(),
+                }
+            }
         };
 
         let frontmatter = SessionHistoryFrontMatter::from(history);
@@ -118,7 +132,7 @@ impl HistoryStorage for FileSystemStorage {
             slug
         ));
 
-        let res = utils::markdown::write_markdown(&frontmatter, content, path.clone());
+        let res = utils::markdown::write_markdown(&frontmatter, history_text, path.clone());
 
         // delete the file if the write error
         if res.is_err() {
@@ -158,7 +172,6 @@ impl HistoryStorage for FileSystemStorage {
                 res.push(SessionHistory {
                     uid: frontmatter.uid,
                     vizier_session: frontmatter.session,
-                    timestamp: frontmatter.timestamp,
                     content: match frontmatter.content_metadata {
                         ContentMetadata::request {
                             user,
@@ -169,6 +182,7 @@ impl HistoryStorage for FileSystemStorage {
                             is_command,
                             metadata,
                         } => SessionHistoryContent::Request(VizierRequest {
+                            timestamp: frontmatter.timestamp,
                             user,
                             metadata,
                             content: match (is_silent_read, is_task, is_chat, is_prompt, is_command)
@@ -181,8 +195,11 @@ impl HistoryStorage for FileSystemStorage {
                                 _ => unimplemented!(),
                             },
                         }),
-                        ContentMetadata::response { stats } => {
-                            SessionHistoryContent::Response(content, stats)
+                        ContentMetadata::response { content, stats } => {
+                            SessionHistoryContent::Response(VizierResponse {
+                                timestamp: frontmatter.timestamp,
+                                content: VizierResponseContent::Message { content, stats },
+                            })
                         }
                     },
                 });
@@ -190,11 +207,27 @@ impl HistoryStorage for FileSystemStorage {
         }
 
         // Sort by timestamp descending (most recent first) for proper cursor pagination
-        res.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        res.sort_by(|a, b| {
+            let a_ts = match &a.content {
+                SessionHistoryContent::Request(r) => r.timestamp,
+                SessionHistoryContent::Response(r) => r.timestamp,
+            };
+            let b_ts = match &b.content {
+                SessionHistoryContent::Request(r) => r.timestamp,
+                SessionHistoryContent::Response(r) => r.timestamp,
+            };
+            b_ts.cmp(&a_ts)
+        });
 
         // Apply cursor filter: get items before the given datetime
         if let Some(before_dt) = before {
-            res.retain(|item| item.timestamp < before_dt);
+            res.retain(|item| {
+                let ts = match &item.content {
+                    SessionHistoryContent::Request(r) => r.timestamp,
+                    SessionHistoryContent::Response(r) => r.timestamp,
+                };
+                ts < before_dt
+            });
         }
 
         // Apply limit
@@ -203,7 +236,17 @@ impl HistoryStorage for FileSystemStorage {
         }
 
         // Sort back to ascending order (oldest first) for the final result
-        res.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+        res.sort_by(|a, b| {
+            let a_ts = match &a.content {
+                SessionHistoryContent::Request(r) => r.timestamp,
+                SessionHistoryContent::Response(r) => r.timestamp,
+            };
+            let b_ts = match &b.content {
+                SessionHistoryContent::Request(r) => r.timestamp,
+                SessionHistoryContent::Response(r) => r.timestamp,
+            };
+            a_ts.cmp(&b_ts)
+        });
 
         Ok(res)
     }

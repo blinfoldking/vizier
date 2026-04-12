@@ -17,7 +17,7 @@ use crate::{
     error::VizierError,
     schema::{
         AgentId, VizierChannelId, VizierRequest, VizierRequestContent, VizierResponse,
-        VizierSession, VizierSessionDetail,
+        VizierResponseContent, VizierSession, VizierSessionDetail,
     },
     storage::{VizierStorage, history::HistoryStorage, session::SessionStorage},
     transport::VizierTransport,
@@ -59,6 +59,7 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
                     .send_request(
                         session,
                         VizierRequest {
+                            timestamp: Utc::now(),
                             user: heartbeat_agent_id.clone(),
                             content: VizierRequestContent::Task("TODO:".into()),
                             metadata: serde_json::json!({
@@ -97,10 +98,14 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
                 let res = session_detail_agent
                     .chat(
                         VizierRequest {
+                            timestamp: Utc::now(),
                             user: "system".into(),
                             content: VizierRequestContent::Prompt(format!(
                                 // TODO: resolve the tools issue programatically instead
-                                r#"summarize (don't execute) prompt below into a single line title: \n "{}""#,
+                                r#"summarize (don't execute) the prompt below into a 60 character title: 
+"{}"
+
+**only response the summarizetitle**"#,
                                 session_detail_request.to_prompt().unwrap()
                             )),
                             metadata: serde_json::json!({}),
@@ -109,9 +114,18 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
                         None,
                     )
                     .await;
-                if let Ok(VizierResponse::Message { content, stats: _ }) = res {
+                if let Ok(VizierResponse { content: VizierResponseContent::Message { content, stats: _ }, timestamp: _ }) = res {
                     let mut title = content;
-                    title.truncate(20);
+                    title.truncate(60);
+
+                    if title.starts_with('"') {
+                        title.remove(0);
+                    }
+
+                    if title.ends_with('"') {
+                        title.pop();
+                    }
+
                     let detail = VizierSessionDetail {
                         agent_id,
                         channel,
@@ -127,7 +141,13 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
             if !handle.is_finished() {
                 let _ = deps
                     .transport
-                    .send_response(session.clone(), crate::schema::VizierResponse::Abort)
+                    .send_response(
+                        session.clone(),
+                        crate::schema::VizierResponse {
+                            timestamp: chrono::Utc::now(),
+                            content: crate::schema::VizierResponseContent::Abort,
+                        },
+                    )
                     .await;
             }
             handle.abort();
@@ -155,7 +175,10 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
                 let _ = thinking_transport
                     .send_response(
                         thinking_session.clone(),
-                        crate::schema::VizierResponse::ThinkingStart,
+                        crate::schema::VizierResponse {
+                            timestamp: chrono::Utc::now(),
+                            content: crate::schema::VizierResponseContent::ThinkingStart,
+                        },
                     )
                     .await;
             }
@@ -185,9 +208,12 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
                     let _ = transport
                         .send_response(
                             session.clone(),
-                            crate::schema::VizierResponse::Message {
-                                content: format!("ERR: {}", err),
-                                stats: None,
+                            crate::schema::VizierResponse {
+                                timestamp: chrono::Utc::now(),
+                                content: crate::schema::VizierResponseContent::Message {
+                                    content: format!("ERR: {}", err),
+                                    stats: None,
+                                },
                             },
                         )
                         .await;

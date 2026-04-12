@@ -58,7 +58,14 @@ pub struct VizierResponseStats {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
-pub enum VizierResponse {
+pub struct VizierResponse {
+    pub timestamp: DateTime<Utc>,
+    pub content: VizierResponseContent,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[serde(rename_all = "snake_case")]
+pub enum VizierResponseContent {
     ThinkingStart,
     Thinking(String),
     ToolChoice {
@@ -74,6 +81,7 @@ pub enum VizierResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[serde(rename_all = "snake_case")]
 pub enum VizierRequestContent {
     Chat(String),
     Prompt(String),
@@ -100,6 +108,7 @@ impl Display for VizierRequestContent {
 
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
 pub struct VizierRequest {
+    pub timestamp: DateTime<Utc>,
     pub user: String,
     pub content: VizierRequestContent,
     pub metadata: serde_json::Value,
@@ -162,13 +171,12 @@ pub struct SessionHistory {
     pub uid: String,
     pub vizier_session: VizierSession,
     pub content: SessionHistoryContent,
-    pub timestamp: chrono::DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
 pub enum SessionHistoryContent {
     Request(VizierRequest),
-    Response(String, Option<VizierResponseStats>),
+    Response(VizierResponse),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]

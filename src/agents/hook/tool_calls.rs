@@ -3,7 +3,7 @@ use serde_json::Value;
 
 use crate::{
     agents::hook::VizierSessionHook,
-    schema::{VizierResponse, VizierSession},
+    schema::{VizierResponse, VizierResponseContent, VizierSession},
     transport::VizierTransport,
 };
 
@@ -27,9 +27,12 @@ impl VizierSessionHook for ToolCallsHook {
             self.transport
                 .send_response(
                     self.session.clone(),
-                    VizierResponse::ToolChoice {
-                        name: function_name.clone(),
-                        args: args_json,
+                    VizierResponse {
+                        timestamp: chrono::Utc::now(),
+                        content: VizierResponseContent::ToolChoice {
+                            name: function_name.clone(),
+                            args: args_json,
+                        },
                     },
                 )
                 .await?;
