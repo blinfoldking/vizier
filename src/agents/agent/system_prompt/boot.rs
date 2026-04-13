@@ -33,7 +33,8 @@ Write tasks to `HEARTBEAT.md` to execute them on a schedule. Clear the file to s
 1. **Skill** → additional capabilities/instructions
 2. **Document** → user-provided documents
 3. **Memory** → long-term facts/context
-"#,
+
+{}"#,
         Utc::now().to_rfc3339(),
         python_note,
         heartbeat_instruction,

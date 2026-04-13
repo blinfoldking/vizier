@@ -40,7 +40,8 @@ const formatToolChoice = (name: string, args: Record<string, unknown>): string =
     case 'memory_write':
       return `**write memory:** '${args.title as string}'`
     default:
-      return `*use* **${name}**`
+      let formattedArgs = "```js" + `\n${JSON.stringify(args, null, 2)}\n` + "```";
+      return `* use * ** ${name}** \n${formattedArgs}`
   }
 }
 
@@ -92,6 +93,7 @@ export default function Chat() {
 
 
       if (agentId) {
+        console.log('>> ?', { agentId })
         listTopics(agentId).then(topic => {
           let topicDetail = topic.data.find((item: any) => item.topic_id == topicId);
 
@@ -522,7 +524,7 @@ export default function Chat() {
 
                     {!isUserMessage && stats && (
                       <div
-                        title={`Input: ${stats.total_input_tokens} | Output: ${stats.total_output_tokens} | Cached: ${stats.total_cached_input_tokens}`}
+                        title={`Input: ${stats.total_input_tokens} | Output: ${stats.total_output_tokens} | Cached: ${stats.total_cached_input_tokens} `}
                         style={{
                           marginTop: '8px',
                           padding: '4px 8px',
@@ -601,7 +603,11 @@ export default function Chat() {
                         </div>
                       )}
                       {evt.type === 'thinking' && evt.content && (
-                        <span style={{ fontStyle: 'italic' }}>{evt.content}</span>
+                        <div className="prose">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                            {evt.content.split('\n').map(line => `> ${line} `).join('\n')}
+                          </ReactMarkdown>
+                        </div>
                       )}
                     </div>
                   ))}
