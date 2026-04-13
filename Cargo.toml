@@ -84,6 +84,12 @@ rmcp = { version = "1.3.0", features = [
   "transport-streamable-http-client-reqwest",
   "transport-streamable-http-server",
 ] }
+mlua = { version = "0.11.6", features = [
+  "lua54",
+  "serialize",
+  "serde",
+  "vendored",
+] }
 
 [features]
 default = []
