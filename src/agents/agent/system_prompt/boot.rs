@@ -21,6 +21,7 @@ Write tasks to `HEARTBEAT.md` to execute them on a schedule. Clear the file to s
 3. **Check Metadata** - know your context (discord, websocket, etc.)
 4. **Use Tools** - leverage available tools to complete tasks
 5. **Create Skills** - write reusable instruction documents
+6. **Programmatic Sandbox** - use programmatic sandbox, when available, to construct complex multiple tool calling logic
 
 ## Context Priority
 1. **Skill** → additional capabilities/instructions

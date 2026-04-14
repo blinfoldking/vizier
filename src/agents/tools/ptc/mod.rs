@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
-use mlua::{Lua, LuaSerdeExt};
+use rustpython;
+use rustpython_vm::{self as vm};
 use serde::{Deserialize, Serialize};
 use tokio::runtime::Handle;
 
@@ -23,9 +24,6 @@ pub struct ProgramaticSandboxArgs {
 pub struct ProgramaticSandboxOutput {
     #[schemars(description = "console_output")]
     pub console_outputs: String,
-
-    #[schemars(description = "return value if any")]
-    pub return_value: serde_json::Value,
 }
 
 #[async_trait::async_trait]
@@ -38,91 +36,63 @@ impl VizierTool for ProgramaticSandbox {
     }
 
     fn description(&self) -> String {
-        r#"run a lua script in a sandbox.
-can used to call multiple tools at once by using tool_call(function_name, args). 
-ie: tool_call("web_search", { query = "some query", page = 1 })
+        r#"Run a Python script in a sandboxed environment.
 
-and you can use print to see the result of the tool call
-"#
+Available functions:
+- print(str): Print values to output, in this sandbox you can't do print() without any args
+- tool_call(function_name, args_json): Call external tools. Returns JSON string based on output schema.
+
+Examples:
+  tool_call("web_search", "{ \"query\": \"some query\", \"page\": 1 }")
+  print("some str")
+
+All tool_call results are serialized as JSON strings matching the output schema."#
         .into()
     }
 
     async fn call(&self, args: Self::Input) -> Result<Self::Output, VizierError> {
-        let lua = Lua::new();
-        let globals = lua.globals();
-
-        let _ = lua.load_std_libs(
-            mlua::StdLib::TABLE
-                | mlua::StdLib::STRING
-                | mlua::StdLib::MATH
-                | mlua::StdLib::UTF8
-                | mlua::StdLib::OS,
-        );
-
+        let script = args.script.clone();
         let tools = self.tools.clone();
-        let tool_call = lua
-            .create_function(
-                move |lua: &Lua, (function_name, args): (String, mlua::Value)| {
-                    let params = serde_json::to_string(&args)
-                        .map_err(|err| mlua::Error::runtime(err.to_string()))?;
 
-                    // Execute the async tool call using tokio
-                    let result = if let Ok(handle) = Handle::try_current() {
-                        // We're inside a tokio runtime, use block_in_place
-                        tokio::task::block_in_place(|| {
-                            handle.block_on(async { tools.call(function_name, params).await })
-                        })
-                    } else {
-                        // No runtime, create a new one
-                        tokio::runtime::Runtime::new()
-                            .unwrap()
-                            .block_on(async { tools.call(function_name, params).await })
-                    }
-                    .map_err(|err| mlua::Error::runtime(err.to_string()))?;
+        let console = Arc::new(Mutex::new(vec![]));
 
-                    let value = serde_json::from_str::<serde_json::Value>(&result)
-                        .map_err(|err| mlua::Error::runtime(err.to_string()))?;
+        let vm_console = console.clone();
+        let interpreter = rustpython::InterpreterConfig::new()
+            .init_stdlib()
+            .interpreter();
 
-                    let ret = lua
-                        .to_value(&value)
-                        .map_err(|err| mlua::Error::runtime(err.to_string()))?;
+        interpreter.enter(|vm| {
+            let scope: vm::scope::Scope = vm.new_scope_with_builtins();
+            let tools = tools.clone();
+            let print = vm.new_function("print", move |str: String| {
+                vm_console.lock().unwrap().push(str);
+            });
 
-                    Ok(ret)
-                },
-            )
-            .map_err(|e| VizierError(e.to_string()))?;
+            let tool_call =
+                vm.new_function("tool_call", move |function_name: String, params: String| {
+                    let tool_call = tools.call(function_name, params);
+                    let handle = Handle::try_current().unwrap();
+                    // We're inside a tokio runtime, use block_in_place
+                    let result = handle.block_on(async { tool_call.await }).unwrap();
 
-        globals
-            .set("tool_call", tool_call)
-            .map_err(|e| VizierError(e.to_string()))?;
+                    return result;
+                });
 
-        let print_buffer = Arc::new(Mutex::new(Vec::<String>::new()));
-        let print_buffer_clone = print_buffer.clone();
-        let print_fn = lua
-            .create_function(move |_: &Lua, args: mlua::Value| {
-                let line = serde_json::to_string(&args).unwrap();
-                print_buffer_clone.lock().unwrap().push(line);
-                Ok(())
-            })
-            .map_err(|e| VizierError(e.to_string()))?;
+            let _ = scope.globals.set_item("print", print.into(), vm);
+            let _ = scope.globals.set_item("tool_call", tool_call.into(), vm);
 
-        globals
-            .set("print", print_fn)
-            .map_err(|e| VizierError(e.to_string()))?;
+            let code_obj = vm
+                .compile(&script, vm::compiler::Mode::Exec, "<embedded>".to_owned())
+                .map_err(|err| vm.new_syntax_error(&err, Some(&script)))
+                .unwrap();
 
-        let lua_val = lua
-            .load(&args.script)
-            .eval::<mlua::Value>()
-            .map_err(|e| VizierError(e.to_string()))?;
+            let res = vm.run_code_obj(code_obj, scope.clone());
+        });
 
-        let return_value =
-            serde_json::to_value(&lua_val).map_err(|e| VizierError(e.to_string()))?;
-        let console_outputs = print_buffer.clone().lock().unwrap().join("\n");
+        let _ = interpreter.finalize(None);
 
         Ok(ProgramaticSandboxOutput {
-            console_outputs,
-            return_value,
+            console_outputs: console.lock().unwrap().join("\n"),
         })
     }
 }
-

@@ -42,7 +42,7 @@ const formatToolChoice = (name: string, args: Record<string, unknown>): string =
     case 'python_interpreter':
       return "**programatic tool**: \n```python" + `\n${args.script as string}\n` + "```"
     case 'programmatic_sandbox':
-      return "**programatic sandbox**: \n```lua" + `\n${args.script as string}\n` + "```"
+      return "**programatic sandbox**: \n```py" + `\n${args.script as string}\n` + "```"
     default:
       let formattedArgs = "```js" + `\n${JSON.stringify(args, null, 2)}\n` + "```";
       return `*use* **${name}** \n${formattedArgs}`
