@@ -86,6 +86,7 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
         .to_string();
 
         let mut interval = tokio::time::interval(dream_interval);
+        let _ = interval.tick().await; // skip when first run
 
         loop {
             interval.tick().await;

@@ -7,10 +7,10 @@ use std::collections::HashMap;
 
 use crate::{
     schema::{
-        AgentUsageStats, ChannelTypeUsage, ChannelTypeUsageDetail, ChannelUsage, DailyChannelTypeUsage,
-        DailyUsage, SessionHistory, SessionHistoryContent, UsageSummary, VizierRequest,
-        VizierRequestContent, VizierResponse, VizierResponseContent, VizierResponseStats,
-        VizierSession,
+        AgentUsageStats, ChannelTypeUsage, ChannelTypeUsageDetail, ChannelUsage,
+        DailyChannelTypeUsage, DailyUsage, SessionHistory, SessionHistoryContent, UsageSummary,
+        VizierRequest, VizierRequestContent, VizierResponse, VizierResponseContent,
+        VizierResponseStats, VizierSession,
     },
     storage::{
         fs::{FileSystemStorage, HISTORY_PATH},
@@ -85,14 +85,18 @@ impl From<SessionHistory> for SessionHistoryFrontMatter {
                     },
                     metadata: req.metadata,
                 },
-                SessionHistoryContent::Response(r) => {
-                    match &r.content {
-                        VizierResponseContent::Message { content, stats } => {
-                            ContentMetadata::response { content: content.clone(), stats: stats.clone() }
+                SessionHistoryContent::Response(r) => match &r.content {
+                    VizierResponseContent::Message { content, stats } => {
+                        ContentMetadata::response {
+                            content: content.clone(),
+                            stats: stats.clone(),
                         }
-                        _ => ContentMetadata::response { content: String::new(), stats: None },
                     }
-                }
+                    _ => ContentMetadata::response {
+                        content: String::new(),
+                        stats: None,
+                    },
+                },
             },
         }
     }
@@ -116,12 +120,10 @@ impl HistoryStorage for FileSystemStorage {
 
         let history_text = match &content {
             SessionHistoryContent::Request(req) => format!("{}", req.content),
-            SessionHistoryContent::Response(r) => {
-                match &r.content {
-                    VizierResponseContent::Message { content, stats: _ } => content.clone(),
-                    _ => String::new(),
-                }
-            }
+            SessionHistoryContent::Response(r) => match &r.content {
+                VizierResponseContent::Message { content, stats: _ } => content.clone(),
+                _ => String::new(),
+            },
         };
 
         let frontmatter = SessionHistoryFrontMatter::from(history);
@@ -268,8 +270,10 @@ impl HistoryStorage for FileSystemStorage {
 
         let mut by_channel_type: HashMap<String, ChannelTypeUsage> = HashMap::new();
         let mut by_day: HashMap<NaiveDate, DailyUsage> = HashMap::new();
-        let mut by_day_and_channel_type: HashMap<NaiveDate, HashMap<String, ChannelTypeUsageDetail>> =
-            HashMap::new();
+        let mut by_day_and_channel_type: HashMap<
+            NaiveDate,
+            HashMap<String, ChannelTypeUsageDetail>,
+        > = HashMap::new();
 
         let path_pattern = format!(
             "{}/agents/{}/{}/*/*/*.md",
@@ -336,15 +340,13 @@ impl HistoryStorage for FileSystemStorage {
                             });
                         }
 
-                        let day_entry = by_day
-                            .entry(date)
-                            .or_insert_with(|| DailyUsage {
-                                date,
-                                total_tokens: 0,
-                                input_tokens: 0,
-                                output_tokens: 0,
-                                total_requests: 0,
-                            });
+                        let day_entry = by_day.entry(date).or_insert_with(|| DailyUsage {
+                            date,
+                            total_tokens: 0,
+                            input_tokens: 0,
+                            output_tokens: 0,
+                            total_requests: 0,
+                        });
                         day_entry.total_tokens += stats.total_tokens;
                         day_entry.input_tokens += stats.total_input_tokens;
                         day_entry.output_tokens += stats.total_output_tokens;
@@ -514,6 +516,8 @@ fn get_channel_type(channel_slug: &str) -> String {
         "system".to_string()
     } else if channel_slug == "SUBAGENT" {
         "subagent".to_string()
+    } else if channel_slug.starts_with("DREAM__") {
+        "dream".to_string()
     } else {
         "other".to_string()
     }

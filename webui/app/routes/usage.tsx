@@ -34,6 +34,7 @@ const CHANNEL_COLORS: Record<string, string> = {
   heartbeat: '#ef4444',
   system: '#6b7280',
   subagent: '#14b8a6',
+  dream: '#7B00FF',
   other: '#9ca3af',
 }
 

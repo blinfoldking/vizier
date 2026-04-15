@@ -19,7 +19,7 @@ impl VizierSession {
             "{}__{}__{}",
             self.0,
             self.1.to_slug(),
-            self.2.unwrap_or("DEFAULT".to_string())
+            self.2.clone().unwrap_or("DEFAULT".to_string())
         )
     }
 }
