@@ -288,11 +288,15 @@ impl VizierTools {
             mcp: mcp.clone(),
         };
 
-        let programmatic_tool = ProgramaticSandbox {
-            tools: Arc::new(temp_tool),
-        };
-        tools = tools.tool(programmatic_tool);
+        if agent_config.tools.programmatic_sandbox {
+            let programmatic_tool = ProgramaticSandbox {
+                tools: Arc::new(temp_tool),
+            };
+            tools = tools.tool(programmatic_tool);
 
-        Ok(Self { tools, mcp })
+            Ok(Self { tools, mcp })
+        } else {
+            Ok(temp_tool)
+        }
     }
 }

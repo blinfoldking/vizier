@@ -578,14 +578,12 @@ export default function Chat() {
                   borderLeft: '3px solid var(--accent-primary)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '8px',
                   color: 'var(--text-secondary)',
                   background: 'var(--surface)',
                 }}>
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
                     color: 'var(--text-tertiary)',
                   }}>
                     thinking

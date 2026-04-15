@@ -39,7 +39,7 @@ impl VizierTool for ProgramaticSandbox {
         r#"Run a Python script in a sandboxed environment.
 
 Available functions:
-- print(str): Print values to output, in this sandbox you can't do print() without any args
+- print(str): Print values to output, in this sandbox you can't do print() without any args, you need to use this to get or format the result of tool_call from console output
 - tool_call(function_name, args_json): Call external tools. Returns JSON string based on output schema.
 
 Examples:
@@ -73,7 +73,9 @@ All tool_call results are serialized as JSON strings matching the output schema.
                     let tool_call = tools.call(function_name, params);
                     let handle = Handle::try_current().unwrap();
                     // We're inside a tokio runtime, use block_in_place
-                    let result = handle.block_on(async { tool_call.await }).unwrap();
+                    let result = tokio::task::block_in_place(|| {
+                        handle.block_on(async { tool_call.await }).unwrap()
+                    });
 
                     return result;
                 });
@@ -86,10 +88,10 @@ All tool_call results are serialized as JSON strings matching the output schema.
                 .map_err(|err| vm.new_syntax_error(&err, Some(&script)))
                 .unwrap();
 
-            let res = vm.run_code_obj(code_obj, scope.clone());
+            let _ = vm.run_code_obj(code_obj, scope.clone());
         });
 
-        let _ = interpreter.finalize(None);
+        drop(interpreter);
 
         Ok(ProgramaticSandboxOutput {
             console_outputs: console.lock().unwrap().join("\n"),
