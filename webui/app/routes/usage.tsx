@@ -315,9 +315,9 @@ export default function UsageDashboard() {
 
         </div>
 
-      </div>
+      </div >
 
-      <div style={{ padding: '24px', maxWidth: '100%', }}>
+      <div className='main-body' style={{ padding: '24px', maxWidth: '100%', }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h1 style={{ fontSize: '24px', fontWeight: 600 }}>Usage Dashboard</h1>
 
