@@ -16,6 +16,7 @@ use crate::{
         },
         ptc::ProgramaticSandbox,
         scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
+        shared_document::init_shared_document_tools,
         shell::ShellExec,
         skill::CreateSkill,
         subtasks::SubtasksTool,
@@ -42,6 +43,7 @@ mod notify;
 mod ptc;
 mod scheduler;
 mod shell;
+mod shared_document;
 mod skill;
 mod subtasks;
 mod telegram;
@@ -264,6 +266,14 @@ impl VizierTools {
                 tools = tools.tool(read_memory).tool(write_memory);
             }
         }
+
+        let (shared_doc_read, shared_doc_write, shared_doc_get, shared_doc_list) =
+            init_shared_document_tools(agent_id.clone(), deps.clone())?;
+        tools = tools
+            .tool(shared_doc_read)
+            .tool(shared_doc_write)
+            .tool(shared_doc_get)
+            .tool(shared_doc_list);
 
         tools = tools
             .tool(DiscordDmPrimaryUser::new(deps.config.clone()))

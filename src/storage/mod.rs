@@ -6,8 +6,8 @@ use crate::{
     schema::DocumentIndex,
     storage::{
         history::HistoryStorage, indexer::DocumentIndexer, memory::MemoryStorage,
-        session::SessionStorage, skill::SkillStorage, state::StateStorage, task::TaskStorage,
-        user::UserStorage,
+        session::SessionStorage, shared_document::SharedDocumentStorage, skill::SkillStorage,
+        state::StateStorage, task::TaskStorage, user::UserStorage,
     },
 };
 
@@ -15,6 +15,7 @@ pub mod history;
 pub mod indexer;
 pub mod memory;
 pub mod session;
+pub mod shared_document;
 pub mod skill;
 pub mod state;
 pub mod task;
@@ -32,7 +33,8 @@ where
         + SessionStorage
         + StateStorage
         + DocumentIndexer
-        + UserStorage,
+        + UserStorage
+        + SharedDocumentStorage,
 {
 }
 

@@ -7,12 +7,14 @@ use crate::{
     storage::{
         VizierStorageProvider,
         indexer::{DocumentIndexer, VizierIndexer},
+        shared_document::SharedDocumentStorage,
     },
 };
 
 mod history;
 mod memory;
 mod session;
+mod shared_document;
 mod skill;
 mod state;
 mod task;
@@ -34,6 +36,7 @@ impl FileSystemStorage {
         let storage = Self { workspace, indices };
 
         storage.reindex_memory().await?;
+        storage.reindex_shared_documents().await?;
 
         Ok(storage)
     }

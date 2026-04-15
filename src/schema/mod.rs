@@ -258,3 +258,21 @@ pub struct AgentUsageStats {
     #[serde(default)]
     pub by_day_and_channel_type: Vec<DailyChannelTypeUsage>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
+pub struct SharedDocument {
+    pub slug: String,
+    pub title: String,
+    pub content: String,
+    pub author_agent_id: AgentId,
+    pub timestamp: chrono::DateTime<Utc>,
+    pub embedding: Vec<f64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
+pub struct SharedDocumentSummary {
+    pub slug: String,
+    pub title: String,
+    pub author_agent_id: AgentId,
+    pub timestamp: chrono::DateTime<Utc>,
+}
