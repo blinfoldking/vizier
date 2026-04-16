@@ -61,14 +61,6 @@ impl VizierAgent {
     pub async fn new(agent_id: String, deps: &VizierDependencies) -> Result<VizierAgent> {
         let agent_config = deps.config.agents.get(&agent_id.clone()).unwrap();
 
-        log::info!("reindex {} documents", agent_config.name);
-        for document in &agent_config.documents {
-            log::info!("reindex {}", document);
-            deps.storage
-                .add_document_index(format!("document/{}", agent_id), document.clone())
-                .await?;
-        }
-
         let model = VizierModel::new(agent_id.clone(), deps.clone()).await?;
         let tools = VizierTools::new(agent_id.clone(), deps.clone()).await?;
         let skills = VizierSkills::new(agent_id.clone(), deps.clone()).await?;
@@ -96,7 +88,7 @@ impl VizierAgent {
         let ident_md = read_md_file(self.workspace.clone(), "IDENTITY.md".into());
         let boot = boot_md();
 
-        let res = vec![
+        let mut res = vec![
             Message::system(boot),
             Message::system(
                 self.config
@@ -108,6 +100,10 @@ impl VizierAgent {
             Message::system(agent_md),
             Message::system(ident_md),
         ];
+
+        for document in &self.config.documents {
+            res.push(Message::system(document.clone()));
+        }
 
         res
     }

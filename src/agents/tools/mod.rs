@@ -10,7 +10,6 @@ use crate::{
         brave_search::{BraveSearch, NewsOnlySearch, WebOnlySearch},
         consult::{ConsultAgent, DelegateAgent},
         discord::new_discord_tools,
-        document::init_document_tools,
         notify::{
             DiscordDmPrimaryUser, NotifyPrimaryUser, TelegramDmPrimaryUser, WebUiNotifyPrimaryUser,
         },
@@ -38,12 +37,11 @@ use crate::{
 mod brave_search;
 mod consult;
 mod discord;
-mod document;
 mod notify;
 mod ptc;
 mod scheduler;
-mod shell;
 mod shared_document;
+mod shell;
 mod skill;
 mod subtasks;
 mod telegram;
@@ -213,10 +211,6 @@ impl VizierTools {
             .tool(DelegateAgent::new(agent_id.clone(), deps.clone()))
             .tool(SubtasksTool::new(agent_id.clone(), deps.clone()))
             .tool(CreateSkill::new(agent_id.clone(), deps.clone()));
-
-        if agent_config.documents.len() > 0 {
-            tools = tools.tool(init_document_tools(agent_id.clone(), deps.clone())?);
-        }
 
         if agent_config.tools.shell_access {
             tools = tools.tool(ShellExec(deps.shell.clone()));
