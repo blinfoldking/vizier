@@ -28,7 +28,7 @@ esac
 # Get version (stable release only, no prereleases)
 get_latest_version() {
     local releases_url="https://api.github.com/repos/$REPO/releases"
-    curl -s "$releases_url" | grep '"tag_name":' | grep -v '"prerelease": false' | head -1 | sed -E 's/.*"tag_name": "v?([^"]+)".*/\1/'
+    curl -s "$releases_url" | grep -oP '"tag_name":\s*"\K[^"]+' | grep -v '-' | sort -V | tail -1 | sed 's/^v//'
 }
 VERSION="${VERSION:-$(get_latest_version)}"
 [ -z "$VERSION" ] && error "Failed to get latest version"
