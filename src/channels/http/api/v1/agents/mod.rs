@@ -6,13 +6,12 @@ use axum::{
 use chrono::{DateTime, Utc};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::{
     channels::http::{
         models::{
             self,
-            response::{api_response, err_response},
+            response::{api_response, err_response, APIResponse},
         },
         state::HTTPState,
     },
@@ -21,10 +20,10 @@ use crate::{
     storage::{history::HistoryStorage, VizierStorage},
 };
 
-mod channel;
-mod documents;
-mod memory;
-mod task;
+pub mod channel;
+pub mod documents;
+pub mod memory;
+pub mod task;
 
 use channel::channel;
 use documents::documents;
@@ -48,35 +47,56 @@ pub fn agents() -> Router<HTTPState> {
         .nest("/{agent_id}/tasks", task())
 }
 
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+pub struct AgentSummary {
+    pub agent_id: String,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/agents",
+    responses(
+        (status = 200, description = "List of agents", body = APIResponse<Vec<AgentSummary>>)
+    )
+)]
 async fn list_agents(
     State(state): State<HTTPState>,
-) -> models::response::Response<Vec<serde_json::Value>> {
-    let res = state
+) -> models::response::Response<Vec<AgentSummary>> {
+    let res: Vec<AgentSummary> = state
         .config
         .agents
         .iter()
-        .map(|(key, config)| {
-            json!({
-                "agent_id": key.clone(),
-                "name": config.name.clone(),
-                "description": config.description.clone(),
-            })
+        .map(|(key, config)| AgentSummary {
+            agent_id: key.clone(),
+            name: config.name.clone(),
+            description: config.description.clone(),
         })
         .collect();
 
     api_response(StatusCode::OK, res)
 }
 
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    responses(
+        (status = 200, description = "Agent details", body = APIResponse<AgentSummary>),
+        (status = 404, description = "Agent not found", body = APIResponse<String>)
+    )
+)]
 async fn agent_detail(
     Path(agent_id): Path<String>,
     State(state): State<HTTPState>,
-) -> models::response::Response<serde_json::Value> {
-    let res = state.config.agents.get(&agent_id.clone()).map(|config| {
-        json!({
-            "agent_id": agent_id.clone(),
-            "name": config.name.clone(),
-            "description": config.description.clone(),
-        })
+) -> models::response::Response<AgentSummary> {
+    let res = state.config.agents.get(&agent_id).map(|config| AgentSummary {
+        agent_id: agent_id.clone(),
+        name: config.name.clone(),
+        description: config.description.clone(),
     });
 
     if res.is_none() {
@@ -86,12 +106,25 @@ async fn agent_detail(
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, utoipa::ToSchema)]
 pub struct UsageQuery {
     pub start_date: Option<String>,
     pub end_date: Option<String>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}/usage",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    request_body = UsageQuery,
+    responses(
+        (status = 200, description = "Agent usage statistics", body = APIResponse<AgentUsageStats>),
+        (status = 404, description = "Agent not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 async fn agent_usage(
     Path(agent_id): Path<String>,
     Query(query): Query<UsageQuery>,

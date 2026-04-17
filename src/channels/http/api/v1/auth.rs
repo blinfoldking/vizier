@@ -8,35 +8,35 @@ use serde::{Deserialize, Serialize};
 
 use crate::channels::http::{
     auth::{AuthService, AuthenticatedUser},
-    models::{self, response::api_response},
+    models::{self, response::{api_response, APIResponse}},
     state::HTTPState,
 };
 use crate::storage::user::UserStorage;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
 pub struct LoginResponse {
     pub token: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct ChangePasswordRequest {
     pub current_password: String,
     pub new_password: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct CreateApiKeyRequest {
     pub name: String,
     pub expires_in_days: Option<i64>,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
 pub struct CreateApiKeyResponse {
     pub id: String,
     pub name: String,
@@ -45,7 +45,7 @@ pub struct CreateApiKeyResponse {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
 pub struct ApiKeyResponse {
     pub id: String,
     pub name: String,
@@ -54,6 +54,16 @@ pub struct ApiKeyResponse {
     pub last_used_at: Option<DateTime<Utc>>,
 }
 
+#[utoipa::path(
+    post,
+    path = "/auth/login",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, description = "Login successful", body = APIResponse<LoginResponse>),
+        (status = 401, description = "Invalid credentials", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn login(
     State(state): State<HTTPState>,
     Json(req): Json<LoginRequest>,
@@ -119,6 +129,16 @@ pub async fn login(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/auth/change-password",
+    request_body = ChangePasswordRequest,
+    responses(
+        (status = 204, description = "Password changed successfully"),
+        (status = 401, description = "Current password is incorrect", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn change_password(
     State(state): State<HTTPState>,
     Extension(user): Extension<AuthenticatedUser>,
@@ -190,6 +210,15 @@ pub async fn change_password(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/auth/api-keys",
+    request_body = CreateApiKeyRequest,
+    responses(
+        (status = 201, description = "API key created successfully", body = APIResponse<CreateApiKeyResponse>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn create_api_key(
     State(state): State<HTTPState>,
     Extension(user): Extension<AuthenticatedUser>,
@@ -241,6 +270,14 @@ pub async fn create_api_key(
     )
 }
 
+#[utoipa::path(
+    get,
+    path = "/auth/api-keys",
+    responses(
+        (status = 200, description = "List of API keys", body = APIResponse<Vec<ApiKeyResponse>>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn list_api_keys(
     State(state): State<HTTPState>,
     Extension(user): Extension<AuthenticatedUser>,
@@ -270,6 +307,18 @@ pub async fn list_api_keys(
     api_response(StatusCode::OK, response)
 }
 
+#[utoipa::path(
+    delete,
+    path = "/auth/api-keys/{key_id}",
+    params(
+        ("key_id" = String, Path, description = "API key ID to delete")
+    ),
+    responses(
+        (status = 204, description = "API key deleted successfully"),
+        (status = 404, description = "API key not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn delete_api_key(
     State(state): State<HTTPState>,
     Extension(user): Extension<AuthenticatedUser>,

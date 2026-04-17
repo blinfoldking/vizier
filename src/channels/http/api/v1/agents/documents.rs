@@ -5,13 +5,13 @@ use axum::{
     Json,
 };
 use reqwest::StatusCode;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     channels::http::{
         models::{
             self,
-            response::{api_response, err_response},
+            response::{api_response, err_response, APIResponse},
         },
         state::HTTPState,
     },
@@ -25,9 +25,19 @@ pub fn documents() -> Router<HTTPState> {
         .route("/heartbeat", get(get_heartbeat_doc).put(update_heartbeat_doc))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct UpdateDocumentRequest {
     content: String,
+}
+
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+pub struct DocumentContentResponse {
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+pub struct DocumentUpdateResponse {
+    pub message: String,
 }
 
 fn get_document_path(workspace: &str, agent_id: &str, doc_name: &str) -> String {
@@ -42,104 +52,167 @@ fn write_document(path: &str, content: &str) -> Result<(), std::io::Error> {
     std::fs::write(path, content)
 }
 
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}/documents/agent",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    responses(
+        (status = 200, description = "Get AGENT.md content", body = APIResponse<DocumentContentResponse>),
+        (status = 404, description = "Agent or document not found", body = APIResponse<String>)
+    )
+)]
 pub async fn get_agent_doc(
     Path(agent_id): Path<String>,
     State(state): State<HTTPState>,
-) -> models::response::Response<serde_json::Value> {
+) -> models::response::Response<DocumentContentResponse> {
     if !state.config.is_agent_exists(&agent_id) {
         return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
     }
 
     let path = get_document_path(&state.config.workspace, &agent_id, "AGENT.md");
     match read_document(&path) {
-        Ok(content) => api_response(StatusCode::OK, serde_json::json!({ "content": content })),
+        Ok(content) => api_response(StatusCode::OK, DocumentContentResponse { content }),
         Err(e) => err_response(StatusCode::NOT_FOUND, format!("failed to read AGENT.md: {}", e)),
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/agents/{agent_id}/documents/agent",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    request_body = UpdateDocumentRequest,
+    responses(
+        (status = 200, description = "AGENT.md updated successfully", body = APIResponse<DocumentUpdateResponse>),
+        (status = 404, description = "Agent not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn update_agent_doc(
     Path(agent_id): Path<String>,
     State(state): State<HTTPState>,
     Json(body): Json<UpdateDocumentRequest>,
-) -> models::response::Response<serde_json::Value> {
+) -> models::response::Response<DocumentUpdateResponse> {
     if !state.config.is_agent_exists(&agent_id) {
         return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
     }
 
     let path = get_document_path(&state.config.workspace, &agent_id, "AGENT.md");
     match write_document(&path, &body.content) {
-        Ok(_) => api_response(
-            StatusCode::OK,
-            serde_json::json!({ "message": "AGENT.md updated successfully" }),
-        ),
+        Ok(_) => api_response(StatusCode::OK, DocumentUpdateResponse { message: "AGENT.md updated successfully".to_string() }),
         Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, format!("failed to update AGENT.md: {}", e)),
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}/documents/identity",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    responses(
+        (status = 200, description = "Get IDENTITY.md content", body = APIResponse<DocumentContentResponse>),
+        (status = 404, description = "Agent or document not found", body = APIResponse<String>)
+    )
+)]
 pub async fn get_identity_doc(
     Path(agent_id): Path<String>,
     State(state): State<HTTPState>,
-) -> models::response::Response<serde_json::Value> {
+) -> models::response::Response<DocumentContentResponse> {
     if !state.config.is_agent_exists(&agent_id) {
         return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
     }
 
     let path = get_document_path(&state.config.workspace, &agent_id, "IDENTITY.md");
     match read_document(&path) {
-        Ok(content) => api_response(StatusCode::OK, serde_json::json!({ "content": content })),
+        Ok(content) => api_response(StatusCode::OK, DocumentContentResponse { content }),
         Err(e) => err_response(StatusCode::NOT_FOUND, format!("failed to read IDENTITY.md: {}", e)),
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/agents/{agent_id}/documents/identity",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    request_body = UpdateDocumentRequest,
+    responses(
+        (status = 200, description = "IDENTITY.md updated successfully", body = APIResponse<DocumentUpdateResponse>),
+        (status = 404, description = "Agent not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn update_identity_doc(
     Path(agent_id): Path<String>,
     State(state): State<HTTPState>,
     Json(body): Json<UpdateDocumentRequest>,
-) -> models::response::Response<serde_json::Value> {
+) -> models::response::Response<DocumentUpdateResponse> {
     if !state.config.is_agent_exists(&agent_id) {
         return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
     }
 
     let path = get_document_path(&state.config.workspace, &agent_id, "IDENTITY.md");
     match write_document(&path, &body.content) {
-        Ok(_) => api_response(
-            StatusCode::OK,
-            serde_json::json!({ "message": "IDENTITY.md updated successfully" }),
-        ),
+        Ok(_) => api_response(StatusCode::OK, DocumentUpdateResponse { message: "IDENTITY.md updated successfully".to_string() }),
         Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, format!("failed to update IDENTITY.md: {}", e)),
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}/documents/heartbeat",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    responses(
+        (status = 200, description = "Get HEARTBEAT.md content", body = APIResponse<DocumentContentResponse>),
+        (status = 404, description = "Agent or document not found", body = APIResponse<String>)
+    )
+)]
 pub async fn get_heartbeat_doc(
     Path(agent_id): Path<String>,
     State(state): State<HTTPState>,
-) -> models::response::Response<serde_json::Value> {
+) -> models::response::Response<DocumentContentResponse> {
     if !state.config.is_agent_exists(&agent_id) {
         return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
     }
 
     let path = get_document_path(&state.config.workspace, &agent_id, "HEARTBEAT.md");
     match read_document(&path) {
-        Ok(content) => api_response(StatusCode::OK, serde_json::json!({ "content": content })),
+        Ok(content) => api_response(StatusCode::OK, DocumentContentResponse { content }),
         Err(e) => err_response(StatusCode::NOT_FOUND, format!("failed to read HEARTBEAT.md: {}", e)),
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/agents/{agent_id}/documents/heartbeat",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    request_body = UpdateDocumentRequest,
+    responses(
+        (status = 200, description = "HEARTBEAT.md updated successfully", body = APIResponse<DocumentUpdateResponse>),
+        (status = 404, description = "Agent not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn update_heartbeat_doc(
     Path(agent_id): Path<String>,
     State(state): State<HTTPState>,
     Json(body): Json<UpdateDocumentRequest>,
-) -> models::response::Response<serde_json::Value> {
+) -> models::response::Response<DocumentUpdateResponse> {
     if !state.config.is_agent_exists(&agent_id) {
         return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
     }
 
     let path = get_document_path(&state.config.workspace, &agent_id, "HEARTBEAT.md");
     match write_document(&path, &body.content) {
-        Ok(_) => api_response(
-            StatusCode::OK,
-            serde_json::json!({ "message": "HEARTBEAT.md updated successfully" }),
-        ),
+        Ok(_) => api_response(StatusCode::OK, DocumentUpdateResponse { message: "HEARTBEAT.md updated successfully".to_string() }),
         Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, format!("failed to update HEARTBEAT.md: {}", e)),
     }
 }

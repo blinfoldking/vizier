@@ -7,7 +7,7 @@ use reqwest::StatusCode;
 use crate::channels::http::{
     api::v1::agents::agents,
     auth::middleware::require_auth,
-    models::{self, response::api_response},
+    models::{self, response::{api_response, APIResponse}},
     state::HTTPState,
 };
 
@@ -46,6 +46,13 @@ pub fn v1(state: HTTPState) -> Router<HTTPState> {
         )
 }
 
+#[utoipa::path(
+    get,
+    path = "/ping",
+    responses(
+        (status = 200, description = "pong", body = APIResponse<String>)
+    )
+)]
 async fn ping() -> models::response::Response<String> {
     api_response(StatusCode::OK, "pong".into())
 }

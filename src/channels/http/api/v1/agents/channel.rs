@@ -15,7 +15,7 @@ use crate::{
     channels::http::{
         models::{
             self,
-            response::{api_response, err_response},
+            response::{api_response, err_response, APIResponse},
         },
         state::HTTPState,
     },
@@ -34,13 +34,13 @@ pub fn channel() -> Router<HTTPState> {
         .route("/{channel_id}/topic/{topic_id}", delete(delete_topic))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct HistoryQuery {
     before: Option<chrono::DateTime<Utc>>,
     limit: Option<usize>,
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, utoipa::ToSchema)]
 pub struct TopicEntry {
     pub topic_id: String,
     pub title: String,
@@ -59,6 +59,20 @@ impl From<VizierSessionDetail> for TopicEntry {
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}/channel/{channel_id}/topic/{topic_id}/history",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID"),
+        ("channel_id" = String, Path, description = "Channel ID"),
+        ("topic_id" = String, Path, description = "Topic ID")
+    ),
+    request_body = HistoryQuery,
+    responses(
+        (status = 200, description = "Topic history", body = APIResponse<Vec<SessionHistory>>),
+        (status = 404, description = "Agent or topic not found", body = APIResponse<String>)
+    )
+)]
 pub async fn get_topic_history(
     Path((agent_id, channel_id, topic_id)): Path<(String, String, TopicId)>,
     Query(params): Query<HistoryQuery>,
@@ -86,6 +100,19 @@ pub async fn get_topic_history(
     api_response(StatusCode::OK, response.unwrap())
 }
 
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}/channel/{channel_id}/topics",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID"),
+        ("channel_id" = String, Path, description = "Channel ID")
+    ),
+    responses(
+        (status = 200, description = "List of topics", body = APIResponse<Vec<TopicEntry>>),
+        (status = 404, description = "Agent not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn list_topics(
     Path((agent_id, channel_id)): Path<(String, String)>,
     State(state): State<HTTPState>,
@@ -114,6 +141,19 @@ pub async fn list_topics(
     api_response(StatusCode::OK, list)
 }
 
+#[utoipa::path(
+    delete,
+    path = "/agents/{agent_id}/channel/{channel_id}/topic/{topic_id}",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID"),
+        ("channel_id" = String, Path, description = "Channel ID"),
+        ("topic_id" = String, Path, description = "Topic ID")
+    ),
+    responses(
+        (status = 200, description = "Topic deleted", body = APIResponse<String>),
+        (status = 404, description = "Agent or topic not found", body = APIResponse<String>)
+    )
+)]
 pub async fn delete_topic(
     Path((agent_id, channel_id, topic_id)): Path<(String, String, TopicId)>,
     State(state): State<HTTPState>,
@@ -136,6 +176,19 @@ pub async fn delete_topic(
     api_response(StatusCode::OK, "Topic deleted".into())
 }
 
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}/channel/{channel_id}/topic/{topic_id}/chat",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID"),
+        ("channel_id" = String, Path, description = "Channel ID"),
+        ("topic_id" = String, Path, description = "Topic ID")
+    ),
+    responses(
+        (status = 101, description = "WebSocket connection established"),
+        (status = 404, description = "Agent not found")
+    )
+)]
 pub async fn chat(
     Path((agent_id, channel_id, topic_id)): Path<(String, String, TopicId)>,
     ws: WebSocketUpgrade,

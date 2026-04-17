@@ -11,7 +11,18 @@ pub type AgentId = String;
 
 pub type TopicId = String;
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, SurrealValue)]
+#[derive(
+    Debug,
+    Clone,
+    Hash,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    SurrealValue,
+    JsonSchema,
+    utoipa::ToSchema,
+)]
 pub struct VizierSession(pub AgentId, pub VizierChannelId, pub Option<TopicId>);
 
 impl VizierSession {
@@ -25,7 +36,18 @@ impl VizierSession {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize, SurrealValue)]
+#[derive(
+    Debug,
+    Clone,
+    Hash,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    SurrealValue,
+    JsonSchema,
+    utoipa::ToSchema,
+)]
 pub enum VizierChannelId {
     DiscordChanel(u64),
     TelegramChannel(i64),
@@ -60,7 +82,7 @@ impl VizierChannelId {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, JsonSchema, utoipa::ToSchema)]
 pub struct VizierResponseStats {
     pub input_tokens: u64,
     pub cached_input_tokens: u64,
@@ -71,13 +93,26 @@ pub struct VizierResponseStats {
     pub duration: tokio::time::Duration,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, JsonSchema, utoipa::ToSchema)]
 pub struct VizierResponse {
     pub timestamp: DateTime<Utc>,
     pub content: VizierResponseContent,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, JsonSchema, utoipa::ToSchema)]
+pub struct SessionHistory {
+    pub uid: String,
+    pub vizier_session: VizierSession,
+    pub content: SessionHistoryContent,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue, JsonSchema, utoipa::ToSchema)]
+pub enum SessionHistoryContent {
+    Request(VizierRequest),
+    Response(VizierResponse),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, JsonSchema, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum VizierResponseContent {
     ThinkingStart,
@@ -94,7 +129,7 @@ pub enum VizierResponseContent {
     Abort,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, JsonSchema, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum VizierRequestContent {
     Chat(String),
@@ -120,7 +155,7 @@ impl Display for VizierRequestContent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue)]
+#[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, JsonSchema, utoipa::ToSchema)]
 pub struct VizierRequest {
     pub timestamp: DateTime<Utc>,
     pub user: String,
@@ -174,23 +209,10 @@ pub struct Task {
     pub timestamp: chrono::DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue, JsonSchema, utoipa::ToSchema)]
 pub enum TaskSchedule {
     CronTask(String),
     OneTimeTask(chrono::DateTime<Utc>),
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
-pub struct SessionHistory {
-    pub uid: String,
-    pub vizier_session: VizierSession,
-    pub content: SessionHistoryContent,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
-pub enum SessionHistoryContent {
-    Request(VizierRequest),
-    Response(VizierResponse),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
@@ -218,7 +240,7 @@ pub struct VizierSessionDetail {
     pub title: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UsageSummary {
     pub total_tokens: u64,
     pub total_input_tokens: u64,
@@ -227,14 +249,14 @@ pub struct UsageSummary {
     pub avg_duration_ms: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ChannelUsage {
     pub channel_id: String,
     pub total_tokens: u64,
     pub total_requests: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ChannelTypeUsageDetail {
     pub total_tokens: u64,
     pub input_tokens: u64,
@@ -242,20 +264,20 @@ pub struct ChannelTypeUsageDetail {
     pub total_requests: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DailyChannelTypeUsage {
     pub date: chrono::NaiveDate,
     pub by_channel_type: std::collections::HashMap<String, ChannelTypeUsageDetail>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ChannelTypeUsage {
     pub total_tokens: u64,
     pub total_requests: u64,
     pub channels: Vec<ChannelUsage>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DailyUsage {
     pub date: chrono::NaiveDate,
     pub total_tokens: u64,
@@ -264,7 +286,7 @@ pub struct DailyUsage {
     pub total_requests: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct AgentUsageStats {
     pub summary: UsageSummary,
     pub by_channel_type: std::collections::HashMap<String, ChannelTypeUsage>,

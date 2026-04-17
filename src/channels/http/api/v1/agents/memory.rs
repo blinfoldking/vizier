@@ -4,14 +4,15 @@ use axum::{
     routing::{delete, get, post, put},
     Json,
 };
+use chrono::{DateTime, Utc};
 use reqwest::StatusCode;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     channels::http::{
         models::{
             self,
-            response::{api_response, err_response},
+            response::{api_response, err_response, APIResponse},
         },
         state::HTTPState,
     },
@@ -28,20 +29,20 @@ pub fn memory() -> Router<HTTPState> {
         .route("/{slug}", delete(delete_memory))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct CreateMemoryRequest {
     title: String,
     content: String,
     slug: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct UpdateMemoryRequest {
     title: String,
     content: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct QueryMemoryRequest {
     query: String,
     #[serde(default = "default_limit")]
@@ -58,25 +59,65 @@ fn default_threshold() -> f64 {
     0.5
 }
 
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+pub struct MemorySummary {
+    pub agent_id: String,
+    pub slug: String,
+    pub title: String,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+pub struct MemoryDetail {
+    pub agent_id: String,
+    pub slug: String,
+    pub title: String,
+    pub content: String,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+pub struct CreateMemoryResponse {
+    pub agent_id: String,
+    pub title: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+pub struct UpdateMemoryResponse {
+    pub agent_id: String,
+    pub slug: String,
+    pub message: String,
+}
+
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}/memory",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    responses(
+        (status = 200, description = "List of memories", body = APIResponse<Vec<MemorySummary>>),
+        (status = 404, description = "Agent not found", body = APIResponse<String>)
+    )
+)]
 pub async fn get_all_memories(
     Path(agent_id): Path<String>,
     State(state): State<HTTPState>,
-) -> models::response::Response<Vec<serde_json::Value>> {
+) -> models::response::Response<Vec<MemorySummary>> {
     if !state.config.is_agent_exists(&agent_id) {
         return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
     }
 
     match state.storage.get_all_agent_memory(agent_id).await {
         Ok(memory) => {
-            let response = memory
+            let response: Vec<MemorySummary> = memory
                 .iter()
-                .map(|memory| {
-                    serde_json::json!({
-                        "agent_id": memory.agent_id,
-                        "slug": memory.slug,
-                        "title": memory.title,
-                        "timestamp": memory.timestamp
-                    })
+                .map(|memory| MemorySummary {
+                    agent_id: memory.agent_id.clone(),
+                    slug: memory.slug.clone(),
+                    title: memory.title.clone(),
+                    timestamp: memory.timestamp,
                 })
                 .collect();
 
@@ -86,11 +127,24 @@ pub async fn get_all_memories(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/agents/{agent_id}/memory",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    request_body = CreateMemoryRequest,
+    responses(
+        (status = 201, description = "Memory created", body = APIResponse<CreateMemoryResponse>),
+        (status = 404, description = "Agent not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn create_memory(
     Path(agent_id): Path<String>,
     State(state): State<HTTPState>,
     Json(body): Json<CreateMemoryRequest>,
-) -> models::response::Response<serde_json::Value> {
+) -> models::response::Response<CreateMemoryResponse> {
     if !state.config.is_agent_exists(&agent_id) {
         return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
     }
@@ -102,26 +156,39 @@ pub async fn create_memory(
     {
         Ok(_) => api_response(
             StatusCode::CREATED,
-            serde_json::json!({
-                "agent_id": agent_id,
-                "title": body.title,
-                "message": "memory created successfully"
-            }),
+            CreateMemoryResponse {
+                agent_id,
+                title: body.title,
+                message: "memory created successfully".to_string(),
+            },
         ),
         Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/agents/{agent_id}/memory/{slug}",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID"),
+        ("slug" = String, Path, description = "Memory slug")
+    ),
+    request_body = UpdateMemoryRequest,
+    responses(
+        (status = 200, description = "Memory updated", body = APIResponse<UpdateMemoryResponse>),
+        (status = 404, description = "Agent or memory not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn update_memory(
     Path((agent_id, slug)): Path<(String, String)>,
     State(state): State<HTTPState>,
     Json(body): Json<UpdateMemoryRequest>,
-) -> models::response::Response<serde_json::Value> {
+) -> models::response::Response<UpdateMemoryResponse> {
     if !state.config.is_agent_exists(&agent_id) {
         return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
     }
 
-    // Check if memory exists
     match state.storage.get_memory_detail(agent_id.clone(), slug.clone()).await {
         Ok(None) => {
             return err_response(StatusCode::NOT_FOUND, format!("memory {slug} not found"));
@@ -130,7 +197,6 @@ pub async fn update_memory(
         _ => {}
     }
 
-    // Update by writing new content with the same slug
     match state
         .storage
         .write_memory(agent_id.clone(), Some(slug.clone()), body.title, body.content)
@@ -138,21 +204,34 @@ pub async fn update_memory(
     {
         Ok(_) => api_response(
             StatusCode::OK,
-            serde_json::json!({
-                "agent_id": agent_id,
-                "slug": slug,
-                "message": "memory updated successfully"
-            }),
+            UpdateMemoryResponse {
+                agent_id,
+                slug,
+                message: "memory updated successfully".to_string(),
+            },
         ),
         Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}/memory/query",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    request_body = QueryMemoryRequest,
+    responses(
+        (status = 200, description = "Query results", body = APIResponse<Vec<MemoryDetail>>),
+        (status = 404, description = "Agent not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn query_memories(
     Path(agent_id): Path<String>,
     Query(params): Query<QueryMemoryRequest>,
     State(state): State<HTTPState>,
-) -> models::response::Response<Vec<serde_json::Value>> {
+) -> models::response::Response<Vec<MemoryDetail>> {
     if !state.config.is_agent_exists(&agent_id) {
         return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
     }
@@ -163,16 +242,14 @@ pub async fn query_memories(
         .await
     {
         Ok(memories) => {
-            let response = memories
+            let response: Vec<MemoryDetail> = memories
                 .iter()
-                .map(|memory| {
-                    serde_json::json!({
-                        "agent_id": memory.agent_id,
-                        "slug": memory.slug,
-                        "title": memory.title,
-                        "content": memory.content,
-                        "timestamp": memory.timestamp
-                    })
+                .map(|memory| MemoryDetail {
+                    agent_id: memory.agent_id.clone(),
+                    slug: memory.slug.clone(),
+                    title: memory.title.clone(),
+                    content: memory.content.clone(),
+                    timestamp: memory.timestamp,
                 })
                 .collect();
 
@@ -182,10 +259,22 @@ pub async fn query_memories(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}/memory/{slug}",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID"),
+        ("slug" = String, Path, description = "Memory slug")
+    ),
+    responses(
+        (status = 200, description = "Memory details", body = APIResponse<MemoryDetail>),
+        (status = 404, description = "Agent or memory not found", body = APIResponse<String>)
+    )
+)]
 pub async fn get_memory_detail(
     Path((agent_id, slug)): Path<(String, String)>,
     State(state): State<HTTPState>,
-) -> models::response::Response<serde_json::Value> {
+) -> models::response::Response<MemoryDetail> {
     if !state.config.is_agent_exists(&agent_id) {
         return err_response(StatusCode::NOT_FOUND, format!("agent {agent_id} not found"));
     }
@@ -193,18 +282,30 @@ pub async fn get_memory_detail(
     match state.storage.get_memory_detail(agent_id, slug).await {
         Ok(Some(memory)) => api_response(
             StatusCode::OK,
-            serde_json::json!({
-                "agent_id": memory.agent_id,
-                "slug": memory.slug,
-                "title": memory.title,
-                "content": memory.content,
-                "timestamp": memory.timestamp
-            }),
+            MemoryDetail {
+                agent_id: memory.agent_id,
+                slug: memory.slug,
+                title: memory.title,
+                content: memory.content,
+                timestamp: memory.timestamp,
+            },
         ),
         _ => err_response(StatusCode::NOT_FOUND, "Not Found".into()),
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/agents/{agent_id}/memory/{slug}",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID"),
+        ("slug" = String, Path, description = "Memory slug")
+    ),
+    responses(
+        (status = 200, description = "Memory deleted", body = APIResponse<String>),
+        (status = 404, description = "Agent or memory not found", body = APIResponse<String>)
+    )
+)]
 pub async fn delete_memory(
     Path((agent_id, slug)): Path<(String, String)>,
     State(state): State<HTTPState>,

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 pub type Response<T> = (StatusCode, Json<APIResponse<T>>);
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, utoipa::ToSchema)]
 pub struct APIResponse<T: Serialize + Clone> {
     pub status: u16,
     pub message: Option<String>,

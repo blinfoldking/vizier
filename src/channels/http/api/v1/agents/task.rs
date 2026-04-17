@@ -15,7 +15,7 @@ use crate::{
     channels::http::{
         models::{
             self,
-            response::{api_response, err_response},
+            response::{api_response, err_response, APIResponse},
         },
         state::HTTPState,
     },
@@ -53,12 +53,12 @@ pub fn task() -> Router<HTTPState> {
         .route("/{slug}", delete(delete_task))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct GetTasksQuery {
     is_active: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct CreateTaskRequest {
     slug: String,
     user: String,
@@ -67,7 +67,7 @@ pub struct CreateTaskRequest {
     schedule: ScheduleRequest,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 #[serde(tag = "type")]
 pub enum ScheduleRequest {
     Cron { expression: String },
@@ -83,7 +83,7 @@ impl From<ScheduleRequest> for TaskSchedule {
     }
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, utoipa::ToSchema)]
 pub struct TaskResponse {
     slug: String,
     user: String,
@@ -110,6 +110,19 @@ impl From<Task> for TaskResponse {
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}/tasks",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    request_body = GetTasksQuery,
+    responses(
+        (status = 200, description = "List of tasks", body = APIResponse<Vec<TaskResponse>>),
+        (status = 404, description = "Agent not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn get_tasks(
     Path(agent_id): Path<String>,
     Query(params): Query<GetTasksQuery>,
@@ -132,6 +145,19 @@ pub async fn get_tasks(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/agents/{agent_id}/tasks/{slug}",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID"),
+        ("slug" = String, Path, description = "Task slug")
+    ),
+    responses(
+        (status = 200, description = "Task details", body = APIResponse<TaskResponse>),
+        (status = 404, description = "Agent or task not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn get_task(
     Path((agent_id, slug)): Path<(String, String)>,
     State(state): State<HTTPState>,
@@ -152,6 +178,20 @@ pub async fn get_task(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/agents/{agent_id}/tasks",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID")
+    ),
+    request_body = CreateTaskRequest,
+    responses(
+        (status = 201, description = "Task created", body = APIResponse<TaskResponse>),
+        (status = 400, description = "Invalid schedule", body = APIResponse<String>),
+        (status = 404, description = "Agent not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn create_task(
     Path(agent_id): Path<String>,
     State(state): State<HTTPState>,
@@ -184,6 +224,21 @@ pub async fn create_task(
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/agents/{agent_id}/tasks/{slug}",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID"),
+        ("slug" = String, Path, description = "Task slug")
+    ),
+    request_body = CreateTaskRequest,
+    responses(
+        (status = 200, description = "Task updated", body = APIResponse<TaskResponse>),
+        (status = 400, description = "Invalid schedule", body = APIResponse<String>),
+        (status = 404, description = "Agent or task not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn update_task(
     Path((agent_id, slug)): Path<(String, String)>,
     State(state): State<HTTPState>,
@@ -226,6 +281,19 @@ pub async fn update_task(
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/agents/{agent_id}/tasks/{slug}",
+    params(
+        ("agent_id" = String, Path, description = "Agent ID"),
+        ("slug" = String, Path, description = "Task slug")
+    ),
+    responses(
+        (status = 200, description = "Task deleted", body = APIResponse<String>),
+        (status = 404, description = "Agent or task not found", body = APIResponse<String>),
+        (status = 500, description = "Internal server error", body = APIResponse<String>)
+    )
+)]
 pub async fn delete_task(
     Path((agent_id, slug)): Path<(String, String)>,
     State(state): State<HTTPState>,
