@@ -79,11 +79,10 @@ See the [Getting Started](./getting-started/installation.md) section for detaile
 - [x] Simple TUI (terminal user interface)
 - [x] Additional AI providers (Google Gemini, OpenAI, Anthropic)
 - [x] **Sub-agent spawning for parallel task execution**
-- [x] **Sub-agent spawning for parallel task execution**
 - [x] Model Context Protocol (MCP) integration
 - [x] **Skill system for reusable agent behaviors**
 - [ ] WASM-based plugin system
-- [ ] Built-in HTTP client tool
+- [x] Built-in HTTP client tool
 
 ## Next Steps
 
