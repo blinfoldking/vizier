@@ -1,7 +1,11 @@
-use std::{collections::HashMap, str::FromStr, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+    time::Duration,
+};
 
 use anyhow::Result;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use croner::Cron;
 
 use crate::{
@@ -21,62 +25,106 @@ impl VizierScheduler {
 
     pub async fn run(&mut self) -> Result<()> {
         let mut schedules: HashMap<(DateTime<Utc>, String), Task> = HashMap::new();
-        let mut interval = tokio::time::interval(Duration::from_secs(1));
+        let mut running: HashSet<(String, String)> = HashSet::new();
+        let mut interval = tokio::time::interval(Duration::from_mins(1));
         loop {
             interval.tick().await;
             let now = Utc::now();
 
-            // fetch tasks
-            let tasks = self.deps.storage.get_task_list(None, Some(true)).await?;
+            let tasks = match self.deps.storage.get_task_list(None, Some(true)).await {
+                Ok(t) => t,
+                Err(e) => {
+                    log::error!("Failed to fetch task list: {}", e);
+                    continue;
+                }
+            };
 
             for task in tasks.iter() {
+                if running.contains(&(task.agent_id.clone(), task.slug.clone())) {
+                    continue;
+                }
+
                 match &task.schedule {
                     TaskSchedule::OneTimeTask(schedule) => {
-                        schedules.insert((*schedule, task.slug.clone()), task.clone())
+                        schedules.insert((*schedule, task.slug.clone()), task.clone());
                     }
-                    TaskSchedule::CronTask(cron) => {
-                        let cron = Cron::from_str(&cron).unwrap();
-                        let schedule =
-                            cron.find_next_occurrence(&task.last_executed_at.unwrap_or(now), true)?;
-
-                        schedules.insert((schedule, task.slug.clone()), task.clone())
+                    TaskSchedule::CronTask(cron_str) => {
+                        let cron = match Cron::from_str(cron_str) {
+                            Ok(c) => c,
+                            Err(e) => {
+                                log::warn!(
+                                    "Invalid cron expression for task '{}': {}",
+                                    task.slug,
+                                    e
+                                );
+                                continue;
+                            }
+                        };
+                        let schedule = match cron
+                            .find_next_occurrence(&task.last_executed_at.unwrap_or(now), true)
+                        {
+                            Ok(s) => s,
+                            Err(e) => {
+                                log::warn!(
+                                    "Failed to find next occurrence for cron task '{}': {}",
+                                    task.slug,
+                                    e
+                                );
+                                continue;
+                            }
+                        };
+                        schedules.insert((schedule, task.slug.clone()), task.clone());
                     }
                 };
             }
 
-            // handle task
             let mut to_be_run = vec![];
             let lookup = schedules.clone();
             for ((schedule, slug), _) in &lookup {
                 if *schedule <= now {
                     if let Some(task) = schedules.remove(&(*schedule, slug.clone())) {
+                        if running.contains(&(task.agent_id.clone(), task.slug.clone())) {
+                            continue;
+                        }
                         to_be_run.push(task);
                     }
                 }
             }
 
             for task in to_be_run {
+                running.insert((task.agent_id.clone(), task.slug.clone()));
+
+                let task_slug = task.slug.clone();
+                let agent_id = task.agent_id.clone();
+
                 if let &TaskSchedule::OneTimeTask(_) = &task.schedule {
-                    let _ = self
+                    if let Err(e) = self
                         .deps
                         .storage
                         .delete_task(task.agent_id.clone(), task.slug.clone())
-                        .await;
+                        .await
+                    {
+                        log::error!("Failed to delete one-time task '{}': {}", task_slug, e);
+                    }
                 }
 
                 if let &TaskSchedule::CronTask(_) = &task.schedule {
                     let mut updated_task = task.clone();
                     updated_task.last_executed_at = Some(now);
-                    let _ = self.deps.storage.save_task(updated_task).await;
+                    if let Err(e) = self.deps.storage.save_task(updated_task).await {
+                        log::error!("Failed to update cron task '{}': {}", task_slug, e);
+                    }
                 }
 
-                let _ = self
+                let now_second = Utc.timestamp_opt(now.timestamp(), 0).unwrap();
+
+                if let Err(e) = self
                     .deps
                     .transport
                     .send_request(
                         VizierSession(
-                            task.agent_id,
-                            VizierChannelId::Task(task.slug.clone(), now.clone()),
+                            agent_id,
+                            VizierChannelId::Task(task_slug.clone(), now_second),
                             None,
                         ),
                         VizierRequest {
@@ -88,7 +136,12 @@ impl VizierScheduler {
                             }),
                         },
                     )
-                    .await;
+                    .await
+                {
+                    log::error!("Failed to send request for task '{}': {}", task_slug, e);
+                }
+
+                running.remove(&(task.agent_id, task_slug));
             }
         }
     }

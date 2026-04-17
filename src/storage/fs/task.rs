@@ -51,7 +51,7 @@ impl TaskStorage for FileSystemStorage {
         ));
 
         if !path.exists() {
-            std::fs::create_dir_all(&path)?;
+            tokio::fs::create_dir_all(&path).await?;
         }
 
         path.push(format!("{}.md", task.slug.clone()));
@@ -75,7 +75,7 @@ impl TaskStorage for FileSystemStorage {
 
         path.push(format!("{}.md", slug));
 
-        Ok(std::fs::remove_file(path)?)
+        Ok(tokio::fs::remove_file(path).await?)
     }
 
     async fn get_task_list(
