@@ -32,6 +32,9 @@ pub struct ScheduleOneTimeTaskArgs {
         description = "Scheduled utc datetime of the task, in RFC3339 format (e.g., 2024-12-25T10:30:00Z)"
     )]
     schedule: String,
+
+    #[schemars(description = "Optional slug for the task. If not provided, one will be generated from the title")]
+    slug: Option<String>,
 }
 
 #[async_trait::async_trait]
@@ -66,7 +69,7 @@ impl VizierTool for ScheduleOneTimeTask {
         let response = self
             .storage
             .save_task(Task {
-                slug: slugify!(&args.title.clone()),
+                slug: args.slug.clone().unwrap_or_else(|| slugify!(&args.title.clone())),
                 user: args.user,
                 agent_id: self.agent_id.clone(),
                 title: args.title,
@@ -112,6 +115,9 @@ pub struct ScheduleCronTaskArgs {
         description = "Recurring pattern for the task, following the the standard cron expression"
     )]
     cron: String,
+
+    #[schemars(description = "Optional slug for the task. If not provided, one will be generated from the title")]
+    slug: Option<String>,
 }
 
 #[async_trait::async_trait]
@@ -142,7 +148,7 @@ impl VizierTool for ScheduleCronTask {
         let response = self
             .db
             .save_task(Task {
-                slug: slugify!(&args.title.clone()),
+                slug: args.slug.clone().unwrap_or_else(|| slugify!(&args.title.clone())),
                 user: args.user,
                 agent_id: self.agent_id.clone(),
                 title: args.title,
@@ -159,5 +165,109 @@ impl VizierTool for ScheduleCronTask {
         }
 
         Ok(())
+    }
+}
+
+pub struct ListTask {
+    pub storage: Arc<VizierStorage>,
+    pub agent_id: AgentId,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct ListTaskArgs {
+    #[schemars(description = "Filter by active status (optional)")]
+    is_active: Option<bool>,
+}
+
+#[async_trait::async_trait]
+impl VizierTool for ListTask {
+    type Input = ListTaskArgs;
+    type Output = Vec<Task>;
+
+    fn name() -> String {
+        "list_task".to_string()
+    }
+
+    fn description(&self) -> String {
+        "List all tasks for the agent".into()
+    }
+
+    async fn call(&self, args: Self::Input) -> Result<Self::Output, VizierError> {
+        let tasks = self
+            .storage
+            .get_task_list(Some(self.agent_id.clone()), args.is_active)
+            .await
+            .map_err(|e| VizierError(e.to_string()))?;
+
+        Ok(tasks)
+    }
+}
+
+pub struct DeleteTask {
+    pub storage: Arc<VizierStorage>,
+    pub agent_id: AgentId,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct DeleteTaskArgs {
+    #[schemars(description = "Slug of the task to delete")]
+    slug: String,
+}
+
+#[async_trait::async_trait]
+impl VizierTool for DeleteTask {
+    type Input = DeleteTaskArgs;
+    type Output = ();
+
+    fn name() -> String {
+        "delete_task".to_string()
+    }
+
+    fn description(&self) -> String {
+        "Delete a task by its slug".into()
+    }
+
+    async fn call(&self, args: Self::Input) -> Result<Self::Output, VizierError> {
+        self.storage
+            .delete_task(self.agent_id.clone(), args.slug)
+            .await
+            .map_err(|e| VizierError(e.to_string()))?;
+
+        Ok(())
+    }
+}
+
+pub struct GetTaskDetail {
+    pub storage: Arc<VizierStorage>,
+    pub agent_id: AgentId,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct GetTaskDetailArgs {
+    #[schemars(description = "Slug of the task to get")]
+    slug: String,
+}
+
+#[async_trait::async_trait]
+impl VizierTool for GetTaskDetail {
+    type Input = GetTaskDetailArgs;
+    type Output = Option<Task>;
+
+    fn name() -> String {
+        "get_task_detail".to_string()
+    }
+
+    fn description(&self) -> String {
+        "Get details of a specific task by its slug".into()
+    }
+
+    async fn call(&self, args: Self::Input) -> Result<Self::Output, VizierError> {
+        let task = self
+            .storage
+            .get_task(self.agent_id.clone(), args.slug)
+            .await
+            .map_err(|e| VizierError(e.to_string()))?;
+
+        Ok(task)
     }
 }

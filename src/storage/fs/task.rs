@@ -121,4 +121,39 @@ impl TaskStorage for FileSystemStorage {
 
         Ok(res)
     }
+
+    async fn get_task(&self, agent_id: AgentId, slug: String) -> Result<Option<Task>> {
+        let path = format!(
+            "{}/agents/{}/{}/{}.md",
+            self.workspace, agent_id, TASK_PATH, slug
+        );
+
+        let entry = match glob::glob(&path) {
+            Ok(mut entries) => entries.next(),
+            Err(_) => return Ok(None),
+        };
+
+        let entry = match entry {
+            Some(e) => e?,
+            None => return Ok(None),
+        };
+
+        if !entry.is_file() {
+            return Ok(None);
+        }
+
+        let (frontmatter, content) = utils::markdown::read_markdown::<TaskFrontMatter>(entry)?;
+
+        Ok(Some(Task {
+            slug: frontmatter.slug,
+            user: frontmatter.user,
+            agent_id: frontmatter.agent_id,
+            title: frontmatter.title,
+            is_active: frontmatter.is_active,
+            schedule: frontmatter.schedule,
+            last_executed_at: frontmatter.last_executed_at,
+            timestamp: frontmatter.timestamp,
+            instruction: content,
+        }))
+    }
 }

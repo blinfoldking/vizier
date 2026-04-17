@@ -67,4 +67,12 @@ impl TaskStorage for SurrealStorage {
 
         Ok(tasks)
     }
+
+    async fn get_task(&self, agent_id: AgentId, slug: String) -> Result<Option<Task>> {
+        let task: Option<Task> = self
+            .conn
+            .select(("task", format!("{}/{}", agent_id, slug)))
+            .await?;
+        Ok(task)
+    }
 }

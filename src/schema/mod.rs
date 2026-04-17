@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use surrealdb_types::SurrealValue;
@@ -160,7 +161,7 @@ pub struct Memory {
     pub agent_id: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
+#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue, JsonSchema)]
 pub struct Task {
     pub slug: String,
     pub user: String,
@@ -173,7 +174,7 @@ pub struct Task {
     pub timestamp: chrono::DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
+#[derive(Debug, Serialize, Deserialize, Clone, SurrealValue, JsonSchema)]
 pub enum TaskSchedule {
     CronTask(String),
     OneTimeTask(chrono::DateTime<Utc>),

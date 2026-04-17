@@ -14,7 +14,7 @@ use crate::{
             DiscordDmPrimaryUser, NotifyPrimaryUser, TelegramDmPrimaryUser, WebUiNotifyPrimaryUser,
         },
         ptc::ProgramaticSandbox,
-        scheduler::{ScheduleCronTask, ScheduleOneTimeTask},
+        scheduler::{DeleteTask, GetTaskDetail, ListTask, ScheduleCronTask, ScheduleOneTimeTask},
         shared_document::init_shared_document_tools,
         shell::ShellExec,
         skill::CreateSkill,
@@ -206,6 +206,18 @@ impl VizierTools {
             .tool(ScheduleCronTask {
                 agent_id: agent_id.clone(),
                 db: deps.storage.clone(),
+            })
+            .tool(ListTask {
+                agent_id: agent_id.clone(),
+                storage: deps.storage.clone(),
+            })
+            .tool(DeleteTask {
+                agent_id: agent_id.clone(),
+                storage: deps.storage.clone(),
+            })
+            .tool(GetTaskDetail {
+                agent_id: agent_id.clone(),
+                storage: deps.storage.clone(),
             })
             .tool(ConsultAgent::new(agent_id.clone(), deps.clone()))
             .tool(DelegateAgent::new(agent_id.clone(), deps.clone()))

@@ -16,6 +16,8 @@ pub trait TaskStorage {
         agent_id: Option<AgentId>,
         is_active: Option<bool>,
     ) -> Result<Vec<Task>>;
+
+    async fn get_task(&self, agent_id: AgentId, slug: String) -> Result<Option<Task>>;
 }
 
 #[async_trait::async_trait]
@@ -34,5 +36,9 @@ impl TaskStorage for VizierStorage {
         is_active: Option<bool>,
     ) -> Result<Vec<Task>> {
         self.0.get_task_list(agent_id, is_active).await
+    }
+
+    async fn get_task(&self, agent_id: AgentId, slug: String) -> Result<Option<Task>> {
+        self.0.get_task(agent_id, slug).await
     }
 }
