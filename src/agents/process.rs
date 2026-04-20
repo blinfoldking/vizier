@@ -63,6 +63,8 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
                             user: heartbeat_agent_id.clone(),
                             content: VizierRequestContent::Task(prompt.clone()),
                             metadata: serde_json::json!({}),
+
+                            ..Default::default()
                         },
                     )
                     .await
@@ -128,6 +130,8 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
                                 user: agent_id.clone(),
                                 content: VizierRequestContent::Task(prompt.clone()),
                                 metadata: serde_json::json!({}),
+
+                                ..Default::default()
                             },
                         )
                         .await
@@ -159,14 +163,15 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
                 .await
                 .unwrap_or(None)
             {
-                let res = session_detail_agent
-                    .prompt(format!(
-                        r#"summarize (don't execute) the prompt below into a 60 character title: 
+                let prompt = format!(
+                    r#"summarize (don't execute) the prompt below into a 60 character title: 
 "{}"
 
 **only response the summarize title**"#,
-                        session_detail_request.to_prompt().unwrap()
-                    ),vec![],0,None,false)
+                    session_detail_request.to_prompt().unwrap()
+                );
+                let res = session_detail_agent
+                    .prompt(prompt, vec![], vec![], 0, None, false)
                     .await;
                 if let Ok((title, _)) = res {
                     let mut title = title.clone();

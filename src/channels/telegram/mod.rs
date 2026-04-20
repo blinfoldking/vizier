@@ -234,6 +234,8 @@ impl TelegramChannelReader {
                             user,
                             content: VizierRequestContent::Chat(content),
                             metadata,
+
+                            ..Default::default()
                         },
                     )
                     .await
@@ -254,6 +256,8 @@ impl TelegramChannelReader {
                             user,
                             content: VizierRequestContent::SilentRead(text),
                             metadata,
+
+                            ..Default::default()
                         },
                     )
                     .await
@@ -301,7 +305,10 @@ impl VizierChannel for TelegramChannelWriter {
                     let chat_id = ChatId(chat_id);
 
                     match res {
-                        VizierResponse { content: VizierResponseContent::ThinkingStart, timestamp: _ } => {
+                        VizierResponse {
+                            content: VizierResponseContent::ThinkingStart,
+                            timestamp: _,
+                        } => {
                             if let Some(handle) = typing_handles.remove(&chat_id.0) {
                                 handle.abort();
                             }
@@ -309,13 +316,18 @@ impl VizierChannel for TelegramChannelWriter {
                             let typing_chat_id = chat_id;
                             let typing_task = tokio::spawn(async move {
                                 loop {
-                                    let _ = typing_bot.send_chat_action(typing_chat_id, ChatAction::Typing).await;
+                                    let _ = typing_bot
+                                        .send_chat_action(typing_chat_id, ChatAction::Typing)
+                                        .await;
                                     tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
                                 }
                             });
                             typing_handles.insert(chat_id.0, typing_task);
                         }
-                        VizierResponse { content: VizierResponseContent::ToolChoice { name, args }, timestamp: _ } => {
+                        VizierResponse {
+                            content: VizierResponseContent::ToolChoice { name, args },
+                            timestamp: _,
+                        } => {
                             let _ = crate::utils::telegram::send_message(
                                 &bot,
                                 chat_id,
@@ -323,7 +335,10 @@ impl VizierChannel for TelegramChannelWriter {
                             )
                             .await;
                         }
-                        VizierResponse { content: VizierResponseContent::Thinking(thought), timestamp: _ } => {
+                        VizierResponse {
+                            content: VizierResponseContent::Thinking(thought),
+                            timestamp: _,
+                        } => {
                             let _ = crate::utils::telegram::send_message(
                                 &bot,
                                 chat_id,
@@ -331,7 +346,10 @@ impl VizierChannel for TelegramChannelWriter {
                             )
                             .await;
                         }
-                        VizierResponse { content: VizierResponseContent::Message { content, stats: _ }, timestamp: _ } => {
+                        VizierResponse {
+                            content: VizierResponseContent::Message { content, stats: _ },
+                            timestamp: _,
+                        } => {
                             if let Some(handle) = typing_handles.remove(&chat_id.0) {
                                 handle.abort();
                             }
@@ -339,7 +357,10 @@ impl VizierChannel for TelegramChannelWriter {
                             let _ =
                                 crate::utils::telegram::send_message(&bot, chat_id, content).await;
                         }
-                        VizierResponse { content: VizierResponseContent::Abort, timestamp: _ } => {
+                        VizierResponse {
+                            content: VizierResponseContent::Abort,
+                            timestamp: _,
+                        } => {
                             if let Some(handle) = typing_handles.remove(&chat_id.0) {
                                 handle.abort();
                             }
@@ -365,4 +386,3 @@ impl VizierChannel for TelegramChannelWriter {
 struct ChannelState {
     active_topic: Option<TopicId>,
 }
-

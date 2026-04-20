@@ -15,9 +15,9 @@ pub fn remove_think_tags(text: &str) -> String {
 }
 
 /// Build a filesystem path in a cross-platform way using PathBuf.
-/// 
+///
 /// This ensures compatibility on Windows (which uses backslashes) and Unix systems.
-/// 
+///
 /// # Example
 /// ```
 /// let path = build_path("/home/user", &["projects", "vizier"]);
@@ -32,10 +32,10 @@ pub fn build_path(base: &str, components: &[&str]) -> PathBuf {
 }
 
 /// Build a glob pattern path in a cross-platform way.
-/// 
+///
 /// Glob patterns require forward slashes even on Windows, so this function
 /// constructs the path using PathBuf for safety, then converts to string with forward slashes.
-/// 
+///
 /// # Example
 /// ```
 /// let glob_pattern = build_glob_path("/home/user", &["projects", "**", "*.md"]);
@@ -46,15 +46,13 @@ pub fn build_glob_path(base: &str, components: &[&str]) -> String {
     for component in components {
         path.push(component);
     }
-    
+
     // Convert to string using forward slashes (required for glob patterns)
-    path.to_string_lossy()
-        .to_string()
-        .replace('\\', "/")
+    path.to_string_lossy().to_string().replace('\\', "/")
 }
 
 /// Get the workspace directory for a specific agent.
-/// 
+///
 /// # Example
 /// ```
 /// let workspace = agent_workspace("/home/user/.vizier", "my_agent");
@@ -84,4 +82,10 @@ pub fn format_thinking(name: &String, args: &serde_json::Value) -> String {
     };
 
     format!("{} {}", title, content)
+}
+
+pub fn get_mime_type(filename: &str) -> String {
+    mime_guess::from_path(filename)
+        .first_or_text_plain()
+        .to_string()
 }

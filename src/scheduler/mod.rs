@@ -134,6 +134,8 @@ impl VizierScheduler {
                             metadata: serde_json::json!({
                                 "timestamp": now,
                             }),
+
+                            ..Default::default()
                         },
                     )
                     .await

@@ -76,6 +76,8 @@ impl VizierTool for SubtasksTool {
                         user: self.agent_id.clone(),
                         content: VizierRequestContent::Prompt(task.prompt.clone()),
                         metadata: serde_json::json!({}),
+
+                        ..Default::default()
                     },
                 )
                 .await;

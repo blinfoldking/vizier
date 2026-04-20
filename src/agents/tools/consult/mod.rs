@@ -94,6 +94,8 @@ impl VizierTool for ConsultAgent {
                     user: self.agent_id.clone(),
                     content: VizierRequestContent::Chat(args.prompt.clone()),
                     metadata: json!({}),
+
+                    ..Default::default()
                 },
             )
             .await
@@ -204,6 +206,7 @@ impl VizierTool for DelegateAgent {
                     user: self.agent_id.clone(),
                     content: VizierRequestContent::Prompt(args.prompt),
                     metadata: json!({}),
+                    ..Default::default()
                 },
             )
             .await
@@ -212,4 +215,3 @@ impl VizierTool for DelegateAgent {
         Ok(())
     }
 }
-

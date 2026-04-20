@@ -139,6 +139,12 @@ pub enum VizierRequestContent {
     Command(String),
 }
 
+impl Default for VizierRequestContent {
+    fn default() -> Self {
+        Self::Prompt("".to_string())
+    }
+}
+
 impl Display for VizierRequestContent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -156,11 +162,20 @@ impl Display for VizierRequestContent {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, JsonSchema, utoipa::ToSchema)]
+pub struct VizierAttachment {
+    pub filename: String,
+    pub content: Vec<u8>,
+}
+
+#[derive(
+    Debug, Clone, Serialize, Deserialize, SurrealValue, JsonSchema, utoipa::ToSchema, Default,
+)]
 pub struct VizierRequest {
     pub timestamp: DateTime<Utc>,
     pub user: String,
     pub content: VizierRequestContent,
     pub metadata: serde_json::Value,
+    pub attachments: Vec<VizierAttachment>,
 }
 
 impl VizierRequest {

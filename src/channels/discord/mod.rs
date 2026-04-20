@@ -17,8 +17,8 @@ use crate::channels::VizierChannel;
 use crate::config::DiscordChannelConfig;
 use crate::dependencies::VizierDependencies;
 use crate::schema::{
-    TopicId, VizierChannelId, VizierRequest, VizierRequestContent, VizierResponse,
-    VizierResponseContent, VizierSession,
+    TopicId, VizierAttachment, VizierChannelId, VizierRequest, VizierRequestContent,
+    VizierResponse, VizierResponseContent, VizierSession,
 };
 use crate::storage::session::SessionStorage;
 use crate::storage::state::StateStorage;
@@ -86,13 +86,19 @@ impl VizierChannel for DiscordChannelWriter {
                     let discord_channel_id = ChannelId::new(channel_id);
 
                     match res {
-                        VizierResponse { content: VizierResponseContent::ThinkingStart, timestamp: _ } => {
+                        VizierResponse {
+                            content: VizierResponseContent::ThinkingStart,
+                            timestamp: _,
+                        } => {
                             typing_state.insert(
                                 channel_id,
                                 Typing::start(http.clone(), discord_channel_id),
                             );
                         }
-                        VizierResponse { content: VizierResponseContent::ToolChoice { name, args }, timestamp: _ } => {
+                        VizierResponse {
+                            content: VizierResponseContent::ToolChoice { name, args },
+                            timestamp: _,
+                        } => {
                             let _ = crate::utils::discord::send_message(
                                 http.clone(),
                                 &discord_channel_id,
@@ -100,7 +106,10 @@ impl VizierChannel for DiscordChannelWriter {
                             )
                             .await;
                         }
-                        VizierResponse { content: VizierResponseContent::Thinking(thought), timestamp: _ } => {
+                        VizierResponse {
+                            content: VizierResponseContent::Thinking(thought),
+                            timestamp: _,
+                        } => {
                             let _ = crate::utils::discord::send_message(
                                 http.clone(),
                                 &discord_channel_id,
@@ -108,7 +117,10 @@ impl VizierChannel for DiscordChannelWriter {
                             )
                             .await;
                         }
-                        VizierResponse { content: VizierResponseContent::Message { content, stats: _ }, timestamp: _ } => {
+                        VizierResponse {
+                            content: VizierResponseContent::Message { content, stats: _ },
+                            timestamp: _,
+                        } => {
                             if let Some(typing) = typing_state.remove(&channel_id) {
                                 typing.stop();
                             }
@@ -121,7 +133,10 @@ impl VizierChannel for DiscordChannelWriter {
                             )
                             .await;
                         }
-                        VizierResponse { content: VizierResponseContent::Abort, timestamp: _ } => {
+                        VizierResponse {
+                            content: VizierResponseContent::Abort,
+                            timestamp: _,
+                        } => {
                             if let Some(typing) = typing_state.remove(&channel_id) {
                                 typing.stop();
                             }
@@ -278,7 +293,12 @@ impl EventHandler for Handler {
                             .await;
                     }
                 } else {
-                    if let Ok(sessions) = self.1.storage.get_session_list(agent_id, Some(channel)).await {
+                    if let Ok(sessions) = self
+                        .1
+                        .storage
+                        .get_session_list(agent_id, Some(channel))
+                        .await
+                    {
                         let mut res = vec![];
                         for session in &sessions {
                             res.push(format!(
@@ -339,6 +359,16 @@ If I am halucinating, feel free to `/lobotomy` me
         let is_dm = msg.guild_id.is_none();
 
         if let Ok(is_mention) = msg.mentions_me(ctx.http).await {
+            let mut attachments = vec![];
+            for attachment in &msg.attachments {
+                if let Ok(bytes) = attachment.download().await {
+                    attachments.push(VizierAttachment {
+                        filename: attachment.filename.clone(),
+                        content: bytes,
+                    });
+                }
+            }
+
             let agent_id = self.0.clone();
             let transport = self.1.transport.clone();
             let current_user = ctx.cache.current_user().discriminator;
@@ -378,6 +408,9 @@ If I am halucinating, feel free to `/lobotomy` me
                                 ),
                                 content: VizierRequestContent::SilentRead(msg.content),
                                 metadata,
+                                attachments,
+
+                                ..Default::default()
                             },
                         )
                         .await
@@ -406,6 +439,9 @@ If I am halucinating, feel free to `/lobotomy` me
                             ),
                             content: VizierRequestContent::Chat(msg.content),
                             metadata,
+                            attachments,
+
+                            ..Default::default()
                         },
                     )
                     .await

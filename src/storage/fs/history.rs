@@ -194,6 +194,8 @@ impl HistoryStorage for FileSystemStorage {
                                 (_, _, _, _, true) => VizierRequestContent::Command(content),
                                 _ => unimplemented!(),
                             },
+
+                            ..Default::default()
                         }),
                         ContentMetadata::response { stats } => {
                             SessionHistoryContent::Response(VizierResponse {
@@ -466,6 +468,8 @@ impl HistoryStorage for FileSystemStorage {
                                 (_, _, _, _, true) => VizierRequestContent::Command(content),
                                 _ => unimplemented!(),
                             },
+
+                            ..Default::default()
                         }),
                         ContentMetadata::response { stats } => {
                             SessionHistoryContent::Response(VizierResponse {
