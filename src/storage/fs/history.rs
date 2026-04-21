@@ -9,8 +9,8 @@ use crate::{
     schema::{
         AgentUsageStats, ChannelTypeUsage, ChannelTypeUsageDetail, ChannelUsage,
         DailyChannelTypeUsage, DailyUsage, SessionHistory, SessionHistoryContent, UsageSummary,
-        VizierRequest, VizierRequestContent, VizierResponse, VizierResponseContent,
-        VizierResponseStats, VizierSession,
+        VizierAttachment, VizierRequest, VizierRequestContent, VizierResponse,
+        VizierResponseContent, VizierResponseStats, VizierSession,
     },
     storage::{
         fs::{FileSystemStorage, HISTORY_PATH},
@@ -30,6 +30,7 @@ enum ContentMetadata {
         is_prompt: bool,
         is_command: bool,
         metadata: serde_json::Value,
+        attachments: Vec<VizierAttachment>,
     },
     response {
         stats: Option<VizierResponseStats>,
@@ -82,6 +83,7 @@ impl From<SessionHistory> for SessionHistoryFrontMatter {
                     } else {
                         false
                     },
+                    attachments: req.attachments,
                     metadata: req.metadata,
                 },
                 SessionHistoryContent::Response(r) => match &r.content {
@@ -181,6 +183,7 @@ impl HistoryStorage for FileSystemStorage {
                             is_prompt,
                             is_command,
                             metadata,
+                            attachments,
                         } => SessionHistoryContent::Request(VizierRequest {
                             timestamp: frontmatter.timestamp,
                             user,
@@ -194,6 +197,7 @@ impl HistoryStorage for FileSystemStorage {
                                 (_, _, _, _, true) => VizierRequestContent::Command(content),
                                 _ => unimplemented!(),
                             },
+                            attachments,
 
                             ..Default::default()
                         }),
@@ -455,6 +459,7 @@ impl HistoryStorage for FileSystemStorage {
                             is_prompt,
                             is_command,
                             metadata,
+                            attachments,
                         } => SessionHistoryContent::Request(VizierRequest {
                             timestamp,
                             user,
@@ -468,7 +473,7 @@ impl HistoryStorage for FileSystemStorage {
                                 (_, _, _, _, true) => VizierRequestContent::Command(content),
                                 _ => unimplemented!(),
                             },
-
+                            attachments,
                             ..Default::default()
                         }),
                         ContentMetadata::response { stats } => {

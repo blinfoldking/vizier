@@ -95,6 +95,9 @@ impl VizierRequest {
                     VizierAttachmentContent::Bytes(bytes) => {
                         UserContent::document_raw(bytes.clone(), Some(media_type))
                     }
+                    VizierAttachmentContent::Url(url) => {
+                        UserContent::document_url(url.clone(), Some(media_type))
+                    }
                     _ => unimplemented!(),
                 }
             };

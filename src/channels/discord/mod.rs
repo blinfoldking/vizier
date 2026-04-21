@@ -361,12 +361,10 @@ If I am halucinating, feel free to `/lobotomy` me
         if let Ok(is_mention) = msg.mentions_me(ctx.http).await {
             let mut attachments = vec![];
             for attachment in &msg.attachments {
-                if let Ok(bytes) = attachment.download().await {
-                    attachments.push(VizierAttachment {
-                        filename: attachment.filename.clone(),
-                        content: VizierAttachmentContent::Bytes(bytes),
-                    });
-                }
+                attachments.push(VizierAttachment {
+                    filename: attachment.filename.clone(),
+                    content: VizierAttachmentContent::Url(attachment.url.clone()),
+                });
             }
 
             let agent_id = self.0.clone();
