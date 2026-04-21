@@ -47,6 +47,7 @@ impl Display for VizierRequestContent {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, SurrealValue, JsonSchema, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum VizierAttachmentContent {
     Bytes(Vec<u8>),
     Base64(String),
@@ -121,6 +122,7 @@ pub struct VizierRequest {
     pub user: String,
     pub content: VizierRequestContent,
     pub metadata: serde_json::Value,
+    #[serde(default)]
     pub attachments: Vec<VizierAttachment>,
 }
 

@@ -66,6 +66,13 @@ export interface VizierRequestMessage {
   user: string
   content: VizierRequestContent
   metadata?: Record<string, unknown>
+  attachments?: VizierAttachment[]
+}
+
+// VizierAttachment - matches backend VizierAttachment
+export interface VizierAttachment {
+  filename: string
+  content: { url: string } | { bytes: number[] } | { base64: string }
 }
 
 // Response stats from backend
@@ -100,6 +107,7 @@ export interface WebSocketMessage {
   user: string
   content: VizierRequestContent
   metadata?: Record<string, unknown>
+  attachments?: VizierAttachment[]
 }
 
 // WebSocketResponse matches backend VizierResponse struct
@@ -162,7 +170,7 @@ export interface CreateTaskRequest {
   schedule: { type: 'Cron'; expression: string } | { type: 'OneTime'; datetime: string }
 }
 
-export interface UpdateTaskRequest extends CreateTaskRequest {}
+export interface UpdateTaskRequest extends CreateTaskRequest { }
 
 // ============================================================================
 // USAGE

@@ -2,17 +2,17 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import type { FormEvent } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import useWebSocket, { ReadyState } from 'react-use-websocket'
-import { getTopicHistory, getChatWebSocketUrl, listTopics, getAgentDetail, listAgents } from '../services/vizier'
+import { getTopicHistory, getChatWebSocketUrl, listTopics, getAgentDetail, listAgents, uploadFile, base_url } from '../services/vizier'
 import { autoCorrectSlug, autoCorrectSlugStrict } from '../utils/slug'
-import type { Agent, ChatMessage, Topic, WebSocketMessage, WebSocketResponse, VizierResponseStats } from '../interfaces/types'
+import type { Agent, ChatMessage, Topic, VizierAttachment, WebSocketMessage, WebSocketResponse, VizierResponseStats } from '../interfaces/types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import hljs from 'highlight.js'
 import { getCurrentUsername } from '../utils/auth'
 import { Skeleton, SkeletonMessage } from '../components/Skeleton'
-import { FaPaperPlane } from 'react-icons/fa'
-import { FiCopy, FiCheck } from 'react-icons/fi'
+import { FaPaperPlane, FaPaperclip } from 'react-icons/fa'
+import { FiX } from 'react-icons/fi'
 import { useToastStore } from '../hooks/toastStore'
 import { MessageItem } from '../components/MessageItem'
 import { ThinkingIndicator } from '../components/ThinkingIndicator'
@@ -137,8 +137,11 @@ export default function Chat() {
   const [showNewTopicInput, setShowNewTopicInput] = useState(false)
   const [inlineEvents, setInlineEvents] = useState<InlineEvent[]>([])
   const [agentDetail, setAgentDetail] = useState<Agent | null>(null)
+  const [attachments, setAttachments] = useState<VizierAttachment[]>([])
+  const [uploading, setUploading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const thinkingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { addToast } = useToastStore()
 
@@ -193,9 +196,10 @@ export default function Chat() {
     }
   }, [topicId])
 
-  // Clear inline events when topic changes
+  // Clear inline events and attachments when topic changes
   useEffect(() => {
     setInlineEvents([])
+    setAttachments([])
     if (thinkingTimeoutRef.current) {
       clearTimeout(thinkingTimeoutRef.current)
       thinkingTimeoutRef.current = null
@@ -360,12 +364,11 @@ export default function Chat() {
 
   const handleSendMessage = useCallback(async (e: FormEvent) => {
     e.preventDefault()
-    // Read current input value directly from DOM to avoid stale closure
     const currentInput = inputRef.current?.value || ''
     if (!currentInput.trim() || !agentId || !topicId) return
 
     console.log('WebSocket readyState before check:', readyState)
-    if (readyState !== 1) { // 1 = OPEN
+    if (readyState !== 1) {
       console.error('WebSocket not ready, state:', readyState)
       return
     }
@@ -377,6 +380,7 @@ export default function Chat() {
       user: username,
       content: { chat: currentInput.trim() },
       metadata: null as any,
+      attachments: attachments.length > 0 ? attachments : undefined,
     }
 
     console.log('Sending message:', JSON.stringify(message))
@@ -393,12 +397,14 @@ export default function Chat() {
           timestamp: new Date().toISOString(),
           user: username,
           content: { chat: currentInput.trim() },
+          attachments: attachments.length > 0 ? attachments : undefined,
         },
       },
     }
 
     setMessages(prev => [...prev, userMessage])
     setInput('')
+    setAttachments([])
     if (inputRef.current) {
       inputRef.current.style.height = 'auto'
     }
@@ -406,7 +412,7 @@ export default function Chat() {
     console.log('WebSocket readyState:', readyState)
     sendJsonMessage(message)
     console.log('sendJsonMessage called, readyState now:', readyState)
-  }, [agentId, topicId, readyState, sendJsonMessage])
+  }, [agentId, topicId, readyState, sendJsonMessage, attachments])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -419,6 +425,34 @@ export default function Chat() {
     navigator.clipboard.writeText(content)
     addToast('success', 'Copied!', 'Message copied to clipboard')
   }, [addToast])
+
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    setUploading(true)
+    for (const file of Array.from(files)) {
+      try {
+        const result = await uploadFile(file)
+        const newAttachment: VizierAttachment = {
+          filename: result.filename,
+          content: { url: `http://${base_url}${result.url}` },
+        }
+        setAttachments(prev => [...prev, newAttachment])
+      } catch (err: any) {
+        console.error('Upload failed:', err)
+        addToast('error', 'Upload failed', err?.message || 'Failed to upload file')
+      }
+    }
+    setUploading(false)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }, [addToast])
+
+  const handleRemoveAttachment = useCallback((index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
+  }, [])
 
   if (loading) {
     return (
@@ -566,6 +600,7 @@ export default function Chat() {
               let content: string | undefined
               let senderName: string = 'Unknown'
               let stats: VizierResponseStats | undefined
+              let msgAttachments: VizierAttachment[] | undefined
 
               if (isUserMessage && msg.content.Request) {
                 const request = msg.content.Request as any
@@ -573,6 +608,7 @@ export default function Chat() {
                   content = request.content.chat
                 }
                 senderName = request.user || 'You'
+                msgAttachments = request.attachments
               } else if (!isUserMessage && msg.content.Response) {
                 const response = msg.content.Response as any
                 if (response?.content?.message?.content) {
@@ -592,6 +628,7 @@ export default function Chat() {
                   senderName={senderName}
                   content={content}
                   stats={stats}
+                  attachments={msgAttachments}
                   onCopy={handleCopyMessage}
                 />
               )
@@ -614,41 +651,132 @@ export default function Chat() {
         background: 'var(--background)',
       }}>
         <style>{textareaStyle}</style>
-        <form onSubmit={handleSendMessage} style={{
+        <div style={{
           display: 'flex',
+          flexDirection: 'column',
           gap: '12px',
           maxWidth: '900px',
           margin: '0 auto',
         }}>
-          <textarea
-            className="chat-textarea"
-            ref={inputRef}
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value)
-              debouncedResize(e.target)
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={readyState === ReadyState.OPEN ? "Type your message..." : "Connecting..."}
-            disabled={readyState !== ReadyState.OPEN}
-            rows={1}
-            style={{
-              flex: 1,
-              resize: 'none',
-              minHeight: '44px',
-              maxHeight: '50vh',
-              overflowY: 'auto',
-            }}
-          />
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={!input.trim() || readyState !== ReadyState.OPEN}
-            style={{ width: '44px', height: '44px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <FaPaperPlane />
-          </button>
-        </form>
+          {/* Attachment chips */}
+          {attachments.length > 0 && (
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '8px',
+              alignItems: 'center',
+            }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Attached:</span>
+              {attachments.map((att, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 8px',
+                    background: 'var(--surface)',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                  }}
+                >
+                  <span>{att.filename}</span>
+                  <button
+                    onClick={() => handleRemoveAttachment(idx)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: 'var(--text-tertiary)',
+                    }}
+                  >
+                    <FiX size={12} />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => setAttachments([])}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  color: 'var(--text-tertiary)',
+                  textDecoration: 'underline',
+                }}
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+          {/* Input row */}
+          <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '12px' }}>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              style={{ display: 'none' }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={readyState !== ReadyState.OPEN || uploading}
+              style={{
+                width: '44px',
+                height: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                cursor: readyState !== ReadyState.OPEN || uploading ? 'not-allowed' : 'pointer',
+                color: readyState !== ReadyState.OPEN || uploading ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                opacity: uploading ? 0.7 : 1,
+              }}
+              title="Attach file"
+            >
+              {uploading ? (
+                <span style={{ fontSize: '10px' }}>...</span>
+              ) : (
+                <FaPaperclip />
+              )}
+            </button>
+            <textarea
+              className="chat-textarea"
+              ref={inputRef}
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value)
+                debouncedResize(e.target)
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={readyState === ReadyState.OPEN ? "Type your message..." : "Connecting..."}
+              disabled={readyState !== ReadyState.OPEN}
+              rows={1}
+              style={{
+                flex: 1,
+                resize: 'none',
+                minHeight: '44px',
+                maxHeight: '50vh',
+                overflowY: 'auto',
+              }}
+            />
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={!input.trim() || readyState !== ReadyState.OPEN}
+              style={{ width: '44px', height: '44px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <FaPaperPlane />
+            </button>
+          </form>
+        </div>
       </div >
     </>
   )

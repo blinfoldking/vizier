@@ -3,7 +3,9 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { FiCopy } from 'react-icons/fi'
-import type { VizierResponseStats } from '../interfaces/types'
+import { FaFile, FaFilePdf, FaFileImage, FaFileAlt } from 'react-icons/fa'
+import type { VizierAttachment, VizierResponseStats } from '../interfaces/types'
+import { base_url } from '~/services/vizier'
 
 interface MessageItemProps {
   uid: string
@@ -12,6 +14,7 @@ interface MessageItemProps {
   content: string
   stats?: VizierResponseStats
   onCopy: (content: string) => void
+  attachments?: VizierAttachment[]
 }
 
 function MessageItemComponent({
@@ -21,7 +24,17 @@ function MessageItemComponent({
   content,
   stats,
   onCopy,
+  attachments,
 }: MessageItemProps) {
+  const isImage = (filename: string) => /\.(jpg|jpeg|png|gif|webp)$/i.test(filename)
+
+  const getFileIcon = (filename: string) => {
+    if (/\.pdf$/i.test(filename)) return <FaFilePdf size={16} />
+    if (/\.(jpg|jpeg|png|gif|webp)$/i.test(filename)) return <FaFileImage size={16} />
+    if (/\.(doc|docx|txt|rtf)$/i.test(filename)) return <FaFileAlt size={16} />
+    return <FaFile size={16} />
+  }
+
   return (
     <div
       style={{
@@ -68,6 +81,63 @@ function MessageItemComponent({
           </button>
         </div>
 
+        {attachments && attachments.length > 0 && (
+          <div style={{
+            marginTop: '12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+          }}>
+            {attachments.map((att, idx) => {
+              if (att.content.url) {
+                if (isImage(att.filename)) {
+                  return (
+                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <img
+                        src={(att.content.url?.startsWith(`http://${base_url}`) ? '' : `http://${base_url}`) + `${att.content.url}`}
+                        alt={att.filename}
+                        style={{
+                          maxWidth: '300px',
+                          maxHeight: '200px',
+                          borderRadius: '8px',
+                          objectFit: 'cover',
+                        }}
+                      />
+                      <span style={{
+                        fontSize: '12px',
+                        color: 'var(--text-tertiary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}>
+                        📎 {att.filename}
+                      </span>
+                    </div>
+                  )
+                }
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      background: 'var(--surface)',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                    }}
+                  >
+                    {getFileIcon(att.filename)}
+                    <span>{att.filename}</span>
+                  </div>
+                )
+              }
+              return null
+            })}
+          </div>
+        )}
+
         {!isUserMessage && stats && (
           <div
             title={`Input: ${stats.total_input_tokens} | Output: ${stats.total_output_tokens} | Cached: ${stats.total_cached_input_tokens} `}
@@ -98,7 +168,11 @@ function MessageItemComponent({
 }
 
 // Memoize component to prevent re-renders when parent re-renders
-// Only re-render if the message UID changes
+// Only re-render if the message UID or attachments change
 export const MessageItem = memo(MessageItemComponent, (prevProps, nextProps) => {
-  return prevProps.uid === nextProps.uid
+  if (prevProps.uid !== nextProps.uid) return false
+  if (prevProps.content !== nextProps.content) return false
+  if (prevProps.stats !== nextProps.stats) return false
+  if (prevProps.attachments !== nextProps.attachments) return false
+  return true
 })

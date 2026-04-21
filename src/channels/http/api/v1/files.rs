@@ -1,11 +1,14 @@
 use std::path::PathBuf;
 
 use axum::{
+    Router,
     body::Body,
     extract::{Path, State},
-    http::{HeaderMap, StatusCode, header::{CONTENT_DISPOSITION, CONTENT_TYPE}},
+    http::{
+        HeaderMap, StatusCode,
+        header::{CONTENT_DISPOSITION, CONTENT_TYPE},
+    },
     response::{IntoResponse, Response},
-    Router,
     routing::post,
 };
 use axum_extra::extract::Multipart;
@@ -15,7 +18,7 @@ use tokio::io::AsyncWriteExt;
 use utoipa::ToSchema;
 
 use crate::channels::http::{
-    models::response::{api_response, err_response, APIResponse},
+    models::response::{APIResponse, api_response, err_response},
     state::HTTPState,
 };
 
@@ -69,7 +72,7 @@ pub async fn upload_file(
             Ok(None) => break,
             Err(e) => {
                 log::error!("Error reading multipart field: {}", e);
-                continue;
+                break;
             }
         };
 
@@ -86,16 +89,17 @@ pub async fn upload_file(
                 }
                 Err(e) => {
                     log::error!("Error reading file bytes: {}", e);
+                    return err_response(
+                        StatusCode::BAD_REQUEST,
+                        format!("Error reading file: {}", e),
+                    );
                 }
             }
         }
     }
 
     if file_data.is_empty() {
-        return err_response(
-            StatusCode::BAD_REQUEST,
-            "No file provided".to_string(),
-        );
+        return err_response(StatusCode::BAD_REQUEST, "No file provided".to_string());
     }
 
     let file_dir = uploads_dir.join(&file_id);
@@ -160,10 +164,8 @@ pub async fn download_file(
     let mut entries = match fs::read_dir(&uploads_dir).await {
         Ok(entries) => entries,
         Err(_) => {
-            let (status, json) = err_response::<String>(
-                StatusCode::NOT_FOUND,
-                "File not found".to_string(),
-            );
+            let (status, json) =
+                err_response::<String>(StatusCode::NOT_FOUND, "File not found".to_string());
             return (status, json).into_response();
         }
     };
@@ -171,17 +173,13 @@ pub async fn download_file(
     let entry = match entries.next_entry().await {
         Ok(Some(e)) => e,
         Ok(None) => {
-            let (status, json) = err_response::<String>(
-                StatusCode::NOT_FOUND,
-                "File not found".to_string(),
-            );
+            let (status, json) =
+                err_response::<String>(StatusCode::NOT_FOUND, "File not found".to_string());
             return (status, json).into_response();
         }
         Err(_) => {
-            let (status, json) = err_response::<String>(
-                StatusCode::NOT_FOUND,
-                "File not found".to_string(),
-            );
+            let (status, json) =
+                err_response::<String>(StatusCode::NOT_FOUND, "File not found".to_string());
             return (status, json).into_response();
         }
     };
@@ -192,10 +190,8 @@ pub async fn download_file(
     let data = match fs::read(&file_path).await {
         Ok(d) => d,
         Err(_) => {
-            let (status, json) = err_response::<String>(
-                StatusCode::NOT_FOUND,
-                "File not found".to_string(),
-            );
+            let (status, json) =
+                err_response::<String>(StatusCode::NOT_FOUND, "File not found".to_string());
             return (status, json).into_response();
         }
     };
@@ -204,23 +200,11 @@ pub async fn download_file(
         .first_or_octet_stream()
         .to_string();
 
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        CONTENT_TYPE,
-        mime_type.parse().unwrap(),
-    );
-    headers.insert(
-        CONTENT_DISPOSITION,
-        format!("attachment; filename=\"{}\"", filename)
-            .parse()
-            .unwrap(),
-    );
-
     Response::builder()
         .status(StatusCode::OK)
         .header(CONTENT_TYPE, mime_type)
-        .header(CONTENT_DISPOSITION, format!("attachment; filename=\"{}\"", filename))
         .body(Body::from(data))
         .unwrap()
         .into_response()
 }
+

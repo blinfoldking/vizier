@@ -291,3 +291,25 @@ export const ping = async () => {
   const res = await apiClient.get('/ping')
   return res.data
 }
+
+// ============================================================================
+// FILE UPLOAD ENDPOINTS
+// ============================================================================
+
+export interface UploadResponse {
+  file_id: string
+  filename: string
+  url: string
+}
+
+export const uploadFile = async (file: File): Promise<UploadResponse> => {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const res = await apiClient.post('/files/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return res.data.data
+}
