@@ -11,8 +11,8 @@ use crate::channels::VizierChannel;
 use crate::config::TelegramChannelConfig;
 use crate::dependencies::VizierDependencies;
 use crate::schema::{
-    TopicId, VizierChannelId, VizierRequest, VizierRequestContent, VizierResponse,
-    VizierResponseContent, VizierSession,
+    TopicId, VizierAttachment, VizierAttachmentContent, VizierChannelId, VizierRequest,
+    VizierRequestContent, VizierResponse, VizierResponseContent, VizierSession,
 };
 use crate::storage::session::SessionStorage;
 use crate::storage::state::StateStorage;
@@ -21,6 +21,7 @@ use crate::utils::remove_think_tags;
 
 pub struct TelegramChannelReader {
     bot: Bot,
+    token: String,
     agent_id: String,
     deps: VizierDependencies,
     offset: i64,
@@ -32,10 +33,12 @@ impl TelegramChannelReader {
         config: TelegramChannelConfig,
         deps: VizierDependencies,
     ) -> Result<Self> {
-        let bot = Bot::new(config.token);
+        let bot = Bot::new(config.token.clone());
+        let token = config.token;
 
         Ok(Self {
             bot,
+            token,
             agent_id,
             deps,
             offset: 0,
@@ -103,6 +106,7 @@ impl TelegramChannelReader {
         let message_id = msg.id.to_string();
         let user_full_name = msg
             .from
+            .as_ref()
             .map(|u| u.username.clone().unwrap())
             .unwrap_or_else(|| "Unknown".into());
 
@@ -114,6 +118,42 @@ impl TelegramChannelReader {
             "telegram_chat_id": chat_id.to_string(),
             "is_dm": is_dm,
         });
+
+        let mut attachments = vec![];
+
+        if let Some(photo) = msg.photo() {
+            if let Some(photo) = photo.iter().max_by_key(|p| p.width * p.height) {
+                let file_id = photo.file.id.clone();
+                if let Ok(file) = self.bot.get_file(&file_id).await {
+                    let url = format!(
+                        "https://api.telegram.org/file/bot{}/{}",
+                        self.token, file.path
+                    );
+                    attachments.push(VizierAttachment {
+                        filename: format!("photo_{}.jpg", file_id),
+                        content: VizierAttachmentContent::Url(url),
+                    });
+                }
+            }
+        }
+
+        if let Some(doc) = msg.document() {
+            let file_id = doc.file.id.clone();
+            if let Ok(file) = self.bot.get_file(&file_id).await {
+                let url = format!(
+                    "https://api.telegram.org/file/bot{}/{}",
+                    self.token, file.path
+                );
+                let filename = doc
+                    .file_name
+                    .clone()
+                    .unwrap_or_else(|| format!("document_{}", file_id));
+                attachments.push(VizierAttachment {
+                    filename,
+                    content: VizierAttachmentContent::Url(url),
+                });
+            }
+        }
 
         let user = format!("@{} (TelegramUser: {})", user_full_name, chat_id.0);
 
@@ -225,6 +265,7 @@ impl TelegramChannelReader {
             let transport = transport.clone();
             let agent_id = self.agent_id.clone();
             let channel = channel.clone();
+            let attachments = attachments.clone();
             tokio::spawn(async move {
                 if let Err(err) = transport
                     .send_request(
@@ -234,8 +275,7 @@ impl TelegramChannelReader {
                             user,
                             content: VizierRequestContent::Chat(content),
                             metadata,
-
-                            ..Default::default()
+                            attachments,
                         },
                     )
                     .await
@@ -247,6 +287,7 @@ impl TelegramChannelReader {
             let transport = transport.clone();
             let agent_id = self.agent_id.clone();
             let channel = channel.clone();
+            let attachments = attachments.clone();
             tokio::spawn(async move {
                 if let Err(err) = transport
                     .send_request(
@@ -256,8 +297,7 @@ impl TelegramChannelReader {
                             user,
                             content: VizierRequestContent::SilentRead(text),
                             metadata,
-
-                            ..Default::default()
+                            attachments,
                         },
                     )
                     .await
