@@ -16,7 +16,7 @@ use crate::{
         notify::{
             DiscordDmPrimaryUser, NotifyPrimaryUser, TelegramDmPrimaryUser, WebUiNotifyPrimaryUser,
         },
-        // ptc::ProgramaticSandbox,
+        ptc::ProgramaticSandbox,
         scheduler::{DeleteTask, GetTaskDetail, ListTask, ScheduleCronTask, ScheduleOneTimeTask},
         shared_document::init_shared_document_tools,
         shell::ShellExec,
@@ -43,7 +43,7 @@ mod discord;
 mod fetch;
 mod http_client;
 mod notify;
-// mod ptc;
+mod ptc;
 mod scheduler;
 mod shared_document;
 mod shell;
@@ -53,6 +53,8 @@ mod telegram;
 mod think;
 mod vector_memory;
 mod workspace;
+
+type VizierToolDef = Arc<Box<dyn VizierToolDyn + Send + Sync + 'static>>;
 
 #[derive(Clone)]
 pub struct VizierToolSet {
@@ -73,6 +75,15 @@ impl VizierToolSet {
         self
     }
 
+    fn get_tool(&self, function_name: String) -> Result<VizierToolDef> {
+        let tool = self
+            .tools
+            .get(&function_name)
+            .ok_or(VizierError(format!("{function_name} does not exists")))?;
+
+        Ok(tool.clone())
+    }
+
     async fn call(
         &self,
         function_name: String,
@@ -84,13 +95,14 @@ impl VizierToolSet {
             .ok_or(VizierError(format!("{function_name} does not exists")))?;
 
         let output = tool.tool_call(args).await?;
-        Ok(serde_json::to_value(&output).map_err(|err| VizierError(err.to_string()))?)
+        Ok(serde_json::from_str(&output).map_err(|err| VizierError(err.to_string()))?)
     }
 }
 
 #[derive(Clone)]
 pub struct VizierTools {
-    pub tools: VizierToolSet,
+    pub default_toolset: VizierToolSet,
+    pub user_toolset: VizierToolSet,
     pub mcp: HashMap<String, Arc<VizierMcp>>,
 }
 
@@ -150,7 +162,11 @@ impl VizierTools {
     pub async fn tools(&self) -> Result<Vec<ToolDefinition>> {
         let mut res = vec![];
 
-        for (_, tool) in self.tools.tools.iter() {
+        for (_, tool) in self.default_toolset.tools.iter() {
+            res.push(tool.tool_def());
+        }
+
+        for (_, tool) in self.user_toolset.tools.iter() {
             res.push(tool.tool_def());
         }
 
@@ -184,16 +200,35 @@ impl VizierTools {
             });
         }
 
-        let res = self.tools.call(function_name.clone(), params).await?;
+        if let Ok(tool) = self.default_toolset.get_tool(function_name.clone()) {
+            let output = tool.tool_call(params.clone()).await?;
+            let res = serde_json::from_str::<serde_json::Value>(&output)?;
 
-        if let Ok(vizier_response) = serde_json::from_value(res.clone()) {
-            return Ok(vizier_response);
+            if let Ok(vizier_response) = serde_json::from_value(res.clone()) {
+                return Ok(vizier_response);
+            }
+
+            return Ok(VizierResponse {
+                timestamp: Utc::now(),
+                content: crate::schema::VizierResponseContent::ToolResponse { response: res },
+            });
         }
 
-        Ok(VizierResponse {
-            timestamp: Utc::now(),
-            content: crate::schema::VizierResponseContent::ToolResponse { response: res },
-        })
+        if let Ok(tool) = self.user_toolset.get_tool(function_name.clone()) {
+            let output = tool.tool_call(params.clone()).await?;
+            let res = serde_json::from_str::<serde_json::Value>(&output)?;
+
+            if let Ok(vizier_response) = serde_json::from_value(res.clone()) {
+                return Ok(vizier_response);
+            }
+
+            return Ok(VizierResponse {
+                timestamp: Utc::now(),
+                content: crate::schema::VizierResponseContent::ToolResponse { response: res },
+            });
+        }
+
+        Err(VizierError(format!("{} not found", function_name)).into())
     }
 }
 
@@ -205,8 +240,10 @@ impl VizierTools {
         let agent_workspace_path = agent_workspace(&workspace, &agent_id);
         let agent_workspace = agent_workspace_path.to_string_lossy().to_string();
 
-        let mut tools = VizierToolSet::new();
-        tools = tools
+        let mut default_toolset = VizierToolSet::new();
+        let mut user_toolset = VizierToolSet::new();
+
+        default_toolset = default_toolset
             .tool(ThinkTool)
             .tool(WritePrimaryDocument::<AgentDocument>::new(
                 agent_workspace.clone(),
@@ -246,8 +283,21 @@ impl VizierTools {
             .tool(CreateSkill::new(agent_id.clone(), deps.clone()));
 
         if agent_config.tools.shell_access {
-            tools = tools.tool(ShellExec(deps.shell.clone()));
+            default_toolset = default_toolset.tool(ShellExec(deps.shell.clone()));
         }
+
+        default_toolset = default_toolset
+            .tool(DiscordDmPrimaryUser::new(deps.config.clone()))
+            .tool(TelegramDmPrimaryUser::new(deps.config.clone()))
+            .tool(WebUiNotifyPrimaryUser::new(
+                agent_id.clone(),
+                deps.transport.clone(),
+            ))
+            .tool(NotifyPrimaryUser::new(
+                deps.config.clone(),
+                agent_id.clone(),
+                deps.transport.clone(),
+            ));
 
         if agent_config.tools.discord.enabled {
             if let Some(discord) = &deps.config.channels.discord {
@@ -255,7 +305,7 @@ impl VizierTools {
                     let token = discord.token.clone();
 
                     let (send_message, react_message, get_message) = new_discord_tools(token);
-                    tools = tools
+                    default_toolset = default_toolset
                         .tool(send_message)
                         .tool(react_message)
                         .tool(get_message);
@@ -269,7 +319,7 @@ impl VizierTools {
                     let bot_token = telegram.token.clone();
 
                     let (send_message, react_message, get_message) = new_telegram_tools(bot_token);
-                    tools = tools
+                    default_toolset = default_toolset
                         .tool(send_message)
                         .tool(react_message)
                         .tool(get_message);
@@ -279,18 +329,18 @@ impl VizierTools {
 
         if agent_config.tools.brave_search.enabled {
             if let Some(brave_search) = tool_config.brave_search {
-                tools = tools
+                user_toolset = user_toolset
                     .tool(BraveSearch::<WebOnlySearch>::new(&brave_search))
                     .tool(BraveSearch::<NewsOnlySearch>::new(&brave_search));
             }
         }
 
         if agent_config.tools.fetch.enabled {
-            tools = tools.tool(FetchWebpage);
+            user_toolset = user_toolset.tool(FetchWebpage);
         }
 
         if agent_config.tools.http_client.enabled {
-            tools = tools.tool(HttpClient);
+            user_toolset = user_toolset.tool(HttpClient);
         }
 
         if agent_config.tools.vector_memory.enabled {
@@ -298,7 +348,7 @@ impl VizierTools {
                 let (read_memory, write_memory, list_memory, detail_memory) =
                     init_vector_memory(agent_id.clone(), deps.clone())?;
 
-                tools = tools
+                user_toolset = user_toolset
                     .tool(read_memory)
                     .tool(write_memory)
                     .tool(list_memory)
@@ -308,24 +358,11 @@ impl VizierTools {
 
         let (shared_doc_read, shared_doc_write, shared_doc_get, shared_doc_list) =
             init_shared_document_tools(agent_id.clone(), deps.clone())?;
-        tools = tools
+        user_toolset = user_toolset
             .tool(shared_doc_read)
             .tool(shared_doc_write)
             .tool(shared_doc_get)
             .tool(shared_doc_list);
-
-        tools = tools
-            .tool(DiscordDmPrimaryUser::new(deps.config.clone()))
-            .tool(TelegramDmPrimaryUser::new(deps.config.clone()))
-            .tool(WebUiNotifyPrimaryUser::new(
-                agent_id.clone(),
-                deps.transport.clone(),
-            ))
-            .tool(NotifyPrimaryUser::new(
-                deps.config.clone(),
-                agent_id.clone(),
-                deps.transport.clone(),
-            ));
 
         let mut mcp = HashMap::new();
         for m in &agent_config.tools.mcp_servers {
@@ -334,28 +371,23 @@ impl VizierTools {
             }
         }
 
+        if agent_config.tools.programmatic_sandbox {
+            let ptc_toolset = VizierToolSet::new().tool(ProgramaticSandbox {
+                tools: Arc::new(user_toolset),
+            });
+            let tools = Self {
+                default_toolset: default_toolset.clone(),
+                user_toolset: ptc_toolset,
+                mcp: mcp.clone(),
+            };
+            return Ok(tools);
+        }
+
         let tools = Self {
-            tools: tools.clone(),
+            default_toolset: default_toolset.clone(),
+            user_toolset: user_toolset.clone(),
             mcp: mcp.clone(),
         };
-
         Ok(tools)
-
-        // TODO: fix ptc
-        // let temp_tool = Self {
-        //     tools: tools.clone(),
-        //     mcp: mcp.clone(),
-        // };
-        //
-        // if agent_config.tools.programmatic_sandbox {
-        //     let programmatic_tool = ProgramaticSandbox {
-        //         tools: Arc::new(temp_tool),
-        //     };
-        //     tools = tools.tool(programmatic_tool);
-        //
-        //     Ok(Self { tools, mcp })
-        // } else {
-        //     Ok(temp_tool)
-        // }
     }
 }
