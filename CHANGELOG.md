@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1] - 2026-04-23
+
+### 🚀 Features
+
+- Implement memory auto-retrieval
+- Emphasize slug on auto-retrieval
+- Reenable ptc
+
+### 🐛 Bug Fixes
+
+- Enhance error messages and improve PATH setup in install script (#10)
+
+### ⚙️ Miscellaneous Tasks
+
+- Update workflow
 ## [0.5.0] - 2026-04-21
 
 ### 🚀 Features
@@ -20,6 +35,10 @@ All notable changes to this project will be documented in this file.
 
 - Schema structure
 - Standardise tool call response
+
+### ⚙️ Miscellaneous Tasks
+
+- Bump version to 0.5.0
 ## [0.5.0-rc.3] - 2026-04-17
 
 ### 🚀 Features
