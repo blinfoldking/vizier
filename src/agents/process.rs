@@ -20,7 +20,9 @@ use crate::{
         AgentId, VizierChannelId, VizierRequest, VizierRequestContent, VizierResponse,
         VizierResponseContent, VizierSession, VizierSessionDetail,
     },
-    storage::{VizierStorage, history::HistoryStorage, session::SessionStorage},
+    storage::{
+        VizierStorage, history::HistoryStorage, memory::MemoryStorage, session::SessionStorage,
+    },
     transport::VizierTransport,
 };
 
@@ -300,7 +302,7 @@ pub async fn handle_request(
     hooks: Arc<VizierSessionHooks>,
 ) -> Result<()> {
     match &request.content {
-        VizierRequestContent::Chat(_) | VizierRequestContent::SilentRead(_) => {
+        VizierRequestContent::Chat(prompt) => {
             let history = storage
                 .list_session_history(
                     session.clone(),
@@ -308,7 +310,22 @@ pub async fn handle_request(
                     Some(agent_config.session_memory.max_capacity),
                 )
                 .await?;
-            let res = agent.chat(request, history, Some(hooks)).await?;
+
+            let memory = storage
+                .query_memory(session.0.clone(), prompt.clone(), 10, 0.5)
+                .await?;
+            let res = agent.chat(request, history, memory, Some(hooks)).await?;
+            transport.send_response(session, res).await?;
+        }
+        VizierRequestContent::SilentRead(_) => {
+            let history = storage
+                .list_session_history(
+                    session.clone(),
+                    Some(request.timestamp.clone()),
+                    Some(agent_config.session_memory.max_capacity),
+                )
+                .await?;
+            let res = agent.chat(request, history, vec![], Some(hooks)).await?;
             transport.send_response(session, res).await?;
         }
         VizierRequestContent::Prompt(_) | VizierRequestContent::Task(_) => {
@@ -337,7 +354,7 @@ pub async fn handle_request(
                 _ => vec![],
             };
 
-            let res = agent.chat(request, history, Some(hooks)).await?;
+            let res = agent.chat(request, history, vec![], Some(hooks)).await?;
             transport.send_response(session, res).await?;
         }
         VizierRequestContent::Command(_) => unimplemented!(),

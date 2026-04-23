@@ -26,7 +26,7 @@ use crate::{
     config::{agent::AgentConfig, user::UserConfig},
     dependencies::VizierDependencies,
     schema::{
-        SessionHistory, SessionHistoryContent, VizierAttachment, VizierAttachmentContent,
+        Memory, SessionHistory, SessionHistoryContent, VizierAttachment, VizierAttachmentContent,
         VizierRequest, VizierRequestContent, VizierResponse, VizierResponseContent,
         VizierResponseStats,
     },
@@ -113,7 +113,8 @@ impl VizierAgent {
     pub async fn chat(
         &self,
         req: VizierRequest,
-        memory: Vec<SessionHistory>,
+        session_history: Vec<SessionHistory>,
+        memory: Vec<Memory>,
         hooks: Option<Arc<VizierSessionHooks>>,
     ) -> Result<VizierResponse> {
         let mut tools = self.tools.tools().await?;
@@ -123,16 +124,42 @@ impl VizierAgent {
         let initiative_factor = rng.random_range(0_f32..=1_f32);
 
         let mut history = self.prepare_system_prompts().await;
-        history.extend(memory.iter().map(|history| match &history.content {
-            SessionHistoryContent::Request(req) => Message::user(req.to_prompt().unwrap()),
-            SessionHistoryContent::Response(r) => {
-                if let VizierResponseContent::Message { content, .. } = &r.content {
-                    Message::assistant(content.clone())
-                } else {
-                    Message::assistant("".to_string())
-                }
-            }
-        }));
+
+        if memory.len() > 0 {
+            let summarize_memories = memory
+                .iter()
+                .map(|memory| {
+                    let mut truncated_content = memory.content.clone();
+                    truncated_content.truncate(200);
+
+                    format!(
+                        "## {}\nslug:{}\n{}...\n**use the slug for more detail of this memory**\n \n---",
+                        memory.title, memory.slug, truncated_content,
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            history.push(Message::system(format!(
+                "# Related Memories\n{}",
+                summarize_memories
+            )));
+        }
+
+        history.extend(
+            session_history
+                .iter()
+                .map(|history| match &history.content {
+                    SessionHistoryContent::Request(req) => Message::user(req.to_prompt().unwrap()),
+                    SessionHistoryContent::Response(r) => {
+                        if let VizierResponseContent::Message { content, .. } = &r.content {
+                            Message::assistant(content.clone())
+                        } else {
+                            Message::assistant("".to_string())
+                        }
+                    }
+                }),
+        );
 
         let mut req = req;
         if let Some(hooks) = hooks.clone() {
