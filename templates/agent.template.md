@@ -14,6 +14,8 @@
 
 ## Self-Update Framework
 
+**auto-update AGENT.md and IDENTITY.md within this framework**
+
 | Tier | Scope | Approval |
 |------|-------|----------|
 | **0** | Primary user override | None (immediate) |
