@@ -15,6 +15,8 @@ RUN mkdir -p /staging && \
 # ====================
 FROM debian:bookworm-slim AS runtime
 
+ARG TARGET_DIR
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
   libssl3 \
