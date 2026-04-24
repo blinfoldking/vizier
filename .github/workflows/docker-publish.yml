@@ -28,15 +28,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Determine if stable release
+      - name: Determine if stable release and prepare tags
         id: stable
         run: |
           VERSION="${{ inputs.version }}"
+          TAGS="ghcr.io/${{ github.repository }}:${{ inputs.version }}"
           if [[ "$VERSION" == *-* ]]; then
             echo "stable=false" >> $GITHUB_OUTPUT
           else
             echo "stable=true" >> $GITHUB_OUTPUT
+            TAGS="$TAGS,ghcr.io/${{ github.repository }}:latest"
           fi
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
       - name: Download release asset for ${{ matrix.target }}
         env:
@@ -66,9 +69,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ inputs.version }}
-            ${{ steps.stable.outputs.stable && 'ghcr.io/${{ github.repository }}:latest' || '' }}
+          tags: ${{ steps.stable.outputs.tags }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.version=${{ inputs.version }}
