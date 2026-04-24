@@ -39,6 +39,8 @@ jobs:
           fi
 
       - name: Download release asset for ${{ matrix.target }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download v${{ inputs.version }} \
             --dir . \
