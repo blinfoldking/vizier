@@ -1,7 +1,7 @@
 # ====================
 # Stage 1: Extract pre-built binaries from release tarball
 # ====================
-FROM debian:bookworm AS build
+FROM ubuntu:24.04 AS build
 
 ARG TARGET_DIR
 
@@ -13,14 +13,14 @@ RUN mkdir -p /staging && \
 # ====================
 # Stage 2: Minimal runtime image
 # ====================
-FROM debian:bookworm-slim AS runtime
+FROM ubuntu:24.04 AS runtime
 
 ARG TARGET_DIR
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-  ca-certificates \
-  libssl3 \
-  && rm -rf /var/lib/apt/lists/*
+        ca-certificates \
+        libssl3t64 \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /staging/vizier-${TARGET_DIR}/vizier /usr/local/bin/vizier
 
