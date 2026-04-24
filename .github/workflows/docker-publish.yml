@@ -76,4 +76,4 @@ jobs:
             org.opencontainers.image.title=vizier
             org.opencontainers.image.description=21st Century Digital Steward
           build-args: |
-            TARGET_DIR=vizier-${{ inputs.version }}-${{ matrix.target }}
+            TARGET_DIR=${{ inputs.version }}-${{ matrix.target }}
