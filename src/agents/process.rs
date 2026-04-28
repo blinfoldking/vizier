@@ -208,6 +208,7 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
                         crate::schema::VizierResponse {
                             timestamp: chrono::Utc::now(),
                             content: crate::schema::VizierResponseContent::Abort,
+                            attachments: vec![],
                         },
                     )
                     .await;
@@ -240,6 +241,7 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
                         crate::schema::VizierResponse {
                             timestamp: chrono::Utc::now(),
                             content: crate::schema::VizierResponseContent::ThinkingStart,
+                            attachments: vec![],
                         },
                     )
                     .await;
@@ -276,6 +278,7 @@ pub async fn agent_process(agent_id: AgentId, deps: VizierDependencies) -> Resul
                                     content: format!("ERR: {}", err),
                                     stats: None,
                                 },
+                                attachments: vec![],
                             },
                         )
                         .await;
@@ -343,6 +346,7 @@ pub async fn handle_request(
                         let res = VizierResponse {
                             timestamp: end.clone(),
                             content: VizierResponseContent::Abort,
+                            attachments: vec![],
                         };
 
                         transport.send_response(session, res).await?;

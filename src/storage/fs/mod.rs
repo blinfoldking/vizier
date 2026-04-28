@@ -7,7 +7,6 @@ use crate::{
     storage::{
         VizierStorageProvider,
         indexer::{DocumentIndexer, VizierIndexer},
-        shared_document::SharedDocumentStorage,
     },
 };
 

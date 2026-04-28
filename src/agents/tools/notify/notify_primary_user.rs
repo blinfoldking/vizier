@@ -177,6 +177,7 @@ impl NotifyPrimaryUser {
                 content: content.to_string(),
                 stats: None,
             },
+            attachments: vec![],
         };
 
         if let Err(err) = transport.send_response(session, response).await {

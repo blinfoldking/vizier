@@ -32,6 +32,7 @@ impl VizierSessionHook for ThinkingHook {
                             content: VizierResponseContent::Thinking(
                                 thinking["thought"].as_str().unwrap().to_string(),
                             ),
+                            attachments: vec![],
                         },
                     )
                     .await?;

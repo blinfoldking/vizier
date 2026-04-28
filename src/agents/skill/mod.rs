@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use futures::FutureExt;
 use rig::completion::ToolDefinition;
 use schemars::schema_for;
 use serde::{Deserialize, Serialize};

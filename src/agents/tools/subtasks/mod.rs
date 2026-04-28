@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
 use chrono::Utc;
-use rig::{completion::ToolDefinition, tool::Tool};
-use schemars::schema_for;
 use serde::{Deserialize, Serialize};
 
 use crate::{

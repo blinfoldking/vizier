@@ -1,8 +1,6 @@
 use std::{marker::PhantomData, time::Duration};
 
 use reqwest::StatusCode;
-use rig::{completion::ToolDefinition, tool::Tool};
-use schemars::schema_for;
 use serde::{Deserialize, Serialize};
 
 use crate::{

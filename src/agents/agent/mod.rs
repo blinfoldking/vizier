@@ -1,14 +1,12 @@
 use std::{fs, sync::Arc};
 
 use anyhow::Result;
-use base64::Engine;
 use chrono::Utc;
 use rand::{RngExt, SeedableRng, rngs::StdRng};
 use rig::{
     OneOrMany,
-    message::{AssistantContent, ImageMediaType, Message, ToolResultContent, UserContent},
+    message::{AssistantContent, Message},
 };
-use rustpython_vm::common::str::ascii::IntoAsciiString;
 use serde::{Deserialize, Serialize};
 use tokio::time::{Instant, timeout};
 
@@ -26,11 +24,10 @@ use crate::{
     config::{agent::AgentConfig, user::UserConfig},
     dependencies::VizierDependencies,
     schema::{
-        Memory, SessionHistory, SessionHistoryContent, VizierAttachment, VizierAttachmentContent,
-        VizierRequest, VizierRequestContent, VizierResponse, VizierResponseContent,
-        VizierResponseStats,
+        Memory, SessionHistory, SessionHistoryContent, VizierRequest, VizierRequestContent,
+        VizierResponse, VizierResponseContent, VizierResponseStats,
     },
-    utils::{agent_workspace, build_path, get_mime_type},
+    utils::{agent_workspace, build_path},
 };
 
 mod model;
@@ -171,6 +168,7 @@ impl VizierAgent {
                 return Ok(VizierResponse {
                     timestamp: chrono::Utc::now(),
                     content: VizierResponseContent::Empty,
+                    attachments: vec![],
                 });
             }
         }
@@ -185,6 +183,7 @@ impl VizierAgent {
                 content: output,
                 stats: Some(stats),
             },
+            attachments: vec![],
         };
         if let Some(hooks) = hooks.clone() {
             response = hooks.on_response(response).await?;
@@ -296,6 +295,7 @@ impl VizierAgent {
                             content: VizierResponseContent::ToolResponse {
                                 response: serde_json::Value::String(output),
                             },
+                            attachments: vec![],
                         }
                     } else {
                         let tool_server = self.tools.clone();
@@ -312,6 +312,7 @@ impl VizierAgent {
                                 content: VizierResponseContent::ToolResponse {
                                     response: serde_json::Value::String(err.to_string()),
                                 },
+                                attachments: vec![],
                             },
                             Ok(s) => s,
                         }

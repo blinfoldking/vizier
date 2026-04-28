@@ -227,4 +227,3 @@ impl VizierTool for SharedDocumentList {
         Ok(res.into_iter().map(|s| s.into()).collect())
     }
 }
-

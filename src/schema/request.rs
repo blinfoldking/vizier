@@ -60,57 +60,44 @@ pub struct VizierAttachment {
     pub content: VizierAttachmentContent,
 }
 
-impl VizierRequest {
-    pub fn to_message(&self) -> Result<Message> {
-        let mut contents = vec![UserContent::Text(
-            self.to_prompt()
-                .map_err(|err| VizierError(err.to_string()))?
-                .into(),
-        )];
-        for attachment in self.attachments.iter() {
-            let mime_type = get_mime_type(&attachment.filename);
-            let content = if mime_type.starts_with("image/") {
-                let media_type = ImageMediaType::from_mime_type(&mime_type).ok_or_else(|| {
-                    VizierError(format!("Unsupported image MIME type: {}", mime_type))
-                })?;
-                match &attachment.content {
-                    VizierAttachmentContent::Bytes(bytes) => {
-                        let base64 = base64::engine::general_purpose::STANDARD.encode(bytes);
+impl VizierAttachment {
+    pub fn to_user_content(&self) -> Result<UserContent> {
+        let attachment = self.clone();
+        let mime_type = get_mime_type(&attachment.filename);
+        let content = if mime_type.starts_with("image/") {
+            let media_type = ImageMediaType::from_mime_type(&mime_type).ok_or_else(|| {
+                VizierError(format!("Unsupported image MIME type: {}", mime_type))
+            })?;
+            match &attachment.content {
+                VizierAttachmentContent::Bytes(bytes) => {
+                    let base64 = base64::engine::general_purpose::STANDARD.encode(bytes);
 
-                        UserContent::image_base64(base64, Some(media_type), None)
-                    }
-                    VizierAttachmentContent::Url(url) => {
-                        UserContent::image_url(url, Some(media_type), None)
-                    }
-                    VizierAttachmentContent::Base64(base64) => {
-                        UserContent::image_base64(base64, Some(media_type), None)
-                    }
+                    UserContent::image_base64(base64, Some(media_type), None)
                 }
-            } else {
-                let media_type =
-                    DocumentMediaType::from_mime_type(&mime_type).ok_or_else(|| {
-                        VizierError(format!("Unsupported image MIME type: {}", mime_type))
-                    })?;
-
-                match &attachment.content {
-                    VizierAttachmentContent::Bytes(bytes) => {
-                        UserContent::document_raw(bytes.clone(), Some(media_type))
-                    }
-                    VizierAttachmentContent::Url(url) => {
-                        UserContent::document_url(url.clone(), Some(media_type))
-                    }
-                    _ => unimplemented!(),
+                VizierAttachmentContent::Url(url) => {
+                    UserContent::image_url(url, Some(media_type), None)
                 }
-            };
+                VizierAttachmentContent::Base64(base64) => {
+                    UserContent::image_base64(base64, Some(media_type), None)
+                }
+            }
+        } else {
+            let media_type = DocumentMediaType::from_mime_type(&mime_type).ok_or_else(|| {
+                VizierError(format!("Unsupported image MIME type: {}", mime_type))
+            })?;
 
-            contents.push(content);
-        }
-
-        let message = Message::User {
-            content: OneOrMany::many(contents).unwrap(),
+            match &attachment.content {
+                VizierAttachmentContent::Bytes(bytes) => {
+                    UserContent::document_raw(bytes.clone(), Some(media_type))
+                }
+                VizierAttachmentContent::Url(url) => {
+                    UserContent::document_url(url.clone(), Some(media_type))
+                }
+                _ => unimplemented!(),
+            }
         };
 
-        Ok(message)
+        Ok(content)
     }
 }
 
@@ -140,5 +127,23 @@ impl VizierRequest {
             "sender": self.user,
             "metadata": self.metadata,
         }))?)
+    }
+
+    pub fn to_message(&self) -> Result<Message> {
+        let mut contents = vec![UserContent::Text(
+            self.to_prompt()
+                .map_err(|err| VizierError(err.to_string()))?
+                .into(),
+        )];
+        for attachment in self.attachments.iter() {
+            println!("{:?}", attachment);
+            contents.push(attachment.to_user_content()?);
+        }
+
+        let message = Message::User {
+            content: OneOrMany::many(contents).unwrap(),
+        };
+
+        Ok(message)
     }
 }

@@ -1,17 +1,21 @@
 use std::{collections::HashMap, sync::Arc};
 
 use anyhow::Result;
+use chrono::Utc;
 use rig::completion::ToolDefinition;
 use tokio::process::Command;
 
 use rmcp::{
     RoleClient, Service, ServiceExt,
-    model::{CallToolRequestParams, ClientCapabilities, ClientInfo, Implementation},
+    model::{CallToolRequestParams, ClientCapabilities, ClientInfo, Implementation, RawContent},
     service::RunningService,
     transport::{ConfigureCommandExt, StreamableHttpClientTransport, TokioChildProcess},
 };
 
-use crate::config::{VizierConfig, tools::mcp::McpClientConfig};
+use crate::{
+    config::{VizierConfig, tools::mcp::McpClientConfig},
+    schema::{VizierAttachment, VizierAttachmentContent, VizierResponse, VizierResponseContent},
+};
 
 pub struct VizierMcpClients {
     pub clients: HashMap<String, Arc<VizierMcp>>,
@@ -40,7 +44,7 @@ impl VizierMcpClient for VizierMcp {
         &self,
         tool_name: String,
         args: serde_json::Map<String, serde_json::Value>,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<VizierResponse> {
         self.0.call(tool_name, args).await
     }
 }
@@ -52,7 +56,7 @@ pub trait VizierMcpClient {
         &self,
         tool_name: String,
         args: serde_json::Map<String, serde_json::Value>,
-    ) -> Result<serde_json::Value>;
+    ) -> Result<VizierResponse>;
 }
 
 #[async_trait::async_trait]
@@ -77,12 +81,38 @@ impl<S: Service<RoleClient>> VizierMcpClient for RunningService<RoleClient, S> {
         &self,
         tool_name: String,
         args: serde_json::Map<String, serde_json::Value>,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<VizierResponse> {
         let result = self
             .call_tool(CallToolRequestParams::new(tool_name).with_arguments(args))
             .await?;
 
-        Ok(serde_json::to_value(result.content)?)
+        let mut contents = vec![];
+        let mut attachments = vec![];
+        for content in result.content {
+            match content.raw {
+                RawContent::Text(text) => {
+                    contents.push(serde_json::Value::String(text.text));
+                }
+                RawContent::Image(image) => {
+                    let ext = image.mime_type.replace("image/", "");
+                    attachments.push(VizierAttachment {
+                        filename: format!("{}.{}", uuid::Uuid::new_v4(), ext),
+                        content: VizierAttachmentContent::Base64(image.data),
+                    });
+                }
+                _ => unimplemented!(),
+            }
+        }
+
+        let res = VizierResponse {
+            timestamp: Utc::now(),
+            content: VizierResponseContent::ToolResponse {
+                response: serde_json::Value::Array(contents),
+            },
+            attachments,
+        };
+
+        Ok(res)
     }
 }
 

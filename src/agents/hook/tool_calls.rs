@@ -33,6 +33,7 @@ impl VizierSessionHook for ToolCallsHook {
                             name: function_name.clone(),
                             args: args_json,
                         },
+                        attachments: vec![],
                     },
                 )
                 .await?;

@@ -5,9 +5,9 @@ use uuid::Uuid;
 
 use crate::{
     schema::{
-        AgentUsageStats, ChannelTypeUsage, ChannelTypeUsageDetail, ChannelUsage, DailyChannelTypeUsage,
-        DailyUsage, SessionHistory, SessionHistoryContent, UsageSummary, VizierChannelId,
-        VizierResponseContent, VizierResponseStats, VizierSession,
+        AgentUsageStats, ChannelTypeUsage, ChannelTypeUsageDetail, ChannelUsage,
+        DailyChannelTypeUsage, DailyUsage, SessionHistory, SessionHistoryContent, UsageSummary,
+        VizierResponseContent, VizierSession,
     },
     storage::{history::HistoryStorage, surreal::SurrealStorage},
 };
@@ -99,8 +99,10 @@ impl HistoryStorage for SurrealStorage {
 
         let mut by_channel_type: HashMap<String, ChannelTypeUsage> = HashMap::new();
         let mut by_day: HashMap<NaiveDate, DailyUsage> = HashMap::new();
-        let mut by_day_and_channel_type: HashMap<NaiveDate, HashMap<String, ChannelTypeUsageDetail>> =
-            HashMap::new();
+        let mut by_day_and_channel_type: HashMap<
+            NaiveDate,
+            HashMap<String, ChannelTypeUsageDetail>,
+        > = HashMap::new();
 
         let query = if start_date.is_some() && end_date.is_some() {
             format!(
@@ -119,9 +121,7 @@ impl HistoryStorage for SurrealStorage {
                 end_date.unwrap().timestamp_millis()
             )
         } else {
-            format!(
-                "SELECT * FROM session_history WHERE vizier_session.0 == $agent_id"
-            )
+            format!("SELECT * FROM session_history WHERE vizier_session.0 == $agent_id")
         };
 
         let mut response = self
@@ -172,15 +172,13 @@ impl HistoryStorage for SurrealStorage {
                             });
                         }
 
-                        let day_entry = by_day
-                            .entry(date)
-                            .or_insert_with(|| DailyUsage {
-                                date,
-                                total_tokens: 0,
-                                input_tokens: 0,
-                                output_tokens: 0,
-                                total_requests: 0,
-                            });
+                        let day_entry = by_day.entry(date).or_insert_with(|| DailyUsage {
+                            date,
+                            total_tokens: 0,
+                            input_tokens: 0,
+                            output_tokens: 0,
+                            total_requests: 0,
+                        });
                         day_entry.total_tokens += stats.total_tokens;
                         day_entry.input_tokens += stats.total_input_tokens;
                         day_entry.output_tokens += stats.total_output_tokens;

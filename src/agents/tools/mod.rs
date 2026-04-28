@@ -211,10 +211,7 @@ impl VizierTools {
                 .call(function_name.to_string(), serde_json::from_str(&params)?)
                 .await?;
 
-            return Ok(VizierResponse {
-                timestamp: Utc::now(),
-                content: crate::schema::VizierResponseContent::ToolResponse { response: res },
-            });
+            return Ok(res);
         }
 
         if let Ok(tool) = self.default_toolset.get_tool(function_name.clone()) {
@@ -228,6 +225,7 @@ impl VizierTools {
             return Ok(VizierResponse {
                 timestamp: Utc::now(),
                 content: crate::schema::VizierResponseContent::ToolResponse { response: res },
+                attachments: vec![],
             });
         }
 
@@ -242,6 +240,7 @@ impl VizierTools {
             return Ok(VizierResponse {
                 timestamp: Utc::now(),
                 content: crate::schema::VizierResponseContent::ToolResponse { response: res },
+                attachments: vec![],
             });
         }
 

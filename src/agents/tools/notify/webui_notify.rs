@@ -56,6 +56,7 @@ where
                 content: args.content,
                 stats: None,
             },
+            attachments: vec![],
         };
 
         match self.transport.send_response(session, response).await {

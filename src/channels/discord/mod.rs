@@ -89,6 +89,7 @@ impl VizierChannel for DiscordChannelWriter {
                         VizierResponse {
                             content: VizierResponseContent::ThinkingStart,
                             timestamp: _,
+                            attachments: _,
                         } => {
                             typing_state.insert(
                                 channel_id,
@@ -98,6 +99,7 @@ impl VizierChannel for DiscordChannelWriter {
                         VizierResponse {
                             content: VizierResponseContent::ToolChoice { name, args },
                             timestamp: _,
+                            attachments: _,
                         } => {
                             let _ = crate::utils::discord::send_message(
                                 http.clone(),
@@ -109,6 +111,7 @@ impl VizierChannel for DiscordChannelWriter {
                         VizierResponse {
                             content: VizierResponseContent::Thinking(thought),
                             timestamp: _,
+                            attachments: _,
                         } => {
                             let _ = crate::utils::discord::send_message(
                                 http.clone(),
@@ -120,6 +123,7 @@ impl VizierChannel for DiscordChannelWriter {
                         VizierResponse {
                             content: VizierResponseContent::Message { content, stats: _ },
                             timestamp: _,
+                            attachments: _,
                         } => {
                             if let Some(typing) = typing_state.remove(&channel_id) {
                                 typing.stop();
@@ -136,6 +140,7 @@ impl VizierChannel for DiscordChannelWriter {
                         VizierResponse {
                             content: VizierResponseContent::Abort,
                             timestamp: _,
+                            attachments: _,
                         } => {
                             if let Some(typing) = typing_state.remove(&channel_id) {
                                 typing.stop();

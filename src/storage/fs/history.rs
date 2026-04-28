@@ -34,6 +34,7 @@ enum ContentMetadata {
     },
     response {
         stats: Option<VizierResponseStats>,
+        attachments: Vec<VizierAttachment>,
     },
 }
 
@@ -90,9 +91,13 @@ impl From<SessionHistory> for SessionHistoryFrontMatter {
                     VizierResponseContent::Message { content: _, stats } => {
                         ContentMetadata::response {
                             stats: stats.clone(),
+                            attachments: r.attachments,
                         }
                     }
-                    _ => ContentMetadata::response { stats: None },
+                    _ => ContentMetadata::response {
+                        stats: None,
+                        attachments: r.attachments,
+                    },
                 },
             },
         }
@@ -198,13 +203,12 @@ impl HistoryStorage for FileSystemStorage {
                                 _ => unimplemented!(),
                             },
                             attachments,
-
-                            ..Default::default()
                         }),
-                        ContentMetadata::response { stats } => {
+                        ContentMetadata::response { stats, attachments } => {
                             SessionHistoryContent::Response(VizierResponse {
                                 timestamp: frontmatter.timestamp,
                                 content: VizierResponseContent::Message { content, stats },
+                                attachments,
                             })
                         }
                     },
@@ -474,12 +478,12 @@ impl HistoryStorage for FileSystemStorage {
                                 _ => unimplemented!(),
                             },
                             attachments,
-                            ..Default::default()
                         }),
-                        ContentMetadata::response { stats } => {
+                        ContentMetadata::response { stats, attachments } => {
                             SessionHistoryContent::Response(VizierResponse {
                                 timestamp,
                                 content: VizierResponseContent::Message { content, stats },
+                                attachments,
                             })
                         }
                     },

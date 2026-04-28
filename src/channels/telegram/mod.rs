@@ -348,6 +348,7 @@ impl VizierChannel for TelegramChannelWriter {
                         VizierResponse {
                             content: VizierResponseContent::ThinkingStart,
                             timestamp: _,
+                            attachments: _,
                         } => {
                             if let Some(handle) = typing_handles.remove(&chat_id.0) {
                                 handle.abort();
@@ -367,6 +368,7 @@ impl VizierChannel for TelegramChannelWriter {
                         VizierResponse {
                             content: VizierResponseContent::ToolChoice { name, args },
                             timestamp: _,
+                            attachments: _,
                         } => {
                             let _ = crate::utils::telegram::send_message(
                                 &bot,
@@ -378,6 +380,7 @@ impl VizierChannel for TelegramChannelWriter {
                         VizierResponse {
                             content: VizierResponseContent::Thinking(thought),
                             timestamp: _,
+                            attachments: _,
                         } => {
                             let _ = crate::utils::telegram::send_message(
                                 &bot,
@@ -389,6 +392,7 @@ impl VizierChannel for TelegramChannelWriter {
                         VizierResponse {
                             content: VizierResponseContent::Message { content, stats: _ },
                             timestamp: _,
+                            attachments: _,
                         } => {
                             if let Some(handle) = typing_handles.remove(&chat_id.0) {
                                 handle.abort();
@@ -400,6 +404,7 @@ impl VizierChannel for TelegramChannelWriter {
                         VizierResponse {
                             content: VizierResponseContent::Abort,
                             timestamp: _,
+                            attachments: _,
                         } => {
                             if let Some(handle) = typing_handles.remove(&chat_id.0) {
                                 handle.abort();
