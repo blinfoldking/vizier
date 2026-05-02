@@ -60,14 +60,14 @@ impl VizierTransport {
         let mut req_rx = self.request_channel.1.clone();
         set.spawn(async move {
             while let Ok((session, req)) = req_rx.recv().await {
-                log::info!("[Request]: {:?} {:?}", session, req);
+                tracing::info!("[Request]: {:?} {:?}", session, req);
             }
         });
 
         let mut res_rx = self.response_channel.1.clone();
         set.spawn(async move {
             while let Ok((session, res)) = res_rx.recv().await {
-                log::info!("[Response]: {:?} {:?}", session, res);
+                tracing::info!("[Response]: {:?} {:?}", session, res);
             }
         });
 
