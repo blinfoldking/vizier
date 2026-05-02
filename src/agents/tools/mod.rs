@@ -201,17 +201,18 @@ impl VizierTools {
     pub async fn call(&self, function_name: String, params: String) -> Result<VizierResponse> {
         // mcp calls
         if function_name.starts_with("mcp_") {
-            let (server, function_name) = function_name.split_once("__").unwrap();
-            let server = server.replace("mcp_", "");
+            if let Some((server, function_name)) = function_name.split_once("__") {
+                let server = server.replace("mcp_", "");
 
-            let res = self
-                .mcp
-                .get(&server)
-                .ok_or(VizierError("mcp not found".into()))?
-                .call(function_name.to_string(), serde_json::from_str(&params)?)
-                .await?;
+                let res = self
+                    .mcp
+                    .get(&server)
+                    .ok_or(VizierError("mcp not found".into()))?
+                    .call(function_name.to_string(), serde_json::from_str(&params)?)
+                    .await?;
 
-            return Ok(res);
+                return Ok(res);
+            }
         }
 
         if let Ok(tool) = self.default_toolset.get_tool(function_name.clone()) {

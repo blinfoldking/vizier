@@ -59,7 +59,5 @@ user most likely will use the actual the actual datetime, but you always use the
         utc_day, utc_now, local_day, local_now, heartbeat_instruction,
     );
 
-    println!("{}", res);
-
     res
 }
