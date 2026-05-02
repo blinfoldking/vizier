@@ -1566,6 +1566,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "daemonize"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab8bfdaacb3c887a54d41bdf48d3af8873b3f5566469f8ba21b92057509f116e"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "darling"
 version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9539,7 +9548,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vizier"
-version = "0.5.3"
+version = "0.5.5"
 dependencies = [
  "anyhow",
  "argon2",
@@ -9553,6 +9562,7 @@ dependencies = [
  "clap 4.5.57",
  "config",
  "croner",
+ "daemonize",
  "dirs",
  "dotenvy",
  "duration-string",

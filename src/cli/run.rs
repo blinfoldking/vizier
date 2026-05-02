@@ -1,5 +1,8 @@
+use std::{fs, path::PathBuf};
+
 use anyhow::Result;
 use clap::Args;
+use daemonize::Daemonize;
 use tokio::task::JoinSet;
 
 use crate::{
@@ -20,8 +23,12 @@ pub struct RunArgs {
         help = "path to .vizier.yaml config file",
     )]
     config: Option<std::path::PathBuf>,
+
+    #[arg(short, long, help = "run the server in the background")]
+    detached: Option<bool>,
 }
 
+#[tokio::main(flavor = "multi_thread")]
 pub async fn run_server(config: VizierConfig) -> Result<()> {
     let deps = VizierDependencies::new(config.clone()).await?;
     let mut set = JoinSet::new();
@@ -68,10 +75,39 @@ pub async fn run_server(config: VizierConfig) -> Result<()> {
     Ok(())
 }
 
-pub async fn run(args: RunArgs) -> Result<()> {
+pub fn run(args: RunArgs) -> Result<()> {
     let config = VizierConfig::load(args.config.clone())?;
 
-    run_server(config.clone()).await?;
+    let workspace = PathBuf::from(&config.workspace);
 
+    let mut runtime_dir = workspace.clone();
+    runtime_dir.push(".runtime");
+    runtime_dir.push("logs");
+    let _ = fs::create_dir_all(&runtime_dir);
+
+    let mut stdout_path = runtime_dir.clone();
+    stdout_path.push("out.log");
+    let stdout = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(stdout_path)?;
+
+    let mut stderr_path = runtime_dir.clone();
+    stderr_path.push("err.log");
+    let stderr = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(stderr_path)?;
+
+    let config = config.clone();
+    let daemonize = Daemonize::new()
+        .pid_file("/tmp/vizier.pid")
+        .working_directory(workspace.parent().unwrap())
+        .umask(0o022)
+        .stdout(stdout)
+        .stderr(stderr);
+
+    daemonize.start()?;
+    let _ = run_server(config);
     Ok(())
 }

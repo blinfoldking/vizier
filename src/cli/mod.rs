@@ -29,14 +29,14 @@ enum Commands {
     Agent(agent::AgentArgs),
 }
 
-pub async fn start() -> Result<()> {
+pub fn start() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Onboard(args) => onboard::onboard(args.clone()).await?,
-        Commands::Run(args) => run::run(args.clone()).await?,
-        Commands::Init => init::init().await?,
-        Commands::Agent(args) => agent::agent(args.clone()).await?,
+        Commands::Onboard(args) => onboard::onboard(args.clone())?,
+        Commands::Run(args) => run::run(args.clone())?,
+        Commands::Init => init::init()?,
+        Commands::Agent(args) => agent::agent(args.clone())?,
         _ => {
             unimplemented!("TODO: unimplemented");
         }

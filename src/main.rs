@@ -25,8 +25,7 @@ mod storage;
 mod transport;
 mod utils;
 
-#[tokio::main(flavor = "multi_thread")]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     dotenvy::dotenv().ok();
 
     if std::env::var("RUST_LOG").is_err() {
@@ -53,7 +52,7 @@ async fn main() -> Result<()> {
         pretty_env_logger::init();
     }
 
-    if let Err(err) = cli::start().await {
+    if let Err(err) = cli::start() {
         log::error!("{}", err)
     }
     process::exit(0);
