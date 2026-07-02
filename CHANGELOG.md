@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.10] - 2026-07-02
+
+### 🚀 Features
+
+- Optimize memory explorer
+
+### ⚙️ Miscellaneous Tasks
+
+- Bump version to 0.10.10
 ## [0.10.9] - 2026-06-27
 
 ### 🚀 Features
