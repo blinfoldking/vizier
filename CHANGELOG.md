@@ -11,9 +11,17 @@ All notable changes to this project will be documented in this file.
 - Auto-checkpoint on dreaming
 - Add checkpoint feedback
 
+### 🐛 Bug Fixes
+
+- Token eating dreaming checkpointing
+
 ### 💼 Other
 
 - Tweak read count weight
+
+### ⚙️ Miscellaneous Tasks
+
+- Bump version to 0.10.9
 ## [0.10.8] - 2026-06-20
 
 ### 🚀 Features
