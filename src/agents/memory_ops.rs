@@ -75,8 +75,8 @@ async fn dispatch_memory_op(
             .get_related_memories(agent_id.to_string(), slug.clone())
             .await
             .map(MemoryOpResponse::MemoryList),
-        MemoryOpRequest::GetGraph => storage
-            .get_memory_graph(agent_id.to_string())
+        MemoryOpRequest::GetGraph { search } => storage
+            .get_memory_graph(agent_id.to_string(), search.clone())
             .await
             .map(MemoryOpResponse::Graph),
         MemoryOpRequest::Delete { slug } => storage

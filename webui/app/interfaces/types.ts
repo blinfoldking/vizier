@@ -664,6 +664,7 @@ export interface PaginatedMemoryResponse {
 export interface MemoryGraph {
   nodes: MemoryGraphNode[]
   edges: MemoryGraphEdge[]
+  initial_slugs: string[]
 }
 
 export interface MemoryGraphNode {

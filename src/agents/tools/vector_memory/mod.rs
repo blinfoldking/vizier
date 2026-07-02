@@ -564,7 +564,7 @@ impl VizierTool for MemoryGraphTool {
     ) -> Result<Self::Output, VizierError> {
         let graph = self
             .1
-            .get_memory_graph(self.0.clone())
+            .get_memory_graph(self.0.clone(), None)
             .await
             .map_err(|err| VizierError(err.to_string()))?;
 

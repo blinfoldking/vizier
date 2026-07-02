@@ -104,6 +104,7 @@ pub struct MemoryGraphEdge {
 pub struct MemoryGraph {
     pub nodes: Vec<MemoryGraphNode>,
     pub edges: Vec<MemoryGraphEdge>,
+    pub initial_slugs: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

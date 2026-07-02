@@ -108,7 +108,9 @@ pub enum MemoryOpRequest {
     GetRelated {
         slug: String,
     },
-    GetGraph,
+    GetGraph {
+        search: Option<String>,
+    },
     Delete {
         slug: String,
     },

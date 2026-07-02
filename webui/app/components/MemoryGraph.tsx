@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react'
 import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide, forceX, forceY, type SimulationNodeDatum } from 'd3-force'
 import type { MemoryGraph as MemoryGraphType, MemoryVisibility } from '../interfaces/types'
-import { FaPlus, FaMinus, FaCrosshairs, FaSliders } from 'react-icons/fa6'
+import { FaPlus, FaMinus, FaCrosshairs, FaSliders, FaArrowRotateLeft, FaXmark } from 'react-icons/fa6'
 
 interface GraphNode extends SimulationNodeDatum {
   slug: string
@@ -32,12 +32,11 @@ const VISIBILITY_COLORS: Record<MemoryVisibility, string> = {
 const COLOR_CONNECTED = '#10b981'
 const COLOR_ORPHANED = '#6b7280'
 
-function getNodeSize(slug: string, edges: { source: string; target: string }[]): number {
-  const count = edges.filter((e) => e.source === slug || e.target === slug).length
-  return 4 + Math.sqrt(count) * 1.5
+const NODE_SIZE_CAP = 14
+
+function getNodeSize(degree: number): number {
+  return Math.min(NODE_SIZE_CAP, 4 + Math.sqrt(degree) * 1.5)
 }
-
-
 
 export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -50,13 +49,9 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
   const nodesRef = useRef<GraphNode[]>([])
   const linksRef = useRef<{ source: string; target: string; broken: boolean }[]>([])
   const transformRef = useRef({ x: 0, y: 0, k: 1 })
-  const rafRef = useRef<number>(0)
   const dragRef = useRef<{ type: 'pan' | 'node'; startX: number; startY: number; startTx: number; startTy: number; node?: GraphNode; nodeStartX: number; nodeStartY: number; moved: boolean } | null>(null)
   const justDraggedRef = useRef(false)
   const activeNodeSlugRef = useRef<string | null>(null)
-  const animPhaseRef = useRef<'nodes' | 'edges' | 'done'>('nodes')
-  const visibleEdgeCountRef = useRef(0)
-  const edgeRevealTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [tooltip, setTooltip] = useState<TooltipData | null>(null)
@@ -64,6 +59,72 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
   const [chargeStrength, setChargeStrength] = useState(-150)
   const [linkDistance, setLinkDistance] = useState(60)
   const [centerPull, setCenterPull] = useState(0.05)
+
+  const [visibleSlugs, setVisibleSlugs] = useState<Set<string>>(
+    () => new Set(graph.initial_slugs)
+  )
+
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
+  const selectedSlugRef = useRef<string | null>(null)
+  selectedSlugRef.current = selectedSlug
+
+  const selectedNode = useMemo(
+    () => (selectedSlug ? graph.nodes.find((n) => n.slug === selectedSlug) ?? null : null),
+    [selectedSlug, graph.nodes]
+  )
+
+  useEffect(() => {
+    setVisibleSlugs(new Set(graph.initial_slugs))
+    setSelectedSlug(null)
+  }, [graph.initial_slugs])
+
+  const degreeMap = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const n of graph.nodes) m.set(n.slug, 0)
+    for (const e of graph.edges) {
+      m.set(e.source, (m.get(e.source) ?? 0) + 1)
+      m.set(e.target, (m.get(e.target) ?? 0) + 1)
+    }
+    return m
+  }, [graph.nodes, graph.edges])
+
+  const nodeSizeMap = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const [slug, deg] of degreeMap) m.set(slug, getNodeSize(deg))
+    return m
+  }, [degreeMap])
+
+  const degreeOutInMap = useMemo(() => {
+    const out = new Map<string, number>()
+    const inc = new Map<string, number>()
+    for (const e of graph.edges) {
+      out.set(e.source, (out.get(e.source) ?? 0) + 1)
+      inc.set(e.target, (inc.get(e.target) ?? 0) + 1)
+    }
+    return { out, inc }
+  }, [graph.edges])
+
+  const adjacency = useMemo(() => {
+    const m = new Map<string, Set<string>>()
+    for (const n of graph.nodes) m.set(n.slug, new Set())
+    for (const e of graph.edges) {
+      if (!m.has(e.source) || !m.has(e.target)) continue
+      m.get(e.source)!.add(e.target)
+      m.get(e.target)!.add(e.source)
+    }
+    return m
+  }, [graph.nodes, graph.edges])
+
+  const baseSlugs = useMemo(() => new Set(graph.initial_slugs), [graph.initial_slugs])
+
+  const oneHopNeighbors = useCallback((slug: string): Set<string> => {
+    const result = new Set<string>([slug])
+    const neighbors = adjacency.get(slug)
+    if (neighbors) {
+      for (const n of neighbors) result.add(n)
+    }
+    return result
+  }, [adjacency])
 
   const highlightedSlugs = useMemo(() => {
     if (!searchQuery.trim()) return null
@@ -89,39 +150,33 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
 
   const startSimulation = useCallback(() => {
     if (simulationRef.current) simulationRef.current.stop()
-    if (edgeRevealTimerRef.current) {
-      clearInterval(edgeRevealTimerRef.current)
-      edgeRevealTimerRef.current = null
-    }
-    animPhaseRef.current = 'nodes'
-    visibleEdgeCountRef.current = 0
 
     const cx = dimensions.width / 2
     const cy = dimensions.height / 2
-    const nodes: GraphNode[] = graph.nodes.map((n, i) => ({
-      ...n,
-      x: cx + (Math.random() - 0.5) * 20,
-      y: cy + (Math.random() - 0.5) * 20,
-    }))
-    const nodeSlugs = new Set(nodes.map((n) => n.slug))
-
-    const brokenSlugs = new Set<string>()
-    for (const edge of graph.edges) {
-      if (!nodeSlugs.has(edge.source)) brokenSlugs.add(edge.source)
-      if (!nodeSlugs.has(edge.target)) brokenSlugs.add(edge.target)
-    }
-    for (const slug of brokenSlugs) {
-      nodes.push({ slug, title: slug, tags: [], visibility: 'private', agent_id: '', x: cx + (Math.random() - 0.5) * 20, y: cy + (Math.random() - 0.5) * 20 })
-      nodeSlugs.add(slug)
+    const previousPositions = new Map<string, { x: number; y: number }>()
+    for (const n of nodesRef.current) {
+      if (n.x != null && n.y != null) previousPositions.set(n.slug, { x: n.x, y: n.y })
     }
 
-    const validLinks = graph.edges
-      .filter((e) => nodeSlugs.has(e.source) && nodeSlugs.has(e.target))
+    const visibleNodes: GraphNode[] = []
+    for (const n of graph.nodes) {
+      if (!visibleSlugs.has(n.slug)) continue
+      const prev = previousPositions.get(n.slug)
+      visibleNodes.push({
+        ...n,
+        x: prev?.x ?? cx + (Math.random() - 0.5) * 20,
+        y: prev?.y ?? cy + (Math.random() - 0.5) * 20,
+      })
+    }
+
+    const visibleLinks = graph.edges
+      .filter((e) => visibleSlugs.has(e.source) && visibleSlugs.has(e.target))
       .map((e) => ({ source: e.source, target: e.target, broken: e.broken }))
-    nodesRef.current = nodes
-    linksRef.current = graph.edges.map((e) => ({ source: e.source, target: e.target, broken: e.broken }))
 
-    const linkForce = forceLink([] as any).id((d: any) => d.slug).distance(linkDistance)
+    nodesRef.current = visibleNodes
+    linksRef.current = graph.edges
+
+    const linkForce = forceLink(visibleLinks as any).id((d: any) => d.slug).distance(linkDistance)
     const chargeForce = forceManyBody().strength(chargeStrength)
     const cxForce = forceX<GraphNode>(dimensions.width / 2).strength(centerPull)
     const cyForce = forceY<GraphNode>(dimensions.height / 2).strength(centerPull)
@@ -130,7 +185,7 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
     centerXForceRef.current = cxForce
     centerYForceRef.current = cyForce
 
-    const sim = forceSimulation(nodes)
+    const sim = forceSimulation(visibleNodes)
       .force('link', linkForce)
       .force('charge', chargeForce)
       .force('center', forceCenter(dimensions.width / 2, dimensions.height / 2).strength(0.05))
@@ -140,30 +195,10 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
       .alphaDecay(0.02)
       .velocityDecay(0.3)
 
-    const batchSize = Math.max(1, Math.ceil(validLinks.length / 30))
-
-    sim.on('tick', () => {
-      draw()
-      if (animPhaseRef.current === 'nodes' && sim.alpha() < 0.05 && validLinks.length > 0) {
-        animPhaseRef.current = 'edges'
-        edgeRevealTimerRef.current = setInterval(() => {
-          const next = Math.min(visibleEdgeCountRef.current + batchSize, validLinks.length)
-          visibleEdgeCountRef.current = next
-          linkForce.links(validLinks.slice(0, next) as any)
-          sim.alpha(0.15).restart()
-          if (next >= validLinks.length) {
-            animPhaseRef.current = 'done'
-            if (edgeRevealTimerRef.current) {
-              clearInterval(edgeRevealTimerRef.current)
-              edgeRevealTimerRef.current = null
-            }
-          }
-        }, 80)
-      }
-    })
+    sim.on('tick', () => draw())
 
     simulationRef.current = sim
-  }, [graph, dimensions.width, dimensions.height])
+  }, [graph, dimensions.width, dimensions.height, linkDistance, chargeStrength, centerPull, visibleSlugs])
 
   const updateForces = useCallback(() => {
     const sim = simulationRef.current
@@ -183,41 +218,42 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
 
     const { width, height } = dimensions
     const t = transformRef.current
-
-    canvas.width = width * devicePixelRatio
-    canvas.height = height * devicePixelRatio
-    ctx.scale(devicePixelRatio, devicePixelRatio)
-
+    const dpr = window.devicePixelRatio || 1
+    const targetW = Math.round(width * dpr)
+    const targetH = Math.round(height * dpr)
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      canvas.width = targetW
+      canvas.height = targetH
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.scale(dpr, dpr)
     ctx.clearRect(0, 0, width, height)
     ctx.save()
     ctx.translate(t.x, t.y)
     ctx.scale(t.k, t.k)
 
     const nodes = nodesRef.current
-    const allLinks = linksRef.current
-    const links = allLinks.slice(0, visibleEdgeCountRef.current)
+    const visible = visibleSlugs
+    const allEdges = linksRef.current
 
     const connectedSlugs = new Set<string>()
-    const brokenSlugs = new Set<string>()
-    for (const link of links) {
-      const srcSlug = typeof link.source === 'object' ? (link.source as any).slug : link.source
-      const tgtSlug = typeof link.target === 'object' ? (link.target as any).slug : link.target
+    for (const link of allEdges) {
+      if (!visible.has(link.source) || !visible.has(link.target)) continue
       if (!link.broken) {
-        connectedSlugs.add(srcSlug)
-        connectedSlugs.add(tgtSlug)
-      } else {
-        brokenSlugs.add(tgtSlug)
+        connectedSlugs.add(link.source)
+        connectedSlugs.add(link.target)
       }
     }
 
-    for (const link of links) {
-
+    for (const link of allEdges) {
+      if (!visible.has(link.source) || !visible.has(link.target)) continue
       const src = nodes.find((n) => n.slug === link.source)
       const tgt = nodes.find((n) => n.slug === link.target)
-      // console.log('>>', { link })
       if (!src || !tgt || src.x == null || src.y == null || tgt.x == null || tgt.y == null) continue
 
-      const isMatch = highlightedSlugs === null || (highlightedSlugs.has(src.slug) && highlightedSlugs.has(tgt.slug))
+      const anyExpanded = !baseSlugs.has(src.slug) || !baseSlugs.has(tgt.slug)
+      const bothMatch = highlightedSlugs !== null && highlightedSlugs.has(src.slug) && highlightedSlugs.has(tgt.slug)
+      const isMatch = highlightedSlugs === null || bothMatch || anyExpanded
       const isActive = activeNodeSlugRef.current !== null && (src.slug === activeNodeSlugRef.current || tgt.slug === activeNodeSlugRef.current)
       ctx.globalAlpha = isMatch ? (isActive ? 1 : 0.5) : 0.07
       ctx.strokeStyle = isActive ? COLOR_CONNECTED : (link.broken ? '#ef4444' : '#9ca3af')
@@ -228,8 +264,8 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
       const dx = tgt.x - src.x
       const dy = tgt.y - src.y
       const dist = Math.sqrt(dx * dx + dy * dy)
-      const srcSize = getNodeSize(src.slug, graph.edges)
-      const tgtSize = getNodeSize(tgt.slug, graph.edges)
+      const srcSize = nodeSizeMap.get(src.slug) ?? 4
+      const tgtSize = nodeSizeMap.get(tgt.slug) ?? 4
       const angle = Math.atan2(tgt.y - src.y, tgt.x - src.x)
       if (dist > 0) {
         const nx = dx / dist
@@ -239,10 +275,10 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
         ctx.lineTo(tgt.x - nx * tgtSize, tgt.y - ny * tgtSize)
         ctx.stroke()
         ctx.setLineDash([])
-        const hasReverse = links.some((l) => {
-          const ls = typeof l.source === 'object' ? (l.source as any).slug : l.source
-          const lt = typeof l.target === 'object' ? (l.target as any).slug : l.target
-          return ls === tgt.slug && lt === src.slug
+        const hasReverse = allEdges.some((l) => {
+          if (l === link) return false
+          if (!visible.has(l.source) || !visible.has(l.target)) return false
+          return l.source === tgt.slug && l.target === src.slug
         })
         const arrowOffset = hasReverse ? 0.15 : 0
         const mx = src.x + (tgt.x - src.x) * (0.5 + arrowOffset)
@@ -277,11 +313,13 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
 
     for (const node of nodes) {
       if (node.x == null || node.y == null) continue
-      const size = getNodeSize(node.slug, graph.edges)
+      const size = nodeSizeMap.get(node.slug) ?? 4
       const isConnected = connectedSlugs.has(node.slug)
       const nodeColor = isConnected ? COLOR_CONNECTED : COLOR_ORPHANED
-      const isMatch = highlightedSlugs === null || highlightedSlugs.has(node.slug)
-      ctx.globalAlpha = isMatch ? 1 : 0.15
+      const isExpanded = !baseSlugs.has(node.slug)
+      const matches = highlightedSlugs === null || highlightedSlugs.has(node.slug)
+      const shouldDim = !matches && !isExpanded
+      ctx.globalAlpha = shouldDim ? 0.15 : 1
 
       ctx.fillStyle = nodeColor + '33'
       ctx.strokeStyle = nodeColor
@@ -299,14 +337,6 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
         ctx.fill()
         ctx.stroke()
         ctx.setLineDash([])
-      } else if (brokenSlugs.has(node.slug) && !connectedSlugs.has(node.slug)) {
-        const arm = size * 0.7
-        ctx.beginPath()
-        ctx.moveTo(node.x - arm, node.y - arm)
-        ctx.lineTo(node.x + arm, node.y + arm)
-        ctx.moveTo(node.x + arm, node.y - arm)
-        ctx.lineTo(node.x - arm, node.y + arm)
-        ctx.stroke()
       } else {
         const half = size * 0.75
         const r = 3 / t.k
@@ -323,7 +353,17 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
         ctx.lineWidth = 2 / t.k
         ctx.globalAlpha = 0.4
         ctx.stroke()
-        ctx.globalAlpha = isMatch ? 1 : 0.15
+        ctx.globalAlpha = shouldDim ? 0.15 : 1
+      }
+
+      if (selectedSlugRef.current === node.slug) {
+        ctx.beginPath()
+        ctx.arc(node.x, node.y, size + 5, 0, 2 * Math.PI)
+        ctx.strokeStyle = '#06b6d4'
+        ctx.lineWidth = 2.5 / t.k
+        ctx.globalAlpha = 1
+        ctx.stroke()
+        ctx.globalAlpha = shouldDim ? 0.15 : 1
       }
 
       const labelAlpha = Math.max(0, Math.min(1, (t.k - 0.6) / 0.4))
@@ -333,23 +373,19 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
         ctx.textAlign = 'center'
         ctx.textBaseline = 'top'
         ctx.fillStyle = '#9ca3af'
-        ctx.globalAlpha = (isMatch ? 0.8 : 0.1) * labelAlpha
+        ctx.globalAlpha = (shouldDim ? 0.1 : 0.8) * labelAlpha
         ctx.fillText(label, node.x, node.y + size + 3 / t.k)
       }
     }
 
     ctx.globalAlpha = 1
     ctx.restore()
-  }, [dimensions, graph.edges, highlightedSlugs])
+  }, [dimensions, highlightedSlugs, nodeSizeMap, visibleSlugs])
 
   useEffect(() => {
     startSimulation()
     return () => {
       simulationRef.current?.stop()
-      if (edgeRevealTimerRef.current) {
-        clearInterval(edgeRevealTimerRef.current)
-        edgeRevealTimerRef.current = null
-      }
     }
   }, [startSimulation])
 
@@ -364,13 +400,15 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
 
   const findNodeAt = useCallback((sx: number, sy: number): GraphNode | null => {
     const { x, y } = screenToGraph(sx, sy)
-    for (const node of nodesRef.current) {
+    const nodes = nodesRef.current
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const node = nodes[i]
       if (node.x == null || node.y == null) continue
-      const size = getNodeSize(node.slug, graph.edges)
+      const size = nodeSizeMap.get(node.slug) ?? 4
       if (Math.hypot(node.x - x, node.y - y) < size + 4) return node
     }
     return null
-  }, [graph.edges, screenToGraph])
+  }, [screenToGraph, nodeSizeMap])
 
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault()
@@ -429,8 +467,6 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
     const node = findNodeAt(mx, my)
     if (node) {
       activeNodeSlugRef.current = node.slug
-      const outgoing = graph.edges.filter((e) => e.source === node.slug).length
-      const incoming = graph.edges.filter((e) => e.target === node.slug).length
       setTooltip({ node, x: e.clientX, y: e.clientY })
       canvasRef.current!.style.cursor = 'pointer'
     } else {
@@ -439,7 +475,7 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
       canvasRef.current!.style.cursor = 'grab'
     }
     draw()
-  }, [findNodeAt, draw, graph.edges, screenToGraph])
+  }, [findNodeAt, draw, screenToGraph])
 
   const handleMouseUp = useCallback(() => {
     if (dragRef.current?.type === 'node' && dragRef.current.node) {
@@ -453,6 +489,26 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
     dragRef.current = null
   }, [])
 
+  const handleNodeActivate = useCallback((slug: string) => {
+    const neighborhoodSet = oneHopNeighbors(slug)
+    setVisibleSlugs((prev) => {
+      const next = new Set(prev)
+      for (const s of neighborhoodSet) next.add(s)
+      return next
+    })
+    simulationRef.current?.alpha(0.3).restart()
+  }, [oneHopNeighbors])
+
+  const handleOpen = useCallback(() => {
+    const slug = selectedSlugRef.current
+    if (slug) onNodeClick(slug)
+  }, [onNodeClick])
+
+  const handleClose = useCallback(() => {
+    setSelectedSlug(null)
+    draw()
+  }, [draw])
+
   const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (justDraggedRef.current) {
       justDraggedRef.current = false
@@ -460,8 +516,21 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
     }
     const rect = canvasRef.current!.getBoundingClientRect()
     const node = findNodeAt(e.clientX - rect.left, e.clientY - rect.top)
-    if (node) onNodeClick(node.slug)
-  }, [findNodeAt, onNodeClick])
+    if (!node) {
+      setSelectedSlug(null)
+      draw()
+      return
+    }
+    setSelectedSlug(node.slug)
+    handleNodeActivate(node.slug)
+    draw()
+  }, [findNodeAt, handleNodeActivate, draw])
+
+  const handleReset = useCallback(() => {
+    setVisibleSlugs(new Set(graph.initial_slugs))
+    setSelectedSlug(null)
+    simulationRef.current?.alpha(0.4).restart()
+  }, [graph.initial_slugs])
 
   const zoomIn = useCallback(() => {
     const t = transformRef.current
@@ -536,7 +605,7 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
             ))}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-            {graph.edges.filter((e) => e.source === tooltip.node.slug).length} outgoing · {graph.edges.filter((e) => e.target === tooltip.node.slug).length} incoming
+            {degreeOutInMap.out.get(tooltip.node.slug) ?? 0} outgoing · {degreeOutInMap.inc.get(tooltip.node.slug) ?? 0} incoming
           </div>
         </div>
       )}
@@ -576,6 +645,9 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
         <button className="btn btn-ghost" onClick={resetView} style={{ padding: '8px', minWidth: '32px', justifyContent: 'center' }} title="Reset view">
           <FaCrosshairs size={14} />
         </button>
+        <button className="btn btn-ghost" onClick={handleReset} style={{ padding: '8px', minWidth: '32px', justifyContent: 'center' }} title="Reset to initial set">
+          <FaArrowRotateLeft size={14} />
+        </button>
         <div style={{ height: '1px', background: 'var(--border)', margin: '0 4px' }} />
         <button className="btn btn-ghost" onClick={() => setShowForceControls(!showForceControls)} style={{ padding: '8px', minWidth: '32px', justifyContent: 'center', color: showForceControls ? 'var(--accent-primary)' : undefined }} title="Force controls">
           <FaSliders size={14} />
@@ -609,9 +681,105 @@ export default function MemoryGraph({ graph, searchQuery, onNodeClick }: MemoryG
         </div>
       )}
 
-      <div style={{ position: 'absolute', top: '12px', right: '12px', fontSize: '11px', color: 'var(--text-tertiary)', background: 'var(--surface)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)' }}>
-        {graph.nodes.length} nodes · {graph.edges.length} edges
-      </div>
+      {selectedNode ? (
+        <div
+          style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            width: '300px',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '8px',
+            boxShadow: 'var(--shadow-lg)',
+            padding: '12px',
+            zIndex: 5,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+            <div style={{ flex: 1, fontWeight: 600, fontSize: '13px', lineHeight: 1.3, wordBreak: 'break-word' }}>
+              {selectedNode.title}
+            </div>
+            <button
+              className="btn btn-ghost"
+              onClick={handleClose}
+              style={{ padding: '2px 6px', minWidth: 'auto', lineHeight: 1 }}
+              title="Deselect"
+            >
+              <FaXmark size={12} />
+            </button>
+          </div>
+          <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>
+            {selectedNode.slug}
+          </div>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            <span
+              style={{
+                fontSize: '10px',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                background: VISIBILITY_COLORS[selectedNode.visibility] + '20',
+                color: VISIBILITY_COLORS[selectedNode.visibility],
+                fontWeight: 500,
+              }}
+            >
+              {selectedNode.visibility}
+            </span>
+            {selectedNode.tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag}
+                style={{
+                  fontSize: '10px',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  background: 'var(--background)',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+            {selectedNode.tags.length > 3 && (
+              <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                +{selectedNode.tags.length - 3}
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+            {degreeOutInMap.out.get(selectedNode.slug) ?? 0} outgoing · {degreeOutInMap.inc.get(selectedNode.slug) ?? 0} incoming
+          </div>
+          <div style={{ height: '1px', background: 'var(--border)' }} />
+          <button
+            className="btn btn-primary"
+            onClick={handleOpen}
+            style={{ justifyContent: 'center' }}
+          >
+            Open
+          </button>
+          <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', textAlign: 'right' }}>
+            {visibleSlugs.size} visible · {graph.nodes.length} total
+          </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            fontSize: '11px',
+            color: 'var(--text-tertiary)',
+            background: 'var(--surface)',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            border: '1px solid var(--border)',
+          }}
+        >
+          {visibleSlugs.size} visible · {graph.nodes.length} total
+        </div>
+      )}
     </div>
   )
 }

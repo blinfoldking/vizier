@@ -394,8 +394,15 @@ export const queryMemories = async (
   return res.data
 }
 
-export const getMemoryGraph = async (agentId: string) => {
-  const res = await apiClient.get(`/agents/${agentId}/memory/graph`)
+export const getMemoryGraph = async (
+  agentId: string,
+  opts?: { search?: string }
+) => {
+  const params = new URLSearchParams()
+  if (opts?.search) params.append('search', opts.search)
+  const queryString = params.toString()
+  const url = `/agents/${agentId}/memory/graph${queryString ? `?${queryString}` : ''}`
+  const res = await apiClient.get(url)
   return res.data
 }
 

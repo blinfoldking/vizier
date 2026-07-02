@@ -319,7 +319,11 @@ impl MemoryStorage for FileSystemStorage {
         Ok(related)
     }
 
-    async fn get_memory_graph(&self, agent_id: String) -> Result<MemoryGraph> {
+    async fn get_memory_graph(
+        &self,
+        agent_id: String,
+        search: Option<String>,
+    ) -> Result<MemoryGraph> {
         let memories = self.get_all_agent_memory(agent_id.clone()).await?;
 
         let mut nodes: Vec<MemoryGraphNode> = memories
@@ -355,7 +359,14 @@ impl MemoryStorage for FileSystemStorage {
         nodes.sort_by(|a, b| a.slug.cmp(&b.slug));
         edges.sort_by(|a, b| a.source.cmp(&b.source).then(a.target.cmp(&b.target)));
 
-        Ok(MemoryGraph { nodes, edges })
+        let initial_slugs =
+            crate::storage::memory::compute_initial_slugs(&nodes, &edges, search.as_deref());
+
+        Ok(MemoryGraph {
+            nodes,
+            edges,
+            initial_slugs,
+        })
     }
 
     async fn has_incoming_links(&self, agent_id: String, slug: String) -> Result<bool> {

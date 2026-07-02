@@ -1,32 +1,27 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
-import { Link, useParams } from 'react-router'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import {
-  listMemories,
   getMemory,
   createMemory,
   updateMemory,
   deleteMemory,
   getMemoryGraph,
-  getRelatedMemories,
   getAgentDetail,
 } from '../services/vizier'
 import { autoCorrectSlug, autoCorrectSlugStrict } from '../utils/slug'
-import { FaPlus, FaTrash, FaPenToSquare, FaMagnifyingGlass, FaList, FaDiagramProject, FaPaperclip } from 'react-icons/fa6'
-import { Skeleton } from '../components/Skeleton'
+import { FaPlus, FaTrash, FaPenToSquare, FaMagnifyingGlass, FaPaperclip } from 'react-icons/fa6'
 import { useToastStore } from '../hooks/toastStore'
 import { useFileAttachments } from '../hooks/useFileAttachments'
 import AttachmentChip from '../components/AttachmentChip'
 import AttachmentPreviewModal from '../components/AttachmentPreviewModal'
 import type {
   AgentDetail,
-  Memory,
   MemoryDetail,
   MemoryVisibility,
   MemoryGraph as MemoryGraphType,
-  PaginatedMemoryResponse,
   VizierAttachment,
 } from '../interfaces/types'
 import MarkdownEditor from '../components/MarkdownEditor'
@@ -42,7 +37,6 @@ function getErrorMessage(err: unknown): string {
 }
 
 type ModalMode = 'create' | 'edit' | 'view' | null
-type ViewMode = 'list' | 'graph'
 
 function VisibilityBadge({ visibility }: { visibility: MemoryVisibility }) {
   const styles: Record<MemoryVisibility, { bg: string; text: string; label: string }> = {
@@ -70,11 +64,11 @@ function VisibilityBadge({ visibility }: { visibility: MemoryVisibility }) {
 
 export default function MemoryManagement() {
   const { agentId } = useParams()
-  const [memories, setMemories] = useState<Memory[]>([])
+  const [searchParams, setSearchParams] = useSearchParams()
+  const urlSearch = searchParams.get('search') ?? ''
+  const [searchQuery, setSearchQuery] = useState(urlSearch)
   const [selectedMemory, setSelectedMemory] = useState<MemoryDetail | null>(null)
-  const [loading, setLoading] = useState(true)
   const [modalMode, setModalMode] = useState<ModalMode>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
 
   const [formTitle, setFormTitle] = useState('')
   const [formContent, setFormContent] = useState('')
@@ -84,18 +78,15 @@ export default function MemoryManagement() {
   const [formTags, setFormTags] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterVisibility, setFilterVisibility] = useState<MemoryVisibility | 'all'>('all')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalMemories, setTotalMemories] = useState(0)
-  const pageSize = 20
-
   const [graph, setGraph] = useState<MemoryGraphType | null>(null)
   const [graphLoading, setGraphLoading] = useState(false)
+  const [graphVersion, setGraphVersion] = useState(0)
   const [agentDetail, setAgentDetail] = useState<AgentDetail | null>(null)
 
   const [existingAttachments, setExistingAttachments] = useState<VizierAttachment[]>([])
   const [previewAttachment, setPreviewAttachment] = useState<VizierAttachment | null>(null)
+
+  const abortRef = useRef<AbortController | null>(null)
 
   const {
     attachments: pendingAttachments,
@@ -123,60 +114,46 @@ export default function MemoryManagement() {
   }, [agentId])
 
   useEffect(() => {
-    loadMemories()
-  }, [agentId, filterVisibility, currentPage])
+    if (searchQuery === urlSearch) return
+    const next = new URLSearchParams(searchParams)
+    if (searchQuery) {
+      next.set('search', searchQuery)
+    } else {
+      next.delete('search')
+    }
+    setSearchParams(next, { replace: true })
+  }, [searchQuery, urlSearch, searchParams, setSearchParams])
 
   useEffect(() => {
-    if (viewMode === 'graph' && agentId) {
-      loadGraph()
-    }
-  }, [viewMode, agentId])
-
-  const loadMemories = async () => {
     if (!agentId) return
-    try {
-      setLoading(true)
-      const response: { data: PaginatedMemoryResponse } = await listMemories(agentId, {
-        visibility: filterVisibility === 'all' ? undefined : filterVisibility,
-        offset: (currentPage - 1) * pageSize,
-        limit: pageSize,
+    if (abortRef.current) abortRef.current.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    setGraphLoading(true)
+    const trimmed = urlSearch.trim()
+    const opts: { search?: string } = {}
+    if (trimmed) opts.search = trimmed
+
+    getMemoryGraph(agentId, opts)
+      .then((res) => {
+        if (controller.signal.aborted) return
+        setGraph(res.data)
       })
-      setMemories(response.data?.memories || [])
-      setTotalMemories(response.data?.total || 0)
-    } catch (error) {
-      console.error('Failed to load memories:', error)
-      addToast('error', 'Failed to load memories', 'Please try again')
-    } finally {
-      setLoading(false)
-    }
-  }
+      .catch((err) => {
+        if (controller.signal.aborted) return
+        console.error('Failed to load graph:', err)
+        addToast('error', 'Failed to load graph', 'Please try again')
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setGraphLoading(false)
+      })
 
-  const loadGraph = async () => {
-    if (!agentId) return
-    try {
-      setGraphLoading(true)
-      const response = await getMemoryGraph(agentId)
-      setGraph(response.data)
-    } catch (error) {
-      console.error('Failed to load graph:', error)
-      addToast('error', 'Failed to load graph', 'Please try again')
-    } finally {
-      setGraphLoading(false)
-    }
-  }
+    return () => controller.abort()
+  }, [agentId, urlSearch, graphVersion, addToast])
 
-  const filteredMemories = useMemo(() => {
-    if (!searchQuery.trim()) return memories
-    const q = searchQuery.toLowerCase()
-    return memories.filter(
-      (m) =>
-        m.title.toLowerCase().includes(q) ||
-        m.slug.toLowerCase().includes(q) ||
-        m.tags?.some((t) => t.toLowerCase().includes(q))
-    )
-  }, [memories, searchQuery])
-
-  const totalPages = Math.ceil(totalMemories / pageSize)
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value)
+  }, [])
 
   const handleViewMemory = async (slug: string) => {
     if (!agentId) return
@@ -252,7 +229,7 @@ export default function MemoryManagement() {
         await updateMemory(agentId, selectedMemory.slug, formTitle, sanitizedContent, formVisibility, sharedTo, tags, allAttachments.length > 0 ? allAttachments : undefined)
         addToast('success', 'Memory updated successfully')
       }
-      await loadMemories()
+      setGraphVersion((v) => v + 1)
       closeModal()
     } catch (error: unknown) {
       console.error('Failed to save memory:', error)
@@ -269,7 +246,7 @@ export default function MemoryManagement() {
     try {
       await deleteMemory(agentId, slug)
       addToast('success', 'Memory deleted successfully')
-      await loadMemories()
+      setGraphVersion((v) => v + 1)
       closeModal()
     } catch (error: unknown) {
       console.error('Failed to delete memory:', error)
@@ -290,10 +267,6 @@ export default function MemoryManagement() {
     clearAttachments()
   }
 
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchQuery(value)
-  }, [])
-
   return (
     <>
       <div className="main-header">
@@ -301,72 +274,32 @@ export default function MemoryManagement() {
           <h3 style={{ margin: 0 }}>Memory Management</h3>
         </div>
 
-        <div className="pill-tabs">
-          <button
-            className={`pill-tab ${viewMode === 'list' ? 'active' : ''}`}
-            onClick={() => setViewMode('list')}
-          >
-            <FaList size={14} />
-            List
-          </button>
-          <button
-            className={`pill-tab ${viewMode === 'graph' ? 'active' : ''}`}
-            onClick={() => setViewMode('graph')}
-          >
-            <FaDiagramProject size={14} />
-            Graph
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
-            <FaMagnifyingGlass
-              size={14}
-              style={{
-                position: 'absolute',
-                left: '10px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-tertiary)',
-              }}
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search memories..."
-              style={{
-                padding: '8px 12px 8px 32px',
-                borderRadius: '6px',
-                border: '1px solid var(--border)',
-                background: 'var(--background)',
-                color: 'var(--text)',
-                width: '200px',
-                fontSize: '13px',
-              }}
-            />
-          </div>
-
-          <select
-            value={filterVisibility}
-            onChange={(e) => {
-              setFilterVisibility(e.target.value as MemoryVisibility | 'all')
-              setCurrentPage(1)
-            }}
+        <div style={{ position: 'relative' }}>
+          <FaMagnifyingGlass
+            size={14}
             style={{
-              padding: '8px 12px',
+              position: 'absolute',
+              left: '10px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--text-tertiary)',
+            }}
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Search memories..."
+            style={{
+              padding: '8px 12px 8px 32px',
               borderRadius: '6px',
               border: '1px solid var(--border)',
               background: 'var(--background)',
               color: 'var(--text)',
+              width: '240px',
               fontSize: '13px',
             }}
-          >
-            <option value="all">All Visibility</option>
-            <option value="private">Private</option>
-            <option value="global">Global</option>
-            <option value="shared">Shared</option>
-          </select>
+          />
         </div>
 
         <button className="btn btn-primary" onClick={handleCreateMemory}>
@@ -405,186 +338,23 @@ export default function MemoryManagement() {
             </Link>
           </div>
         )}
-        {viewMode === 'list' ? (
-          loading ? (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Slug</th>
-                  <th>Tags</th>
-                  <th>Visibility</th>
-                  <th>Updated</th>
-                  <th style={{ width: '80px' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <tr key={i} style={{ cursor: 'default' }}>
-                    <td><Skeleton variant="text" width="60%" /></td>
-                    <td><Skeleton variant="text" width="40%" /></td>
-                    <td><Skeleton variant="text" width="60px" /></td>
-                    <td><Skeleton variant="text" width="60px" /></td>
-                    <td><Skeleton variant="text" width="50%" /></td>
-                    <td><Skeleton variant="text" width="60px" /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : filteredMemories.length === 0 ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '3rem' }}>
-              <p style={{ fontSize: '16px', marginBottom: '0.5rem' }}>
-                {searchQuery || filterVisibility !== 'all'
-                  ? 'No matching memories'
-                  : 'No memories yet'}
-              </p>
-              <p style={{ fontSize: '14px', marginBottom: '1.5rem' }}>
-                {searchQuery || filterVisibility !== 'all'
-                  ? 'Try adjusting your filters'
-                  : 'Create your first memory to get started'}
-              </p>
-              {!searchQuery && filterVisibility === 'all' && (
-                <button className="btn btn-primary" onClick={handleCreateMemory}>
-                  <FaPlus size={16} />
-                  Create Memory
-                </button>
-              )}
+        <div style={{ height: '100%', minHeight: '500px' }}>
+          {graphLoading && !graph ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-tertiary)' }}>
+              Loading graph…
             </div>
+          ) : graph ? (
+            <MemoryGraph
+              graph={graph}
+              searchQuery={searchQuery}
+              onNodeClick={handleViewMemory}
+            />
           ) : (
-            <>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Slug</th>
-                    <th>Tags</th>
-                    <th>Visibility</th>
-                    <th>Updated</th>
-                    <th style={{ width: '80px' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMemories.map((memory) => (
-                    <tr key={memory.slug} onClick={() => handleViewMemory(memory.slug)}>
-                      <td style={{ fontWeight: 500 }}>
-                        {memory.title}
-                        {memory.attachments && memory.attachments.length > 0 && (
-                          <FaPaperclip size={12} style={{ marginLeft: '6px', color: 'var(--text-tertiary)', verticalAlign: 'middle' }} />
-                        )}
-                      </td>
-                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
-                        {memory.slug}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                          {memory.tags?.slice(0, 2).map((tag) => (
-                            <span
-                              key={tag}
-                              style={{
-                                fontSize: '10px',
-                                padding: '2px 6px',
-                                borderRadius: '8px',
-                                background: 'var(--surface)',
-                                color: 'var(--text-secondary)',
-                              }}
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                          {memory.tags?.length > 2 && (
-                            <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
-                              +{memory.tags.length - 2}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td><VisibilityBadge visibility={memory.visibility} /></td>
-                      <td style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                        {new Date(memory.timestamp).toLocaleString()}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          <button
-                            className="btn btn-ghost"
-                            style={{ padding: '4px 6px' }}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleEditMemory({ ...memory, content: '' } as MemoryDetail)
-                            }}
-                          >
-                            <FaPenToSquare size={14} />
-                          </button>
-                          <button
-                            className="btn btn-ghost"
-                            style={{ padding: '4px 6px', color: '#ef4444' }}
-                            onClick={(e) => handleDeleteMemory(memory.slug, e)}
-                          >
-                            <FaTrash size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {totalPages > 1 && (
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '16px',
-                    fontSize: '13px',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  <button
-                    className="btn btn-ghost"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((p) => p - 1)}
-                    style={{ padding: '6px 12px' }}
-                  >
-                    Prev
-                  </button>
-                  <span>
-                    Page {currentPage} of {totalPages} ({totalMemories} memories)
-                  </span>
-                  <button
-                    className="btn btn-ghost"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage((p) => p + 1)}
-                    style={{ padding: '6px 12px' }}
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </>
-          )
-        ) : (
-          <div style={{ height: '100%', minHeight: '500px' }}>
-            {graphLoading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                <Skeleton variant="text" width="200px" />
-              </div>
-            ) : graph ? (
-              <MemoryGraph
-                graph={graph}
-                searchQuery={searchQuery}
-                onNodeClick={handleViewMemory}
-              />
-            ) : (
-              <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '3rem' }}>
-                <p>Failed to load graph</p>
-                <button className="btn btn-secondary" onClick={loadGraph}>
-                  Retry
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+            <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '3rem' }}>
+              <p>Failed to load graph</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* SlideOver */}

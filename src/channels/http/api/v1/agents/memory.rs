@@ -103,6 +103,12 @@ pub struct ListMemoryParams {
     pub sort_order: Option<String>,
 }
 
+#[derive(Debug, Deserialize, Default, utoipa::ToSchema)]
+pub struct GraphQueryParams {
+    #[serde(default)]
+    pub search: Option<String>,
+}
+
 fn default_list_offset() -> usize {
     0
 }
@@ -453,7 +459,8 @@ pub async fn query_memories(
     get,
     path = "/agents/{agent_id}/memory/graph",
     params(
-        ("agent_id" = String, Path, description = "Agent ID")
+        ("agent_id" = String, Path, description = "Agent ID"),
+        ("search" = Option<String>, Query, description = "Substring filter for initial slugs (matches title, slug, tags)")
     ),
     responses(
         (status = 200, description = "Memory graph", body = APIResponse<MemoryGraph>),
@@ -465,14 +472,23 @@ pub async fn get_memory_graph(
     Path(agent_id): Path<String>,
     State(state): State<HTTPState>,
     Extension(user): Extension<crate::channels::http::auth::AuthenticatedUser>,
+    Query(params): Query<GraphQueryParams>,
 ) -> models::response::Response<MemoryGraph> {
     if let Err((status, message)) = require_agent(&state, &agent_id, &user).await {
         return err_response(status, message);
     }
 
+    let search = params
+        .search
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+
     match state
         .transport
-        .send_memory_op(&agent_id, crate::schema::MemoryOpRequest::GetGraph)
+        .send_memory_op(
+            &agent_id,
+            crate::schema::MemoryOpRequest::GetGraph { search },
+        )
         .await
     {
         Ok(crate::schema::MemoryOpResponse::Graph(graph)) => {
