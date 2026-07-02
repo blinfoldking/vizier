@@ -5,14 +5,12 @@ use std::str::FromStr;
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
 use croner::Cron;
-use rig_core::message::Message;
 
 use crate::{
-    agents::agent::{generate_handover_with_model, model::VizierModel},
     dependencies::VizierDependencies,
     schema::{
-        AgentConfig, DreamStage, DreamStatus, VizierChannelId, VizierRequest, VizierRequestContent,
-        VizierResponse, VizierResponseContent, VizierSession, history_entries_to_messages,
+        DreamStage, DreamStatus, VizierChannelId, VizierRequest, VizierRequestContent,
+        VizierResponse, VizierResponseContent, VizierSession,
     },
     storage::{
         agent::AgentStorage, dream::DreamStorage, dream_journal::DreamJournalStorage,
@@ -142,12 +140,9 @@ impl DreamScheduler {
 
         let total = sessions.len();
 
-        // Pre-dream checkpoint: generate a real handover for each source session
-        // and persist it as a Checkpoint row before extraction consumes the history.
-        if let Err(e) = self
-            .pre_check_sessions(agent_id, &sessions, &config)
-            .await
-        {
+        // Pre-dream checkpoint: delegate to the agent's checkpoint command for each
+        // source session so extraction sees a Checkpoint row as the prior context.
+        if let Err(e) = self.pre_check_sessions(agent_id, &sessions).await {
             tracing::warn!(
                 "Pre-dream checkpoint phase failed for agent '{}': {}",
                 agent_id,
@@ -369,87 +364,62 @@ impl DreamScheduler {
             .unwrap_or(DreamStatus::Idle))
     }
 
-    /// Generate a real handover for each source session and persist it as a
-    /// `Checkpoint` row. Runs sequentially before extraction. Uses the dream
-    /// provider/model when configured, otherwise falls back to the agent's
-    /// primary model.
+    /// Delegate checkpointing to the agent's existing `Command("checkpoint")`
+    /// handler for each source session. The agent's handler aborts the session,
+    /// generates a handover, persists a `Checkpoint` row, and replies with a
+    /// `VizierResponseContent::Checkpoint` we wait for.
     ///
-    /// Per-session failures are logged and do not abort the overall phase.
-    async fn pre_check_sessions(
-        &self,
-        agent_id: &str,
-        sessions: &[VizierSession],
-        config: &AgentConfig,
-    ) -> Result<()> {
+    /// Sessions with no new history since the last checkpoint are skipped so
+    /// we don't redundantly regenerate the same handover.
+    async fn pre_check_sessions(&self, agent_id: &str, sessions: &[VizierSession]) -> Result<()> {
         if sessions.is_empty() {
             return Ok(());
         }
 
-        let model_override = match (&config.dream_provider, &config.dream_model) {
-            (Some(p), Some(m)) => Some((p.clone(), m.clone())),
-            _ => None,
-        };
-        let model = VizierModel::new_with_override(&self.deps, config, model_override).await?;
-
         for session in sessions {
             let slug = session.to_slug();
-            let (history, prior_handover) = self
+
+            let (history, _prior_handover) = self
                 .deps
                 .storage
                 .list_session_history_until_checkpoint(session.clone(), None)
                 .await?;
 
-            if history.is_empty() && prior_handover.is_none() {
+            if history.is_empty() {
                 tracing::debug!(
-                    "Pre-dream checkpoint skipped for '{}': no history",
+                    "Pre-dream checkpoint skipped for '{}': no new history",
                     slug
                 );
                 continue;
             }
 
-            let mut messages = history_entries_to_messages(&history);
-            if let Some(handover) = prior_handover {
-                messages.insert(
-                    0,
-                    Message::system(format!(
-                        "# Conversation Context (Previous Checkpoint)\n\
-                         The following is a summary of the conversation before the previous checkpoint. \
-                         Use this to maintain context and continuity.\n\n{}",
-                        handover
-                    )),
-                );
+            let (resp_tx, resp_rx) = flume::unbounded();
+            if let Err(e) = self
+                .deps
+                .transport
+                .send_request(
+                    session.clone(),
+                    VizierRequest {
+                        timestamp: Utc::now(),
+                        user: agent_id.to_string(),
+                        content: VizierRequestContent::Command("checkpoint".to_string()),
+                        ..Default::default()
+                    },
+                    Some(resp_tx),
+                )
+                .await
+            {
+                tracing::warn!("Pre-dream checkpoint dispatch failed for '{}': {}", slug, e);
+                continue;
             }
 
-            match generate_handover_with_model(&model, &messages).await {
-                Ok(Some(handover)) => {
-                    if let Err(e) = self
-                        .deps
-                        .storage
-                        .save_checkpoint(session.clone(), Some(handover))
-                        .await
-                    {
-                        tracing::warn!(
-                            "Pre-dream checkpoint save failed for '{}': {}",
-                            slug,
-                            e
-                        );
-                    } else {
-                        tracing::info!("Pre-dream checkpoint saved for '{}'", slug);
-                    }
-                }
-                Ok(None) => {
-                    tracing::debug!(
-                        "Pre-dream checkpoint skipped for '{}': empty handover",
-                        slug
-                    );
-                }
-                Err(e) => {
-                    tracing::warn!("Pre-dream handover failed for '{}': {}", slug, e);
+            while let Ok(response) = resp_rx.recv_async().await {
+                if matches!(response.content, VizierResponseContent::Checkpoint { .. }) {
+                    break;
                 }
             }
         }
 
-        let _ = agent_id;
         Ok(())
     }
 }
