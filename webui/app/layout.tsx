@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Outlet, useNavigate, useParams, useLocation } from 'react-router'
-import { FaRobot, FaGear, FaCircleCheck, FaRightFromBracket, FaArrowTrendUp, FaChevronDown, FaChevronLeft, FaComment, FaSun, FaMoon, FaBars, FaPlus, FaBook, FaWandMagicSparkles, FaHouse, FaCloudMoon } from 'react-icons/fa6'
+import { FaRobot, FaGear, FaCircleCheck, FaRightFromBracket, FaArrowTrendUp, FaChevronDown, FaChevronLeft, FaComment, FaSun, FaMoon, FaBars, FaPlus, FaBook, FaWandMagicSparkles, FaHouse, FaCloudMoon, FaBrain } from 'react-icons/fa6'
 import Avatar from './components/avatar'
 import ToastContainer from './components/Toast'
 import { useConnectionStore } from './hooks/connectionStore'
@@ -118,6 +118,7 @@ export default function Layout() {
 
   const getCurrentView = () => {
     if (location.pathname === '/') return 'home'
+    if (location.pathname.includes('/core')) return 'core'
     if (location.pathname.includes('/memory')) return 'memory'
     if (location.pathname.includes('/tasks')) return 'tasks'
     if (location.pathname.includes('/skills')) return 'skills'
@@ -266,6 +267,7 @@ export default function Layout() {
             {([
               ['home', 'Home', FaHouse],
               ['chat', 'Chat', FaComment],
+              ['core', 'Core', FaBrain],
               ['memory', 'Memory', FaBook],
               ['tasks', 'Tasks', FaCircleCheck],
               ['skills', 'Skills', FaWandMagicSparkles],

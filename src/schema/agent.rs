@@ -36,6 +36,8 @@ pub struct AgentConfig {
     #[serde(skip)]
     pub documents: Vec<String>,
     pub heartbeat_interval: DurationString,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub core: Option<String>,
     #[serde(default)]
     pub dream_enabled: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]

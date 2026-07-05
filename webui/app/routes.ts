@@ -17,6 +17,7 @@ export default [
     route('settings', 'routes/settingsRoot.tsx'),
     route(':agentId/chat', 'routes/chat.tsx', { id: 'agent-chat' }),
     route(':agentId/chat/:topicId', 'routes/chat.tsx', { id: 'agent-chat-topic' }),
+    route(':agentId/core', 'routes/agent-core.tsx'),
     route(':agentId/memory', 'routes/memory.tsx'),
     route(':agentId/tasks', 'routes/tasks.tsx'),
     route(':agentId/skills', 'routes/skills.tsx'),

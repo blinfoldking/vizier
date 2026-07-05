@@ -33,10 +33,7 @@ scheduler::{DeleteTask, GetTaskDetail, ListTask, ScheduleCronTask, ScheduleOneTi
         image_gen::ImageGenerate,
         vector_memory::init_vector_memory,
         webui::{ListWebuiTopics, SendWebuiMessage},
-        workspace::{
-            AgentDocument, HeartbeatDocument, IdentDocument, ReadPrimaryDocument,
-            WritePrimaryDocument,
-        },
+        workspace::{ReadCore, WriteCore},
     },
     config::provider::ProviderVariant,
     dependencies::VizierDependencies,
@@ -287,11 +284,9 @@ impl VizierTools {
         "memory_follow",
         "memory_graph",
         "memory_delete",
-        // Workspace (4)
-        "WRITE_SOUL",
-        "WRITE_IDENTITY",
-        "WRITE_HEARTBEAT",
-        "READ_HEARTBEAT",
+        // Workspace (2)
+        "WRITE_CORE",
+        "READ_CORE",
         // Scheduler (4)
         "schedule_one_time_task",
         "schedule_cron_task",
@@ -384,18 +379,8 @@ impl VizierTools {
 
         default_toolset = default_toolset
             .tool(ThinkTool)
-            .tool(WritePrimaryDocument::<AgentDocument>::new(
-                agent_workspace.clone(),
-            ))
-            .tool(WritePrimaryDocument::<IdentDocument>::new(
-                agent_workspace.clone(),
-            ))
-            .tool(WritePrimaryDocument::<HeartbeatDocument>::new(
-                agent_workspace.clone(),
-            ))
-            .tool(ReadPrimaryDocument::<HeartbeatDocument>::new(
-                agent_workspace.clone(),
-            ))
+            .tool(WriteCore::new(agent_id.clone(), deps.storage.clone()))
+            .tool(ReadCore::new(agent_id.clone(), deps.storage.clone()))
             .tool(ScheduleOneTimeTask {
                 agent_id: agent_id.clone(),
                 storage: deps.storage.clone(),

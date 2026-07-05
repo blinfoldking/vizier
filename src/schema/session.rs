@@ -48,7 +48,6 @@ pub enum VizierChannelId {
     HTTP(String, String),
     Task(String, DateTime<Utc>),
     InterAgent(Vec<String>),
-    Heartbeat(DateTime<Utc>),
     System,
     Subagent,
     Dream(Box<VizierSession>, DreamStage),
@@ -68,7 +67,6 @@ impl VizierChannelId {
 
                 format!("inter_agent__[{participants}]")
             }
-            Self::Heartbeat(datetime) => format!("heartbeat__{}", datetime.to_rfc3339()),
             Self::System => "SYSTEM".into(),
             Self::Dream(session, stage) => {
                 let stage_str = match stage {

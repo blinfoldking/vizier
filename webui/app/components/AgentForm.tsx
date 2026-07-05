@@ -101,7 +101,6 @@ const DEFAULT_FORM: CreateAgentRequest = {
     image_gen_settings: {},
   },
   prompt_timeout: '60m',
-  heartbeat_interval: '30m',
   dream_enabled: false,
   dream_schedule: '',
   dream_provider: '',
@@ -178,7 +177,6 @@ export default function AgentForm({
           image_gen_settings: d.image_gen_settings || {},
         },
         prompt_timeout: d.prompt_timeout,
-        heartbeat_interval: d.heartbeat_interval,
         dream_enabled: d.dream_enabled,
         dream_schedule: d.dream_schedule || '',
         dream_provider: d.dream_provider || '',
@@ -860,27 +858,6 @@ export default function AgentForm({
                       onChange={(e) =>
                         updateField(
                           'prompt_timeout',
-                          e.target.value
-                        )
-                      }
-                    />
-                  </section>
-                  <section style={{ ...fieldStyle, flex: 1 }}>
-                    <label style={labelStyle}>
-                      <TooltipLabel
-                        label="Heartbeat Interval"
-                        tooltip="How often the agent's background task loop runs."
-                      />
-                    </label>
-                    <input
-                      style={inputStyle}
-                      placeholder="30m"
-                      value={
-                        form.heartbeat_interval || ''
-                      }
-                      onChange={(e) =>
-                        updateField(
-                          'heartbeat_interval',
                           e.target.value
                         )
                       }

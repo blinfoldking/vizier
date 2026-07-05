@@ -1,129 +1,96 @@
-use std::marker::PhantomData;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     agents::tools::{ToolContext, VizierTool},
-    error::{VizierError, throw_vizier_error},
-    utils::build_path,
+    error::VizierError,
+    storage::{VizierStorage, agent::AgentStorage},
 };
 
-pub trait PrimaryDocument {
-    const NAME: &'static str;
-    const WRITE_NAME: &'static str;
-    const READ_NAME: &'static str;
+pub struct CoreDocument;
+
+pub struct WriteCore {
+    agent_id: String,
+    storage: Arc<VizierStorage>,
 }
 
-pub struct AgentDocument;
-
-impl PrimaryDocument for AgentDocument {
-    const NAME: &'static str = "SOUL.md";
-    const WRITE_NAME: &'static str = "WRITE_SOUL";
-    const READ_NAME: &'static str = "READ_SOUL";
-}
-
-pub struct IdentDocument;
-
-impl PrimaryDocument for IdentDocument {
-    const NAME: &'static str = "IDENTITY.md";
-    const WRITE_NAME: &'static str = "WRITE_IDENTITY";
-    const READ_NAME: &'static str = "READ_IDENTITY";
-}
-
-pub struct HeartbeatDocument;
-
-impl PrimaryDocument for HeartbeatDocument {
-    const NAME: &'static str = "HEARTBEAT.md";
-    const WRITE_NAME: &'static str = "WRITE_HEARTBEAT";
-    const READ_NAME: &'static str = "READ_HEARTBEAT";
-}
-
-pub struct WritePrimaryDocument<T: PrimaryDocument> {
-    _phantom_data: PhantomData<T>,
-    workspace: String,
-}
-
-impl<T: PrimaryDocument> WritePrimaryDocument<T> {
-    pub fn new(workspace: String) -> Self {
-        Self {
-            _phantom_data: PhantomData,
-            workspace,
-        }
+impl WriteCore {
+    pub fn new(agent_id: String, storage: Arc<VizierStorage>) -> Self {
+        Self { agent_id, storage }
     }
 }
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
-pub struct WritePrimaryDocumentArgs {
-    #[schemars(description = "New content of the file")]
+pub struct WriteCoreArgs {
+    #[schemars(description = "New content for the CORE document")]
     content: String,
 }
 
 #[async_trait::async_trait]
-impl<T: PrimaryDocument> VizierTool for WritePrimaryDocument<T>
-where
-    Self: Sync + Send,
-{
-    type Input = WritePrimaryDocumentArgs;
+impl VizierTool for WriteCore {
+    type Input = WriteCoreArgs;
     type Output = String;
 
     fn name() -> String {
-        T::WRITE_NAME.to_string()
+        "WRITE_CORE".to_string()
     }
 
     fn description(&self) -> String {
-        format!(
-            "write over your {}, **not append**. Always tell user after updating!",
-            T::NAME.trim_end_matches(".md")
-        )
+        "write over your CORE document, **not append**. Always tell user after updating!".to_string()
     }
 
-    async fn call(&self, args: Self::Input, _ctx: &ToolContext) -> Result<Self::Output, VizierError> {
-        let path = build_path(&self.workspace, &[T::NAME]);
-
-        std::fs::write(path, args.content)
+    async fn call(
+        &self,
+        args: Self::Input,
+        _ctx: &ToolContext,
+    ) -> Result<Self::Output, VizierError> {
+        self.storage
+            .set_agent_core(&self.agent_id, &args.content)
+            .await
             .map_err(|err| VizierError(err.to_string()))?;
-
-        Ok(format!("{} updated successfully", T::NAME))
+        Ok("CORE updated successfully".to_string())
     }
 }
 
-pub struct ReadPrimaryDocument<T: PrimaryDocument> {
-    _phantom_data: PhantomData<T>,
-    workspace: String,
+pub struct ReadCore {
+    agent_id: String,
+    storage: Arc<VizierStorage>,
 }
 
-impl<T: PrimaryDocument> ReadPrimaryDocument<T> {
-    pub fn new(workspace: String) -> Self {
-        Self {
-            _phantom_data: PhantomData,
-            workspace,
-        }
+impl ReadCore {
+    pub fn new(agent_id: String, storage: Arc<VizierStorage>) -> Self {
+        Self { agent_id, storage }
     }
 }
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
-pub struct ReadPrimaryDocumentArgs {}
+pub struct ReadCoreArgs {}
 
 #[async_trait::async_trait]
-impl<T: PrimaryDocument> VizierTool for ReadPrimaryDocument<T>
-where
-    Self: Sync + Send,
-{
-    type Input = ReadPrimaryDocumentArgs;
+impl VizierTool for ReadCore {
+    type Input = ReadCoreArgs;
     type Output = String;
 
     fn name() -> String {
-        T::READ_NAME.to_string()
+        "READ_CORE".to_string()
     }
 
     fn description(&self) -> String {
-        format!("read your {}", T::NAME.trim_end_matches(".md"))
+        "read your CORE document".to_string()
     }
 
-    async fn call(&self, _args: Self::Input, _ctx: &ToolContext) -> Result<Self::Output, VizierError> {
-        let path = build_path(&self.workspace, &[T::NAME]);
-        let content = std::fs::read_to_string(path).map_err(|err| VizierError(err.to_string()))?;
-
+    async fn call(
+        &self,
+        _args: Self::Input,
+        _ctx: &ToolContext,
+    ) -> Result<Self::Output, VizierError> {
+        let content = self
+            .storage
+            .get_agent_core(&self.agent_id)
+            .await
+            .map_err(|err| VizierError(err.to_string()))?
+            .unwrap_or_default();
         Ok(content)
     }
 }

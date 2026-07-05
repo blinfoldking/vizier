@@ -10,7 +10,7 @@ use tokio::task::{JoinHandle, JoinSet};
 
 use crate::{
     agents::{
-        agent::{VizierAgent, read_md_file},
+        agent::VizierAgent,
         hook::{
             VizierSessionHooks, debug::DebugHook, handover::HandoverSenderHook,
             thinking::ThinkingHook, tool_calls::ToolCallsHook,
@@ -121,44 +121,6 @@ pub async fn agent_process(
     let mut main_handles = HashMap::<VizierSession, JoinHandle<()>>::new();
     let mut thinking_handles = HashMap::<VizierSession, Arc<JoinHandle<()>>>::new();
     let mut detail_tasks = JoinSet::new();
-
-    let heartbeat_agent_id = agent_id.clone();
-    let heartbeat_interval = *agent_config.heartbeat_interval;
-    let heartbeat_transport = deps.transport.clone();
-    let heartbeat_workspace = agent.workspace.clone();
-    let heartbeat = tokio::spawn(async move {
-        let mut interval = tokio::time::interval(heartbeat_interval);
-        loop {
-            interval.tick().await;
-            let now = Utc::now();
-            let session = VizierSession(
-                heartbeat_agent_id.clone(),
-                VizierChannelId::Heartbeat(now.clone()),
-                None,
-            );
-
-            let prompt = read_md_file(heartbeat_workspace.clone(), "HEARTBEAT.md".into());
-            if !prompt.is_empty() {
-                if let Err(err) = heartbeat_transport
-                    .send_request(
-                        session,
-                        VizierRequest {
-                            timestamp: Utc::now(),
-                            user: heartbeat_agent_id.clone(),
-                            content: VizierRequestContent::Task(prompt.clone()),
-                            metadata: serde_json::json!({}),
-
-                            ..Default::default()
-                        },
-                        None,
-                    )
-                    .await
-                {
-                    tracing::error!("heartbeat error: {}", err);
-                }
-            }
-        }
-    });
 
     let mut session_queues = HashMap::<
         VizierSession,
@@ -678,7 +640,6 @@ pub async fn agent_process(
         }
     }
 
-    heartbeat.abort();
     agent_channels.shutdown().await;
     Ok(())
 }

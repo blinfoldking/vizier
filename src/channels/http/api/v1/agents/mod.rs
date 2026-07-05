@@ -29,14 +29,14 @@ use crate::{
 };
 
 pub mod channel;
-pub mod documents;
+pub mod core;
 pub mod dream;
 pub mod memory;
 pub mod skills;
 pub mod task;
 
 use channel::channel;
-use documents::documents;
+use core::core;
 use dream::dream;
 use memory::memory;
 use skills::agent_skills;
@@ -91,7 +91,7 @@ pub fn agents() -> Router<HTTPState> {
             get(get_sharing).patch(update_sharing),
         )
         .nest("/{agent_id}/channel", channel())
-        .nest("/{agent_id}/documents", documents())
+        .nest("/{agent_id}/core", core())
         .nest("/{agent_id}/memory", memory())
         .nest("/{agent_id}/skills", agent_skills())
         .nest("/{agent_id}/tasks", task())
@@ -158,7 +158,6 @@ pub struct AgentDetail {
     pub fetch: bool,
     pub http_client: bool,
     pub prompt_timeout: String,
-    pub heartbeat_interval: String,
     pub dream_enabled: bool,
     pub dream_schedule: Option<String>,
     pub dream_provider: Option<crate::config::provider::ProviderVariant>,
@@ -230,7 +229,6 @@ async fn agent_detail(
                 fetch: config.tools.fetch.enabled,
                 http_client: config.tools.http_client.enabled,
                 prompt_timeout: config.prompt_timeout.to_string(),
-                heartbeat_interval: config.heartbeat_interval.to_string(),
                 dream_enabled: config.dream_enabled,
                 dream_schedule: config.dream_schedule,
                 dream_provider: config.dream_provider,
@@ -311,8 +309,6 @@ pub struct CreateAgentRequest {
     pub tools: Option<CreateAgentTools>,
     #[serde(default)]
     pub prompt_timeout: Option<String>,
-    #[serde(default)]
-    pub heartbeat_interval: Option<String>,
     #[serde(default)]
     pub dream_enabled: Option<bool>,
     #[serde(default)]
@@ -458,10 +454,8 @@ impl CreateAgentRequest {
             )
             .unwrap(),
             documents: vec![],
-            heartbeat_interval: duration_string::DurationString::from_string(
-                self.heartbeat_interval.unwrap_or("30m".into()),
-            )
-            .unwrap(),
+            heartbeat_interval: duration_string::DurationString::from_string("30m".into()).unwrap(),
+            core: None,
             dream_enabled: self.dream_enabled.unwrap_or(false),
             dream_schedule: self.dream_schedule,
             dream_provider: self.dream_provider,

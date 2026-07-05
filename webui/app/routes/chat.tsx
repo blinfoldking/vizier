@@ -209,18 +209,10 @@ const formatToolChoice = (
       if (args.limit) filters.push(`limit: ${args.limit as number}`)
       return `💤 Reading dream journal${filters.length > 0 ? ` (${filters.join(', ')})` : ''}`
     }
-    case 'WRITE_SOUL':
-      return `📝 Updating agent notes`
-    case 'READ_SOUL':
-      return `📖 Reading agent notes`
-    case 'WRITE_IDENTITY':
-      return `🪪 Updating identity notes`
-    case 'READ_IDENTITY':
-      return `🪪 Reading identity notes`
-    case 'WRITE_HEARTBEAT':
-      return `💗 Updating heartbeat`
-    case 'READ_HEARTBEAT':
-      return `💗 Reading heartbeat`
+    case 'WRITE_CORE':
+      return `🧠 Updating core`
+    case 'READ_CORE':
+      return `🧠 Reading core`
     case 'discord_send_message':
       return `💬 Sending Discord message`
     case 'discord_react_message':

@@ -133,6 +133,11 @@ impl SqliteStorage {
                 data TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS agent_core (
+                agent_id TEXT PRIMARY KEY,
+                content TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS provider_config (
                 variant TEXT PRIMARY KEY,
                 data TEXT NOT NULL

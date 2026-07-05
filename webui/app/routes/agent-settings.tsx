@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import {
   FaGear,
-  FaFolder,
   FaTriangleExclamation,
   FaCode,
   FaUserGroup,
@@ -11,12 +10,6 @@ import {
 import {
   getAgentDetail,
   updateAgent,
-  getAgentDocument,
-  updateAgentDocument,
-  getIdentityDocument,
-  updateIdentityDocument,
-  getHeartbeatDocument,
-  updateHeartbeatDocument,
   deleteAgent,
   uploadFile,
   getAgentSharing,
@@ -59,13 +52,11 @@ function getErrorMessage(err: unknown): string {
   return 'An error occurred'
 }
 
-type SettingsTab = 'config' | 'prompt' | 'documents' | 'tools' | 'sharing' | 'danger'
-type DocumentType = 'agent' | 'identity' | 'heartbeat'
+type SettingsTab = 'config' | 'prompt' | 'tools' | 'sharing' | 'danger'
 
 const TABS: { key: SettingsTab; label: string; icon: typeof FaGear }[] = [
   { key: 'config', label: 'Config', icon: FaGear },
   { key: 'prompt', label: 'System Prompt', icon: FaCode },
-  { key: 'documents', label: 'Documents', icon: FaFolder },
   { key: 'tools', label: 'Tools', icon: FaScrewdriverWrench },
   { key: 'sharing', label: 'Sharing', icon: FaUserGroup },
   { key: 'danger', label: 'Danger Zone', icon: FaTriangleExclamation },
@@ -138,9 +129,8 @@ export default function AgentSettings() {
       image_gen: false,
       image_gen_settings: {},
     },
-    prompt_timeout: '60m',
-    heartbeat_interval: '30m',
-    dream_enabled: false,
+  prompt_timeout: '60m',
+  dream_enabled: false,
     dream_schedule: '',
     dream_provider: '',
     dream_model: '',
@@ -153,13 +143,6 @@ export default function AgentSettings() {
 
   // ── Dream model toggle (UI-only state) ──
   const [useSameModel, setUseSameModel] = useState(true)
-
-  // ── Documents state ──
-  const [activeDoc, setActiveDoc] = useState<DocumentType>('agent')
-  const [docContent, setDocContent] = useState('')
-  const [docOriginal, setDocOriginal] = useState('')
-  const [docLoading, setDocLoading] = useState(true)
-  const [docSaving, setDocSaving] = useState(false)
 
   // ── Danger state ──
   const [deleteWorkspace, setDeleteWorkspace] = useState(false)
@@ -230,7 +213,6 @@ export default function AgentSettings() {
             image_gen_settings: d.image_gen_settings || {},
           },
           prompt_timeout: d.prompt_timeout,
-          heartbeat_interval: d.heartbeat_interval,
           dream_enabled: d.dream_enabled,
           dream_schedule: d.dream_schedule || '',
           dream_provider: d.dream_provider || '',
@@ -254,41 +236,6 @@ export default function AgentSettings() {
     }
     load()
   }, [agentId])
-
-  // ── Load documents ──
-  useEffect(() => {
-    if (activeTab !== 'documents' || !agentId) return
-    const loadDoc = async () => {
-      setDocLoading(true)
-      try {
-        let res: { data: { content: string } }
-        switch (activeDoc) {
-          case 'agent':
-            res = await getAgentDocument(agentId)
-            break
-          case 'identity':
-            res = await getIdentityDocument(agentId)
-            break
-          case 'heartbeat':
-            res = await getHeartbeatDocument(agentId)
-            break
-        }
-        const content = res.data?.content || ''
-        setDocContent(content)
-        setDocOriginal(content)
-      } catch {
-        addToast(
-          'error',
-          `Failed to load ${activeDoc.toUpperCase()}.md`
-        )
-        setDocContent('')
-        setDocOriginal('')
-      } finally {
-        setDocLoading(false)
-      }
-    }
-    loadDoc()
-  }, [agentId, activeTab, activeDoc])
 
   // ── Load sharing data ──
   useEffect(() => {
@@ -451,35 +398,6 @@ export default function AgentSettings() {
     }
   }
 
-  // ── Document helpers ──
-  const handleSaveDoc = async () => {
-    if (!agentId) return
-    setDocSaving(true)
-    try {
-      switch (activeDoc) {
-        case 'agent':
-          await updateAgentDocument(agentId, docContent)
-          break
-        case 'identity':
-          await updateIdentityDocument(agentId, docContent)
-          break
-        case 'heartbeat':
-          await updateHeartbeatDocument(agentId, docContent)
-          break
-      }
-      setDocOriginal(docContent)
-      addToast('success', `${activeDoc.toUpperCase()}.md saved`)
-    } catch (err: unknown) {
-      addToast(
-        'error',
-        `Failed to save ${activeDoc.toUpperCase()}.md`,
-        getErrorMessage(err)
-      )
-    } finally {
-      setDocSaving(false)
-    }
-  }
-
   // ── Sharing helpers ──
   const handleAddSharedUser = async () => {
     if (!agentId || !newUserUsername.trim()) return
@@ -538,12 +456,6 @@ export default function AgentSettings() {
       setDeleting(false)
     }
   }
-
-  const docTabs: { key: DocumentType; label: string }[] = [
-    { key: 'agent', label: 'SOUL' },
-    { key: 'identity', label: 'IDENTITY' },
-    { key: 'heartbeat', label: 'HEARTBEAT' },
-  ]
 
   if (loading) {
     return (
@@ -1039,9 +951,7 @@ export default function AgentSettings() {
                 >
                   Timing
                 </h4>
-                <div
-                  style={{ display: 'flex', gap: '0.75rem' }}
-                >
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <section style={{ ...fieldStyle, flex: 1 }}>
                     <label style={labelStyle}>
                       <TooltipLabel
@@ -1056,27 +966,6 @@ export default function AgentSettings() {
                       onChange={(e) =>
                         updateField(
                           'prompt_timeout',
-                          e.target.value
-                        )
-                      }
-                    />
-                  </section>
-                  <section style={{ ...fieldStyle, flex: 1 }}>
-                    <label style={labelStyle}>
-                      <TooltipLabel
-                        label="Heartbeat Interval"
-                        tooltip="How often the agent's background task loop runs."
-                      />
-                    </label>
-                    <input
-                      style={inputStyle}
-                      placeholder="30m"
-                      value={
-                        form.heartbeat_interval || ''
-                      }
-                      onChange={(e) =>
-                        updateField(
-                          'heartbeat_interval',
                           e.target.value
                         )
                       }
@@ -1366,101 +1255,6 @@ export default function AgentSettings() {
                   {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
-            </div>
-          )}
-
-          {/* ─── Documents Tab ─── */}
-          {activeTab === 'documents' && (
-            <div>
-              {/* Doc sub-tabs */}
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '4px',
-                  marginBottom: '1rem',
-                  borderBottom: '1px solid var(--border)',
-                  paddingBottom: '4px',
-                }}
-              >
-                {docTabs.map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveDoc(tab.key)}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '4px 4px 0 0',
-                      border: 'none',
-                      background:
-                        activeDoc === tab.key
-                          ? 'var(--surface)'
-                          : 'transparent',
-                      color:
-                        activeDoc === tab.key
-                          ? 'var(--text-primary)'
-                          : 'var(--text-tertiary)',
-                      cursor: 'pointer',
-                      fontWeight:
-                        activeDoc === tab.key
-                          ? '600'
-                          : '400',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-                {docContent !== docOriginal && (
-                  <div
-                    style={{
-                      marginLeft: 'auto',
-                      display: 'flex',
-                      gap: '8px',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: '12px',
-                        color: 'var(--text-tertiary)',
-                      }}
-                    >
-                      Unsaved changes
-                    </span>
-                    <button
-                      className="btn btn-ghost"
-                      onClick={() =>
-                        setDocContent(docOriginal)
-                      }
-                    >
-                      Reset
-                    </button>
-                    <button
-                      className="btn btn-primary"
-                      onClick={handleSaveDoc}
-                      disabled={docSaving}
-                    >
-                      {docSaving ? 'Saving...' : 'Save'}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Editor */}
-              {docLoading ? (
-                <p style={{ color: 'var(--text-tertiary)' }}>
-                  Loading document...
-                </p>
-              ) : (
-                <div style={{ height: 'calc(100vh - 220px)' }}>
-                  <MarkdownEditor
-                    key={activeDoc}
-                    value={docContent}
-                    onChange={setDocContent}
-                    placeholder={`Enter ${activeDoc.toUpperCase()}.md content...`}
-                    className="document-mdx-editor"
-                  />
-                </div>
-              )}
             </div>
           )}
 
@@ -3416,8 +3210,7 @@ export default function AgentSettings() {
                       setDeleteWorkspace(e.target.checked)
                     }
                   />
-                  Also delete workspace files (SOUL,
-                  IDENTITY, etc.)
+                  Also delete the agent's stored data (skills, memories, etc.)
                 </label>
                 <div
                   style={{

@@ -86,4 +86,20 @@ impl AgentStorage for FileSystemStorage {
         std::fs::remove_file(path)?;
         Ok(())
     }
+
+    async fn get_agent_core(&self, agent_id: &str) -> Result<Option<String>> {
+        let dir = build_path(&self.workspace, &[AGENTS_PATH, agent_id]);
+        let path = dir.join("CORE.md");
+        if !path.exists() {
+            return Ok(None);
+        }
+        Ok(Some(std::fs::read_to_string(&path)?))
+    }
+
+    async fn set_agent_core(&self, agent_id: &str, core: &str) -> Result<()> {
+        let dir = build_path(&self.workspace, &[AGENTS_PATH, agent_id]);
+        std::fs::create_dir_all(&dir)?;
+        std::fs::write(dir.join("CORE.md"), core)?;
+        Ok(())
+    }
 }

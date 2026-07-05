@@ -66,6 +66,10 @@ impl AgentStorage for SqliteStorage {
 
     async fn delete_agent(&self, agent_id: &str) -> Result<()> {
         let conn = self.conn.lock();
+        conn.execute(
+            "DELETE FROM agent_core WHERE agent_id = ?1",
+            rusqlite::params![agent_id],
+        )?;
         let deleted = conn.execute(
             "DELETE FROM agent_config WHERE agent_id = ?1",
             rusqlite::params![agent_id],
@@ -73,6 +77,32 @@ impl AgentStorage for SqliteStorage {
         if deleted == 0 {
             return Err(anyhow::anyhow!("Agent '{}' not found", agent_id));
         }
+        Ok(())
+    }
+
+    async fn get_agent_core(&self, agent_id: &str) -> Result<Option<String>> {
+        let conn = self.conn.lock();
+        let mut stmt =
+            conn.prepare("SELECT content FROM agent_core WHERE agent_id = ?1")?;
+        let mut rows = stmt.query_map(rusqlite::params![agent_id], |row| {
+            let content: String = row.get(0)?;
+            Ok(content)
+        })?;
+
+        match rows.next() {
+            Some(Ok(content)) => Ok(Some(content)),
+            Some(Err(e)) => Err(e.into()),
+            None => Ok(None),
+        }
+    }
+
+    async fn set_agent_core(&self, agent_id: &str, core: &str) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "INSERT INTO agent_core (agent_id, content) VALUES (?1, ?2)
+             ON CONFLICT(agent_id) DO UPDATE SET content = excluded.content",
+            rusqlite::params![agent_id, core],
+        )?;
         Ok(())
     }
 }

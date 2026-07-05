@@ -213,11 +213,6 @@ impl VizierAgents {
             return AgentCommandResult::Error(format!("failed to persist agent: {}", e));
         }
 
-        let workspace = agent_workspace(&self.deps.config.workspace, agent_id)
-            .to_string_lossy()
-            .to_string();
-        agent::system_prompt::init_workspace(workspace);
-
         match Self::spawn_agent(&self.deps, agent_id, &config).await {
             Ok(process) => {
                 let owner_username = if let Some(ref owner_id) = config.owner_id {

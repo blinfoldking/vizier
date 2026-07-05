@@ -463,36 +463,16 @@ export const deleteTask = async (agentId: string, slug: string) => {
 }
 
 // ============================================================================
-// DOCUMENT ENDPOINTS
+// CORE ENDPOINT
 // ============================================================================
 
-export const getAgentDocument = async (agentId: string) => {
-  const res = await apiClient.get(`/agents/${agentId}/documents/agent`)
+export const getAgentCore = async (agentId: string) => {
+  const res = await apiClient.get(`/agents/${agentId}/core`)
   return res.data
 }
 
-export const updateAgentDocument = async (agentId: string, content: string) => {
-  const res = await apiClient.put(`/agents/${agentId}/documents/agent`, { content })
-  return res.data
-}
-
-export const getIdentityDocument = async (agentId: string) => {
-  const res = await apiClient.get(`/agents/${agentId}/documents/identity`)
-  return res.data
-}
-
-export const updateIdentityDocument = async (agentId: string, content: string) => {
-  const res = await apiClient.put(`/agents/${agentId}/documents/identity`, { content })
-  return res.data
-}
-
-export const getHeartbeatDocument = async (agentId: string) => {
-  const res = await apiClient.get(`/agents/${agentId}/documents/heartbeat`)
-  return res.data
-}
-
-export const updateHeartbeatDocument = async (agentId: string, content: string) => {
-  const res = await apiClient.put(`/agents/${agentId}/documents/heartbeat`, { content })
+export const updateAgentCore = async (agentId: string, content: string) => {
+  const res = await apiClient.put(`/agents/${agentId}/core`, { content })
   return res.data
 }
 

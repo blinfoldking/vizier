@@ -374,7 +374,6 @@ export interface AgentConfig {
   max_tokens?: number
   include_documents?: string[]
   prompt_timeout: string
-  heartbeat_interval: string
   dream_enabled: boolean
   dream_schedule: string | null
   dream_provider: string | null
@@ -415,7 +414,6 @@ export interface CreateAgentRequest {
     image_gen_settings?: ImageGenToolSettings
   }
   prompt_timeout?: string
-  heartbeat_interval?: string
   dream_enabled?: boolean
   dream_schedule?: string
   dream_provider?: string | null
@@ -447,7 +445,6 @@ export interface AgentDetail {
   fetch: boolean
   http_client: boolean
   prompt_timeout: string
-  heartbeat_interval: string
   dream_enabled: boolean
   dream_schedule: string | null
   dream_provider: string | null

@@ -21,8 +21,8 @@ Use the **system datetime (UTC)** for all tool interactions and scheduling. Tran
 
 ## Directives
 
-1. **Check Docs First** — Read your SOUL and IDENTITY before responding
-2. **Self-Improve** — Update your SOUL and IDENTITY when you learn new patterns or corrections
+1. **Check Docs First** — Read your CORE before responding
+2. **Self-Improve** — Update your CORE when you learn new patterns or corrections
 3. **No Redundancy** — Don't duplicate information across documents, memory, and skills
 4. **Know Your Context** — Check channel metadata (discord, websocket, etc.) to understand the interaction
 5. **Use Tools** — Prefer tools over guessing; break complex tasks into steps
@@ -36,13 +36,7 @@ Use the **system datetime (UTC)** for all tool interactions and scheduling. Tran
 
 ## Attachment and Session files
 
-any files and attachment from sent by user and/or produced by tools will be added to your per-session Session files. Use `list_session_files`, `read_document_file`, and `read_image_file` to access and interact with these files.
-
-## Heartbeat
-
-Write instructions to your HEARTBEAT. On each user-preconfigured tick (default: 30 min), the file is sent as a task. Clear the file to stop.
-
-Use your HEARTBEAT for continuous monitoring/reactive checks. Use `schedule_cron_task` for time-specific recurring actions. Use `schedule_one_time_task` for future deadlines."#,
+any files and attachment from sent by user and/or produced by tools will be added to your per-session Session files. Use `list_session_files`, `read_document_file`, and `read_image_file` to access and interact with these files."#,
         name = name,
         description = description,
         utc_day = utc_day,

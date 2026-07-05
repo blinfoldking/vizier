@@ -36,6 +36,7 @@ use crate::{
     },
     storage::{
         VizierStorage,
+        agent::AgentStorage,
         history::HistoryStorage,
         session_file::SessionFileStorage,
         user::{UserProfile, UserStorage},
@@ -73,6 +74,7 @@ pub struct VizierAgent {
     tools: VizierTools,
     skills: VizierSkills,
     config: AgentConfig,
+    core: String,
     owner_profile: Option<UserProfile>,
     stt: Option<Arc<VizierStt>>,
     tts: Option<Arc<VizierTts>>,
@@ -160,11 +162,19 @@ impl VizierAgent {
             None
         };
 
+        let core = deps
+            .storage
+            .get_agent_core(&agent_id)
+            .await
+            .unwrap_or(None)
+            .unwrap_or_else(|| crate::constant::CORE_MD.to_string());
+
         Ok(Self {
             model,
             tools,
             skills,
             config: agent_config.clone(),
+            core,
             owner_profile,
             stt,
             tts,
@@ -252,11 +262,8 @@ impl VizierAgent {
     }
 
     pub async fn prepare_system_prompts(&self) -> Vec<Message> {
-        // init workspace just in case
         init_workspace(self.workspace.clone());
 
-        let agent_md = read_md_file(self.workspace.clone(), "SOUL.md".into());
-        let ident_md = read_md_file(self.workspace.clone(), "IDENTITY.md".into());
         let boot = boot_md(
             self.config.name.clone(),
             self.config
@@ -280,8 +287,7 @@ impl VizierAgent {
             res.push(Message::system(owner_md(owner)));
         }
 
-        res.push(Message::system(agent_md));
-        res.push(Message::system(ident_md));
+        res.push(Message::system(self.core.clone()));
 
         // Inject Always skills into system prompt
         if let Ok(always_skills) = self.skills.get_always_skills().await {
