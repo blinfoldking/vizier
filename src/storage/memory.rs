@@ -1,12 +1,10 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
-
 use anyhow::Result;
 
 use crate::{
     indexer::VizierIndexer,
     schema::{
-        Memory, MemoryGraph, MemoryGraphEdge, MemoryGraphNode, MemoryQueryParams,
-        MemoryVisibility, PaginatedMemory, VizierAttachment,
+        Memory, MemoryGraph, MemoryGraphNode, MemoryQueryParams, MemoryVisibility,
+        PaginatedMemory, VizierAttachment,
     },
     storage::VizierStorage,
 };
@@ -147,85 +145,22 @@ impl MemoryStorage for VizierStorage {
     }
 }
 
-pub fn compute_initial_slugs(
-    nodes: &[MemoryGraphNode],
-    edges: &[MemoryGraphEdge],
-    search: Option<&str>,
-) -> Vec<String> {
+pub fn compute_initial_slugs(nodes: &[MemoryGraphNode], search: Option<&str>) -> Vec<String> {
     if let Some(q) = search {
         let q = q.trim().to_lowercase();
-        if q.is_empty() {
-            return compute_curated_initial(nodes, edges);
-        }
-        return nodes
-            .iter()
-            .filter(|n| {
-                n.title.to_lowercase().contains(&q)
-                    || n.slug.to_lowercase().contains(&q)
-                    || n.tags.iter().any(|t| t.to_lowercase().contains(&q))
-            })
-            .map(|n| n.slug.clone())
-            .collect();
-    }
-    compute_curated_initial(nodes, edges)
-}
-
-fn compute_curated_initial(nodes: &[MemoryGraphNode], edges: &[MemoryGraphEdge]) -> Vec<String> {
-    let mut degree: HashMap<&str, usize> = HashMap::new();
-    for n in nodes {
-        degree.insert(n.slug.as_str(), 0);
-    }
-    for e in edges {
-        if let Some(d) = degree.get_mut(e.source.as_str()) {
-            *d += 1;
-        }
-        if let Some(d) = degree.get_mut(e.target.as_str()) {
-            *d += 1;
+        if !q.is_empty() {
+            return nodes
+                .iter()
+                .filter(|n| {
+                    n.title.to_lowercase().contains(&q)
+                        || n.slug.to_lowercase().contains(&q)
+                        || n.tags.iter().any(|t| t.to_lowercase().contains(&q))
+                })
+                .map(|n| n.slug.clone())
+                .collect();
         }
     }
-
-    let mut initial: Vec<String> = Vec::new();
-    let mut seen: HashSet<&str> = HashSet::new();
-
-    for n in nodes {
-        if degree.get(n.slug.as_str()).copied().unwrap_or(0) == 0 {
-            initial.push(n.slug.clone());
-            seen.insert(n.slug.as_str());
-        }
-    }
-
-    let mut tag_set: BTreeSet<&str> = BTreeSet::new();
-    for n in nodes {
-        for t in &n.tags {
-            tag_set.insert(t.as_str());
-        }
-    }
-
-    for tag in tag_set {
-        let mut candidates: Vec<&MemoryGraphNode> = nodes
-            .iter()
-            .filter(|n| n.tags.iter().any(|t| t == tag))
-            .collect();
-        candidates.sort_by(|a, b| {
-            let da = degree.get(a.slug.as_str()).copied().unwrap_or(0);
-            let db = degree.get(b.slug.as_str()).copied().unwrap_or(0);
-            db.cmp(&da).then_with(|| a.slug.cmp(&b.slug))
-        });
-        let mut picked = 0;
-        for n in candidates {
-            if picked == 5 {
-                break;
-            }
-            if seen.contains(n.slug.as_str()) {
-                continue;
-            }
-            initial.push(n.slug.clone());
-            seen.insert(n.slug.as_str());
-            picked += 1;
-        }
-    }
-
-    initial
+    nodes.iter().map(|n| n.slug.clone()).collect()
 }
 
 #[cfg(test)]
@@ -243,79 +178,40 @@ mod tests {
         }
     }
 
-    fn edge(source: &str, target: &str) -> MemoryGraphEdge {
-        MemoryGraphEdge {
-            source: source.to_string(),
-            target: target.to_string(),
-            broken: false,
-        }
-    }
-
     #[test]
     fn search_returns_only_matches_case_insensitive() {
         let nodes = vec![node("kubernetes-basics", &["devops"]), node("intro", &["misc"])];
-        let initial = compute_initial_slugs(&nodes, &[], Some("KUBE"));
+        let initial = compute_initial_slugs(&nodes, Some("KUBE"));
         assert_eq!(initial, vec!["kubernetes-basics".to_string()]);
     }
 
     #[test]
-    fn empty_search_falls_back_to_curated() {
+    fn empty_search_returns_all_nodes() {
         let nodes = vec![node("a", &["x"]), node("b", &["x"])];
-        let initial = compute_initial_slugs(&nodes, &[], Some(""));
-        assert!(!initial.is_empty());
+        let initial = compute_initial_slugs(&nodes, Some(""));
+        assert_eq!(initial, vec!["a".to_string(), "b".to_string()]);
     }
 
     #[test]
-    fn isolated_nodes_are_always_included() {
-        let nodes = vec![node("alone", &[]), node("hub", &["t"])];
-        let edges = vec![edge("hub", "other")];
-        let initial = compute_initial_slugs(&nodes, &edges, None);
-        assert!(initial.contains(&"alone".to_string()));
-    }
-
-    #[test]
-    fn top_five_per_tag_with_global_dedup() {
-        let mut nodes = Vec::new();
-        let mut edges = Vec::new();
-        for i in 0..10 {
-            let slug = format!("t-{i}");
-            nodes.push(node(&slug, &["t"]));
-            edges.push(edge("hub", &slug));
-        }
-        nodes.push(node("hub", &["t"]));
-        for i in 0..3 {
-            let slug = format!("s-{i}");
-            nodes.push(node(&slug, &["s"]));
-            edges.push(edge("hub", &slug));
-        }
-        let initial = compute_initial_slugs(&nodes, &edges, None);
-        let seen: std::collections::HashSet<&str> = initial.iter().map(|s| s.as_str()).collect();
-        assert_eq!(seen.len(), initial.len(), "no duplicate slugs");
-        assert!(seen.contains("hub"));
-        assert!(seen.contains("s-0"));
-        assert!(seen.contains("s-1"));
-        assert!(seen.contains("s-2"));
-        let t_count = initial.iter().filter(|s| s.starts_with("t-")).count();
-        assert!(t_count <= 5, "no more than 5 picks from tag t, got {t_count}");
-    }
-
-    #[test]
-    fn deterministic_tiebreak_by_slug() {
+    fn no_search_returns_all_nodes() {
         let nodes = vec![
-            node("zzz", &["t"]),
-            node("aaa", &["t"]),
-            node("mmm", &["t"]),
+            node("alone", &[]),
             node("hub", &["t"]),
+            node("other", &["t"]),
         ];
-        let edges = vec![
-            edge("hub", "aaa"),
-            edge("hub", "mmm"),
-            edge("hub", "zzz"),
-        ];
-        let initial = compute_initial_slugs(&nodes, &edges, None);
+        let initial = compute_initial_slugs(&nodes, None);
         assert_eq!(
             initial,
-            vec!["hub".to_string(), "aaa".to_string(), "mmm".to_string(), "zzz".to_string()]
+            vec!["alone".to_string(), "hub".to_string(), "other".to_string()]
         );
+    }
+
+    #[test]
+    fn no_search_is_not_capped_per_tag() {
+        let nodes: Vec<MemoryGraphNode> = (0..10)
+            .map(|i| node(&format!("t-{i}"), &["t"]))
+            .collect();
+        let initial = compute_initial_slugs(&nodes, None);
+        assert_eq!(initial.len(), nodes.len());
     }
 }

@@ -360,7 +360,7 @@ impl MemoryStorage for FileSystemStorage {
         edges.sort_by(|a, b| a.source.cmp(&b.source).then(a.target.cmp(&b.target)));
 
         let initial_slugs =
-            crate::storage::memory::compute_initial_slugs(&nodes, &edges, search.as_deref());
+            crate::storage::memory::compute_initial_slugs(&nodes, search.as_deref());
 
         Ok(MemoryGraph {
             nodes,
