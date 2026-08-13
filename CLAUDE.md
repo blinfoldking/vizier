@@ -105,3 +105,8 @@ Each agent's persistent "self" document is `CORE.md`, stored in storage (not the
 ## WebUI (`webui/`)
 
 React Router v7 + React 19 + TypeScript + Tailwind v4. State via Zustand-style stores in `app/hooks/*Store.tsx`. Recharts for charts, highlight.js for syntax highlighting, MDX editor for markdown. Build output (`webui/build/client/`) is what the Rust HTTP channel serves at runtime — see the `build.rs` gotcha above for why you generally need `npm install` done before `cargo build` will succeed.
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
