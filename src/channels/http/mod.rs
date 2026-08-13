@@ -5,6 +5,7 @@ use reqwest::{
     header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
 };
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::normalize_path::NormalizePathLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -58,6 +59,7 @@ impl VizierChannel for HTTPChannel {
             // webui
             .route("/", get(webui::index))
             .route("/{*path}", get(webui::assets))
+            .layer(NormalizePathLayer::trim_trailing_slash())
             .layer(cors)
             .layer(DefaultBodyLimit::disable())
             .with_state(state);

@@ -9,6 +9,7 @@ use crate::{
         provider::ProviderVariant,
         storage::StorageConfig,
     },
+    constant::CORE_MD,
     file_manager::FileManager,
     schema::{AgentToolsConfig, ProviderEntry, ProviderEntryConfig},
     storage::{
@@ -52,6 +53,7 @@ impl VizierDependencies {
         Self::migrate_users(&storage).await?;
         Self::migrate_providers(&config, &storage).await?;
         Self::migrate_agent_tools(&storage).await?;
+        Self::migrate_agent_cores(&storage).await?;
 
         let transport = VizierTransport::new();
         let file_manager = FileManager::new(config.workspace.clone());
@@ -256,6 +258,45 @@ impl VizierDependencies {
 
         let _ = storage.delete_global_config("mcp_servers").await;
         let _ = storage.delete_global_config("shell").await;
+
+        Ok(())
+    }
+
+    async fn migrate_agent_cores(storage: &VizierStorage) -> Result<()> {
+        let agents = storage.list_agents().await?;
+        if agents.is_empty() {
+            return Ok(());
+        }
+
+        let mut seeded = 0;
+        for (agent_id, _) in agents {
+            match storage.get_agent_core(&agent_id).await {
+                Ok(Some(_)) => continue,
+                Ok(None) => {}
+                Err(e) => {
+                    tracing::warn!(
+                        "skipping CORE backfill for agent '{}': {}",
+                        agent_id,
+                        e
+                    );
+                    continue;
+                }
+            }
+
+            if let Err(e) = storage.set_agent_core(&agent_id, CORE_MD).await {
+                tracing::warn!(
+                    "failed to backfill default CORE for agent '{}': {}",
+                    agent_id,
+                    e
+                );
+            } else {
+                seeded += 1;
+            }
+        }
+
+        if seeded > 0 {
+            tracing::info!("backfilled default CORE for {} agent(s)", seeded);
+        }
 
         Ok(())
     }

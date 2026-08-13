@@ -8,6 +8,7 @@ use tokio::task::JoinSet;
 
 use crate::agents::process::agent_process;
 use crate::config::provider::ProviderVariant;
+use crate::constant::CORE_MD;
 use crate::dependencies::VizierDependencies;
 use crate::embedding::VizierEmbedder;
 use crate::indexer::VizierIndexer;
@@ -211,6 +212,19 @@ impl VizierAgents {
 
         if let Err(e) = self.deps.storage.create_agent(agent_id, &config).await {
             return AgentCommandResult::Error(format!("failed to persist agent: {}", e));
+        }
+
+        if let Err(e) = self
+            .deps
+            .storage
+            .set_agent_core(agent_id, CORE_MD)
+            .await
+        {
+            tracing::warn!(
+                "failed to seed default CORE for agent '{}': {}",
+                agent_id,
+                e
+            );
         }
 
         match Self::spawn_agent(&self.deps, agent_id, &config).await {

@@ -65,7 +65,7 @@ jsonwebtoken = "9"
 argon2 = "0.5"
 base64 = "0.22"
 sha2 = "0.10"
-tower-http = { version = "0.6.8", features = ["cors", "fs", "limit"] }
+tower-http = { version = "0.6.8", features = ["cors", "fs", "limit", "normalize-path"] }
 rust-embed = "8.11.0"
 mime_guess = "2.0.5"
 rusqlite = { version = "0.39", features = ["bundled"] }

@@ -173,6 +173,8 @@ export type ChatProvider =
   | 'copilot'
   | 'azure'
   | 'custom'
+  | 'opencode_zen'
+  | 'opencode_go'
 
 export const CHAT_PROVIDERS: ChatProvider[] = [
   'ollama',
@@ -200,6 +202,8 @@ export const CHAT_PROVIDERS: ChatProvider[] = [
   'copilot',
   'azure',
   'custom',
+  'opencode_zen',
+  'opencode_go',
 ]
 
 export const CHAT_PROVIDER_DEFAULT_MODELS: Record<ChatProvider, string> = {
@@ -228,6 +232,8 @@ export const CHAT_PROVIDER_DEFAULT_MODELS: Record<ChatProvider, string> = {
   copilot: 'gpt-4o',
   azure: 'gpt-4o',
   custom: '',
+  opencode_zen: 'opencode/gpt-5.5',
+  opencode_go: 'opencode-go/kimi-k3',
 }
 
 export const CHAT_PROVIDER_MODELS: Record<ChatProvider, string[]> = {
@@ -256,6 +262,8 @@ export const CHAT_PROVIDER_MODELS: Record<ChatProvider, string[]> = {
   copilot: ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini'],
   azure: ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini', 'o3-mini'],
   custom: [],
+  opencode_zen: ['opencode/gpt-5.5'],
+  opencode_go: ['opencode-go/kimi-k3', 'opencode-go/deepseek-v4-flash'],
 }
 
 export const TTS_PROVIDER_MODELS: Record<TtsProvider, string[]> = {

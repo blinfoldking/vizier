@@ -33,6 +33,8 @@ providers:
 | `gemini` | `api_key` | [Google Gemini](https://ai.google.dev) models |
 | `mimo` | `api_key` | [Xiaomi MiMo](https://mimo.xiaomi.com) models |
 | `llama_cpp` | `base_url` | Local Llama.cpp instance (default: `http://localhost:8080`) |
+| `opencode_zen` | `api_key`, `base_url` | [OpenCode Zen](https://opencode.ai/docs/zen/) pay-as-you-go gateway (default base_url: `https://opencode.ai/zen/v1`). Only Chat-Completions-compatible models are supported (e.g. `opencode/*` non-GPT/Claude models) — Responses-API and Anthropic-Messages-API models on this gateway aren't reachable through this provider. |
+| `opencode_go` | `api_key`, `base_url` | [OpenCode Go](https://opencode.ai/docs/go/) subscription gateway (default base_url: `https://opencode.ai/zen/go/v1`). Same Chat-Completions-only scope as `opencode_zen` — e.g. `opencode-go/kimi-k3`, `opencode-go/deepseek-v4-flash` work; `opencode-go/gpt-5.6-luna` and MiniMax/Qwen models don't. |
 
 ## Example Configuration
 
@@ -62,6 +64,14 @@ providers:
     
   llama_cpp:
     base_url: "http://localhost:8080"
+
+  opencode_zen:
+    api_key: "${OPENCODE_ZEN_API_KEY}"
+    base_url: null  # Optional: defaults to https://opencode.ai/zen/v1
+
+  opencode_go:
+    api_key: "${OPENCODE_GO_API_KEY}"
+    base_url: null  # Optional: defaults to https://opencode.ai/zen/go/v1
 ```
 
 ## Managing Providers at Runtime

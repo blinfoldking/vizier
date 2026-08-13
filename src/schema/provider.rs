@@ -103,4 +103,14 @@ pub enum ProviderEntryConfig {
         api_key: String,
         base_url: String,
     },
+    OpencodeZen {
+        api_key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        base_url: Option<String>,
+    },
+    OpencodeGo {
+        api_key: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        base_url: Option<String>,
+    },
 }

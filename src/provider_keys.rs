@@ -84,26 +84,32 @@ pub async fn resolve_provider_key(
 
 /// Resolve a provider that supports both API key and optional base URL override.
 ///
-/// Covers moonshot, zai, minimax (and any future openai-compat provider that
-/// exposes a `base_url` builder). Storage entry takes precedence; env var is
-/// the fallback. If neither has a base URL, `None` is returned (the provider
-/// client will use its hardcoded default).
+/// Covers moonshot, zai, minimax, opencode_zen, opencode_go (and any future
+/// openai-compat provider that exposes a `base_url` builder). Storage entry
+/// takes precedence; env var is the fallback. If neither has a base URL,
+/// `default_base_url` is returned instead (pass `None` for providers whose
+/// rig-core client already bakes in its own hardcoded default; pass
+/// `Some(url)` for providers built on a generic client, like
+/// `openai::CompletionsClient`, that has no opinion of its own).
 pub async fn resolve_provider_with_base_url(
     storage: &Arc<VizierStorage>,
     variant: ProviderVariant,
     env_var_name: &'static str,
+    default_base_url: Option<&'static str>,
 ) -> Result<ResolvedProvider, VizierError> {
     if let Ok(Some(entry)) = storage.get_provider(&variant).await {
         let (api_key, base_url) = match entry.config {
             ProviderEntryConfig::Moonshot { api_key, base_url } => (api_key, base_url),
             ProviderEntryConfig::Zai { api_key, base_url } => (api_key, base_url),
             ProviderEntryConfig::Minimax { api_key, base_url } => (api_key, base_url),
+            ProviderEntryConfig::OpencodeZen { api_key, base_url } => (api_key, base_url),
+            ProviderEntryConfig::OpencodeGo { api_key, base_url } => (api_key, base_url),
             _ => (String::new(), None),
         };
         if !api_key.is_empty() {
             return Ok(ResolvedProvider {
                 api_key,
-                base_url,
+                base_url: base_url.or_else(|| default_base_url.map(str::to_string)),
             });
         }
     }
@@ -113,7 +119,8 @@ pub async fn resolve_provider_with_base_url(
     {
         let base_url = std::env::var(format!("{}_API_BASE", env_var_name_prefix(env_var_name)))
             .ok()
-            .filter(|s| !s.is_empty());
+            .filter(|s| !s.is_empty())
+            .or_else(|| default_base_url.map(str::to_string));
         return Ok(ResolvedProvider {
             api_key: key,
             base_url,

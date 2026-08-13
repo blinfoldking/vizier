@@ -871,6 +871,8 @@ export default function Settings() {
                                             'copilot',
                                             'azure',
                                             'custom',
+                                            'opencode_zen',
+                                            'opencode_go',
                                         ]
                                         const configured = providers.map(
                                             (p) => p.variant

@@ -30,6 +30,8 @@ pub enum ProviderVariant {
     copilot,
     azure,
     custom,
+    opencode_zen,
+    opencode_go,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -88,6 +90,10 @@ pub struct ProviderConfig {
     pub azure: Option<AzureProviderConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<CustomProviderConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opencode_zen: Option<OpencodeZenProviderConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opencode_go: Option<OpencodeGoProviderConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -455,6 +461,38 @@ impl Default for CustomProviderConfig {
         Self {
             api_key: "${CUSTOM_API_KEY}".into(),
             base_url: "${CUSTOM_BASE_URL}".into(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OpencodeZenProviderConfig {
+    pub api_key: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_url: Option<String>,
+}
+
+impl Default for OpencodeZenProviderConfig {
+    fn default() -> Self {
+        Self {
+            api_key: "${OPENCODE_ZEN_API_KEY}".into(),
+            base_url: None,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OpencodeGoProviderConfig {
+    pub api_key: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_url: Option<String>,
+}
+
+impl Default for OpencodeGoProviderConfig {
+    fn default() -> Self {
+        Self {
+            api_key: "${OPENCODE_GO_API_KEY}".into(),
+            base_url: None,
         }
     }
 }

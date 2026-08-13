@@ -254,6 +254,12 @@ impl VizierModel {
             ProviderVariant::custom => Self::build(
                 VizierModelImpl::<openai::CompletionsClient>::build_with_client_fn(&resolved, agent_config, config_context_window).await?,
             ),
+            ProviderVariant::opencode_zen => Self::build(
+                VizierModelImpl::<openai::CompletionsClient>::build_with_client_fn(&resolved, agent_config, config_context_window).await?,
+            ),
+            ProviderVariant::opencode_go => Self::build(
+                VizierModelImpl::<openai::CompletionsClient>::build_with_client_fn(&resolved, agent_config, config_context_window).await?,
+            ),
             ProviderVariant::llama_cpp => Self::build(
                 VizierModelImpl::<llamafile::Client>::build_with_client_fn(&resolved, agent_config, config_context_window).await?,
             ),
@@ -358,6 +364,12 @@ impl VizierModel {
             ProviderVariant::custom => Self::build(
                 VizierModelImpl::<openai::CompletionsClient>::build(&resolved, &override_config).await?,
             ),
+            ProviderVariant::opencode_zen => Self::build(
+                VizierModelImpl::<openai::CompletionsClient>::build(&resolved, &override_config).await?,
+            ),
+            ProviderVariant::opencode_go => Self::build(
+                VizierModelImpl::<openai::CompletionsClient>::build(&resolved, &override_config).await?,
+            ),
             ProviderVariant::elevenlabs => {
                 anyhow::bail!("elevenlabs is not a completion model provider")
             }
@@ -408,15 +420,31 @@ async fn resolve_provider(
         ProviderVariant::perplexity => resolve_provider_key(storage, variant.clone(), "PERPLEXITY_API_KEY")
             .await
             .map_err(|e| anyhow::anyhow!(e.0)),
-        ProviderVariant::moonshot => resolve_provider_with_base_url(storage, variant.clone(), "MOONSHOT_API_KEY")
+        ProviderVariant::moonshot => resolve_provider_with_base_url(storage, variant.clone(), "MOONSHOT_API_KEY", None)
             .await
             .map_err(|e| anyhow::anyhow!(e.0)),
-        ProviderVariant::zai => resolve_provider_with_base_url(storage, variant.clone(), "ZAI_API_KEY")
+        ProviderVariant::zai => resolve_provider_with_base_url(storage, variant.clone(), "ZAI_API_KEY", None)
             .await
             .map_err(|e| anyhow::anyhow!(e.0)),
-        ProviderVariant::minimax => resolve_provider_with_base_url(storage, variant.clone(), "MINIMAX_API_KEY")
+        ProviderVariant::minimax => resolve_provider_with_base_url(storage, variant.clone(), "MINIMAX_API_KEY", None)
             .await
             .map_err(|e| anyhow::anyhow!(e.0)),
+        ProviderVariant::opencode_zen => resolve_provider_with_base_url(
+            storage,
+            variant.clone(),
+            "OPENCODE_ZEN_API_KEY",
+            Some("https://opencode.ai/zen/v1"),
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!(e.0)),
+        ProviderVariant::opencode_go => resolve_provider_with_base_url(
+            storage,
+            variant.clone(),
+            "OPENCODE_GO_API_KEY",
+            Some("https://opencode.ai/zen/go/v1"),
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!(e.0)),
         ProviderVariant::together => resolve_provider_key(storage, variant.clone(), "TOGETHER_API_KEY")
             .await
             .map_err(|e| anyhow::anyhow!(e.0)),

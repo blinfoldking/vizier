@@ -31,8 +31,9 @@ export default function AgentCore() {
         const data = res.data?.content || ''
         setContent(data)
         setOriginal(data)
-      } catch {
-        addToast('error', 'Failed to load CORE')
+      } catch (err: unknown) {
+        console.error('Failed to load CORE:', err)
+        addToast('error', 'Failed to load CORE', getErrorMessage(err))
         setContent('')
         setOriginal('')
       } finally {

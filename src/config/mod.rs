@@ -215,6 +215,8 @@ impl Default for VizierConfig {
                 copilot: None,
                 azure: None,
                 custom: None,
+                opencode_zen: None,
+                opencode_go: None,
             },
             channels: ChannelsConfig {
                 http: Some(default_http_channel()),

@@ -79,6 +79,12 @@ fn provider_to_response(entry: &ProviderEntry) -> ProviderResponse {
         ProviderEntryConfig::Custom { api_key, base_url } => {
             (!api_key.is_empty(), Some(base_url.clone()), None)
         }
+        ProviderEntryConfig::OpencodeZen { api_key, base_url } => {
+            (!api_key.is_empty(), base_url.clone(), None)
+        }
+        ProviderEntryConfig::OpencodeGo { api_key, base_url } => {
+            (!api_key.is_empty(), base_url.clone(), None)
+        }
     };
 
     ProviderResponse {
@@ -265,6 +271,14 @@ async fn upsert_provider(
                     "base_url is required for custom provider".into(),
                 );
             }
+        },
+        ProviderVariant::opencode_zen => ProviderEntryConfig::OpencodeZen {
+            api_key: body.api_key.unwrap_or_default(),
+            base_url: body.base_url.filter(|s| !s.is_empty()),
+        },
+        ProviderVariant::opencode_go => ProviderEntryConfig::OpencodeGo {
+            api_key: body.api_key.unwrap_or_default(),
+            base_url: body.base_url.filter(|s| !s.is_empty()),
         },
     };
 
