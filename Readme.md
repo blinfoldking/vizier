@@ -9,7 +9,7 @@ Vizier is a Rust-based AI agent framework that provides a unified interface for 
 - **Multi-Channel Support**: Connect to Discord, Telegram, HTTP (REST API & WebSocket), and WebUI
 - **AI Model Integration**: Support for multiple AI providers (DeepSeek, OpenRouter, Ollama, Anthropic, OpenAI, Gemini, Xiaomi MiMo, Llama.cpp)
 - **Memory System**: Session-based short-term memory, configurable recall depth, and vector-based long-term memory
-- **Tool System**: Extensible tool framework including shell execution, web search (Brave Search), HTTP client, web fetch, scheduler (cron & one-time tasks), vector memory, workspace document management, sub-agent spawning, Python sandbox, and inter-agent communication
+- **Tool System**: Extensible tool framework including shell execution (local or Docker-sandboxed), web search (Brave Search), HTTP client, web fetch, scheduler (cron & one-time tasks), vector memory, workspace document management, sub-agent spawning, skill scripts (shell/Python), and inter-agent communication
 - **Scheduler**: Built-in task scheduler for automated agent execution
 - **WebUI**: Modern React-based web interface for interaction and management
 - **Configuration Driven**: YAML seed config with runtime management via WebUI
@@ -70,7 +70,7 @@ See the [Justfile](Justfile) for all available commands.
 
 ### WebUI
 
-The web interface is built with React and served automatically when the HTTP channel is enabled. After building (`just build`), it will be available at `http://localhost:9999` (or the port configured in your `config.yaml`).
+The web interface is built with React and served automatically when the HTTP channel is enabled. After building (`just build`), it will be available at `http://localhost:9999` (or the port configured in your `.vizier.yaml`).
 
 ## Update Installed Version
 
@@ -113,16 +113,16 @@ curl -fFSL https://get.vizier.rs | sh
 ### Project Structure
 
 - `src/`: Rust source code
-  - `agents/`: Agent process loop, LLM interaction, tools, hooks, skills
+  - `agents/`: Agent process loop, LLM interaction, tools, hooks, skills, per-agent MCP client + shell abstraction (local + Docker)
   - `channels/`: Discord, Telegram, HTTP (REST + WebSocket + WebUI serving)
-  - `storage/`: Filesystem and SurrealDB storage backends
+  - `storage/`: Filesystem and SQLite storage backends
   - `config/`: YAML seed config deserialization
   - `schema/`: Shared types (responses, agent IDs, provider entries)
-  - `mcp/`: MCP client + server integration
   - `embedding/`: Local embedding models (fastembed)
-  - `shell/`: Shell execution abstraction (local + Docker)
-  - `scheduler/`: Cron and one-time task scheduler
-  - `transport/`: Command transport for agent/channel/global commands
+  - `scheduler/`: Cron, one-time task, and "dream cycle" scheduling
+  - `command/`: Unix-socket command server for CLI ↔ running-instance control
+  - `cli/`: `run`/`shutdown`/`onboard`/`skill`/`agent` subcommands
+  - `transport.rs`: In-process command bus (agent/channel/global commands) that ties the above together
 - `webui/`: React-based web interface (React Router v7 + Tailwind v4 + TypeScript)
 - `templates/`: Template files for agent configuration and identity
 - `.vizier/`: Workspace directory for runtime data (config, database, agent workspaces)
