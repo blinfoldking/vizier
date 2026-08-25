@@ -798,13 +798,10 @@ export interface ShellConfigData {
 // SKILL
 // ============================================================================
 
-export type SkillActivation = 'Always' | 'OnDemand' | 'Contextual'
-
 export interface Skill {
   name: string
   description: string
   keywords: string[]
-  activation: SkillActivation
   version: number
   resources: string[]
   content?: string
@@ -816,14 +813,12 @@ export interface CreateSkillRequest {
   description: string
   content: string
   keywords?: string[]
-  activation?: SkillActivation
 }
 
 export interface UpdateSkillRequest {
   description?: string
   content?: string
   keywords?: string[]
-  activation?: SkillActivation
 }
 
 // ============================================================================

@@ -22,8 +22,8 @@ scheduler::{DeleteTask, GetTaskDetail, ListTask, ScheduleCronTask, ScheduleOneTi
         session_files::{ListSessionFiles, ReadDocumentFile, SendAttachment},
         shell::ShellExec,
         skill::{
-            CreateSkill, DeleteSkill, ExecuteSkillResource, ListSkills, ReadSkillResource,
-            UpdateSkill,
+            CreateSkill, DeleteSkill, ExecuteSkillResource, GetSkillDetails, ListSkills,
+            ReadSkillResource, UpdateSkill, UseSkill,
         },
         subtasks::SubtasksTool,
         telegram::new_telegram_tools,
@@ -292,10 +292,12 @@ impl VizierTools {
         "schedule_cron_task",
         "list_task",
         "delete_task",
-        // Skills (3)
+        // Skills (5)
         "create_skill",
         "update_skill",
         "list_skills",
+        "get_skill_details",
+        "use_skill",
     ];
 
     pub async fn dream_tools(
@@ -412,10 +414,12 @@ impl VizierTools {
                 deps.transport.clone(),
             ))
             .tool(SubtasksTool::new(agent_id.clone(), deps.clone()))
-            .tool(CreateSkill::new(agent_id.clone(), deps.clone()))
-            .tool(UpdateSkill::new(deps.clone()))
-            .tool(DeleteSkill::new(deps.clone()))
-            .tool(ListSkills::new(deps.clone()))
+            .tool(CreateSkill::new(agent_id.clone(), deps.clone(), indexer.clone()))
+            .tool(UpdateSkill::new(deps.clone(), indexer.clone()))
+            .tool(DeleteSkill::new(deps.clone(), indexer.clone()))
+            .tool(ListSkills::new(agent_id.clone(), deps.clone()))
+            .tool(GetSkillDetails::new(agent_id.clone(), deps.clone()))
+            .tool(UseSkill::new(agent_id.clone(), deps.clone()))
             .tool(ReadSkillResource::new(Some(agent_id.clone()), deps.clone()))
             .tool(ExecuteSkillResource::new(
                 Some(agent_id.clone()),

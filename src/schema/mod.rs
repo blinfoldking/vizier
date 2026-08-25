@@ -43,8 +43,7 @@ pub use session::{
 pub use session_file::SessionFileRecord;
 pub use storage::{
     DocumentIndex, Memory, MemoryFrontMatter, MemoryGraph, MemoryGraphEdge, MemoryGraphNode,
-    MemoryQueryParams, MemoryVisibility, PaginatedMemory, Skill, SkillActivation,
-    SkillFrontMatter,
+    MemoryQueryParams, MemoryVisibility, PaginatedMemory, Skill, SkillFrontMatter,
 };
 pub use task::{Task, TaskFrontMatter, TaskSchedule};
 
