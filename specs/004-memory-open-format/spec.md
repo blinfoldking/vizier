@@ -71,6 +71,22 @@ An operator moving an agent between environments — migrating from a laptop to 
 1. **Given** an agent with an established set of memories across one or more bundles, **When** those bundles are copied to a new Vizier workspace/deployment, **Then** the agent's memory search, memory listing, and related-memory graph all reflect the same content as the original, with no memories missing or corrupted.
 2. **Given** an agent's memory has been copied to a new deployment, **When** the agent writes a new memory there, **Then** the new memory coexists correctly alongside the migrated ones (no id/slug collisions within a bundle, no broken links).
 
+---
+
+### User Story 4 - An operator exports and imports a bundle as a zip through the WebUI (Priority: P4)
+
+An operator using the WebUI wants a one-click way to download one of an agent's bundles as a single `.zip` file (for backup, sharing, or moving to another deployment), and to upload a `.zip` file to bring a bundle into an agent — without needing filesystem or command-line access to the Vizier workspace.
+
+**Why this priority**: This is the WebUI-level convenience form of the portability already established in Story 3 (a bundle is already just a directory that can be copied); it's the most direct way an operator without filesystem access can back up, move, or hand off an agent's knowledge, so it's addressed last, once the underlying bundle structure and portability are solid.
+
+**Independent Test**: From the WebUI, export one of an agent's bundles as a `.zip`, then import that `.zip` back (as a new bundle, or into a fresh agent), and confirm every concept document, its metadata, and its attachments are identical to the original.
+
+**Acceptance Scenarios**:
+
+1. **Given** an agent with a bundle containing several memories, **When** an operator exports that bundle from the WebUI, **Then** they receive a single `.zip` file containing all of that bundle's concept documents, its index and log documents, and any attachments.
+2. **Given** a previously exported bundle `.zip`, **When** an operator imports it into an agent through the WebUI, **Then** all of its concept documents, metadata, and attachments become part of that agent's memory, addressable exactly as they were before export.
+3. **Given** an operator importing a `.zip` whose bundle name collides with a bundle the agent already has, **When** the import runs, **Then** the operator is prompted to choose a destination bundle name before anything is written, and any concept-level slug collisions within an existing destination bundle are reported and skipped rather than silently overwritten (per FR-009).
+
 ### Edge Cases
 
 - What happens when two memories within the *same* bundle for the same agent end up with the same title/slug (e.g., after a copy or a manual edit)? The system must reject the write rather than silently overwriting one with the other.
@@ -82,6 +98,8 @@ An operator moving an agent between environments — migrating from a laptop to 
 - What happens when a bundle's index or log document falls out of sync with the concept documents actually present (e.g., after a manual edit or deletion outside Vizier)? They must be reconciled/regenerated on next access rather than showing a stale listing or history indefinitely.
 - What happens to a memory that was previously marked `global` or `shared` when it's migrated into the new, all-private bundle model? It becomes private to its owning agent like every other memory — any cross-agent access it previously allowed is intentionally not preserved (see FR-013).
 - What happens when a concept in the currently open bundle's concept-level graph has a link pointing outside that bundle? The concept-level graph must indicate the outward link (e.g., a boundary indicator pointing back to the bundle-level view) rather than silently dropping it or crashing.
+- What happens when an imported `.zip` is malformed, isn't a valid bundle structure, or has concept documents with missing/broken frontmatter? The import must be rejected with a clear error before anything is written, rather than partially importing corrupt data.
+- What happens when an imported `.zip` contains links to a bundle that isn't included in the archive? Those links become broken links after import (consistent with existing broken-link handling), not import failures.
 
 ## Requirements *(mandatory)*
 
@@ -104,6 +122,8 @@ An operator moving an agent between environments — migrating from a laptop to 
 - **FR-015**: System MUST automatically maintain each bundle's index document to reflect the current set of concept documents in that bundle, kept up to date as memories are written, updated, or deleted, so a developer or agent can see what's available without opening every concept document individually.
 - **FR-016**: System MUST automatically maintain each bundle's log document as a chronological history of that bundle's memory writes and updates.
 - **FR-017**: The WebUI memory graph MUST offer two levels of view: a bundle-level graph showing an agent's bundles as nodes and cross-bundle links as edges between them, and a concept-level graph — entered by opening a bundle — showing that bundle's concept documents as nodes and their links as edges, matching today's existing single-collection graph interaction.
+- **FR-018**: The WebUI MUST let an operator export any one of an agent's bundles as a single downloadable `.zip` archive containing that bundle's concept documents, index document, log document, and attachments.
+- **FR-019**: The WebUI MUST let an operator import a `.zip` archive as a bundle for a chosen agent, letting the operator pick the destination bundle name; if the destination bundle already exists, concept-level collisions MUST follow the same reject-not-overwrite rule as FR-009, with the operator informed of which concepts were skipped.
 
 ### Key Entities
 
@@ -128,11 +148,12 @@ An operator moving an agent between environments — migrating from a laptop to 
 - **SC-007**: An agent can start using a brand-new bundle simply by naming it in a memory write, with 100% success and no separate creation step.
 - **SC-008**: A concept in one bundle can link to a specific concept, or to the bundle as a whole, in a different bundle owned by the same agent, and that link resolves correctly through the same related-memory/graph lookups used for intra-bundle links.
 - **SC-009**: A developer can go from the bundle-level graph to any individual bundle's concept-level graph in a single action (opening the bundle node), and back, without needing to know the bundle's structure ahead of time.
+- **SC-010**: An operator can export a bundle and re-import it (to the same or a different agent) through the WebUI with 100% of concept documents, metadata, and attachments preserved, using only the export and import actions — no filesystem or CLI access required.
 
 ## Assumptions
 
 - The primary consumer of memory documents is the owning agent itself, through its existing memory tools; human readability and portability are valuable properties that fall out of that representation, not independent goals pursued at the expense of the agent's own workflow.
-- Sharing an individual memory with another person or team outside of Vizier (e.g., handing off a single file to a colleague) is out of scope for this spec — it may be revisited separately once agent-facing document storage and human-readability are in place.
+- Sharing a single, individual memory (one concept document) with another person or team outside of Vizier remains out of scope for this spec. Exporting/importing a whole bundle as a `.zip` (Story 4) is in scope as the WebUI-level form of bundle portability (Story 3); an operator could use it to hand a bundle to another person, but that's a byproduct of portability, not a dedicated single-memory sharing feature.
 - "Open knowledge format" refers specifically to the bundle convention described in the referenced Open Knowledge Format spec — a hierarchical directory of markdown documents with structured frontmatter metadata — the same general style already used for an agent's CORE.md identity document, rather than a binary or proprietary format.
 - Reconciliation of manual, out-of-band edits to concept documents (Edge Cases, FR-010) happens lazily, on the next relevant read/query/write, rather than through continuous real-time filesystem watching.
 - This feature drops the previous private/global/shared visibility distinction and the `shared_to` list entirely: every memory is private to its owning agent, with no cross-agent access of any kind. Existing memories marked `global` or `shared` are treated as private on migration (see FR-013) — any cross-agent access they previously allowed no longer applies after this change. Reintroducing cross-agent visibility, if ever needed, is a separate future feature.
