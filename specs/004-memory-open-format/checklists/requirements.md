@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Portable Memory as Open Documents
+# Specification Quality Checklist: Agent Memory as Open Documents
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-08-25
@@ -34,3 +34,4 @@
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - Scope decisions on storage-backend applicability, out-of-band edit reconciliation, and cross-instance access-control enforcement were resolved as documented defaults in the Assumptions section rather than left as open clarifications, since each has a reasonable default consistent with the codebase's existing document-based CORE.md pattern. Revisit these in `/speckit-clarify` if the defaults don't match intent.
 - Revised 2026-08-25: reframed around the agent as the primary actor and consumer of its own memory (Story 1, P1) rather than portability/sharing. Human-readability for debugging is now Story 2 (P2), cross-deployment portability moved to Story 3 (P3), and hand-off sharing to another person/team was dropped as an explicit out-of-scope assumption.
+- Clarified 2026-08-25 (`/speckit-clarify`, 3 questions): grounded "open knowledge format" in the referenced OKF bundle spec (concept documents + index + log per agent bundle), pinned slug-collision handling to reject-with-error, and brought index/log documents into scope with new FR-014/FR-015 and SC-006. All checklist items still pass against the updated spec.
